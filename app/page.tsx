@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Upload, FileText, Music, Play, Pause, Repeat, Repeat1, Gauge, CheckCircle2, Keyboard, Mic, MicOff, Globe, FastForward, Wand2, BookOpen, Trash2, Plus, Menu, X, FolderOpen, PanelLeft, Lock, User, LogOut } from 'lucide-react';
+import { Upload, FileText, Music, Play, Pause, Repeat, Repeat1, Gauge, CheckCircle2, Keyboard, Mic, MicOff, Globe, FastForward, Wand2, BookOpen, Trash2, Plus, Menu, X, FolderOpen, PanelLeft, Lock, User, LogOut, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
 import { GoogleGenAI, Type } from '@google/genai';
 import { initDB, saveLesson, getLesson, getAllLessons, deleteLesson, updateLessonProgress } from '@/lib/db';
 
@@ -65,6 +65,12 @@ export default function ShadowingApp() {
   const [lessonName, setLessonName] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
+  
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    'en-US': true,
+    'de-DE': true,
+    'trash': true
+  });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeSentenceRef = useRef<Sentence | null>(null);
@@ -316,7 +322,9 @@ export default function ShadowingApp() {
         name: l.name,
         language: l.language,
         progress: l.totalSentences > 0 ? Math.round((Object.keys(l.completedSentences || {}).length / l.totalSentences) * 100) : 0,
-        hasIpa: Object.keys(l.ipaData || {}).length > 0
+        hasIpa: Object.keys(l.ipaData || {}).length > 0,
+        isTrashed: !!l.isTrashed,
+        hasAudio: !!l.audioFile
       })));
     } catch (e) {
       console.error("Failed to load lessons", e);
@@ -347,12 +355,19 @@ export default function ShadowingApp() {
         setCurrentLessonId(lesson.id);
         setLessonName(lesson.name);
         setRecognitionLang(lesson.language);
-        setAudioFile(lesson.audioFile);
-        setAudioURL(URL.createObjectURL(lesson.audioFile));
+        
+        if (lesson.audioFile) {
+          setAudioFile(lesson.audioFile);
+          setAudioURL(URL.createObjectURL(lesson.audioFile));
+        } else {
+          setAudioFile(null);
+          setAudioURL(null);
+        }
+        
         setTranscriptText(lesson.transcriptText);
         setIpaData(lesson.ipaData || {});
         setCompletedSentences(lesson.completedSentences || {});
-        setIsStarted(true);
+        setIsStarted(!!lesson.audioFile); // Only start if we have audio
         setAppMode('normal');
         
         lesson.lastAccessed = Date.now();
@@ -379,7 +394,18 @@ export default function ShadowingApp() {
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
-  const handleDeleteLesson = async (id: string) => {
+  const handleTrashLesson = async (id: string) => {
+    import('@/lib/db').then(async ({ trashLesson }) => {
+      await trashLesson(id);
+      if (currentLessonId === id) {
+        handleNewLesson();
+      }
+      setLessonToDelete(null);
+      loadLessonsList();
+    });
+  };
+
+  const handleDeletePermanently = async (id: string) => {
     await deleteLesson(id);
     if (currentLessonId === id) {
       handleNewLesson();
@@ -459,6 +485,16 @@ export default function ShadowingApp() {
       setCurrentLessonId(lessonId);
       setLessonName(name);
       loadLessonsList();
+    } else {
+      // Restore audio file for existing lesson
+      const existingLesson = await getLesson(lessonId);
+      if (existingLesson) {
+        existingLesson.audioFile = audioFile;
+        existingLesson.isTrashed = false;
+        existingLesson.lastAccessed = Date.now();
+        await saveLesson(existingLesson);
+        loadLessonsList();
+      }
     }
     
     if (appMode === 'shadowing') {
@@ -768,32 +804,57 @@ export default function ShadowingApp() {
           </div>
         
         <div className="p-4">
-          <button onClick={handleNewLesson} className="w-full py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 rounded-lg border border-yellow-500/30 flex items-center justify-center gap-2 font-medium transition-colors">
+          <button onClick={handleNewLesson} className="w-full py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 rounded-lg border border-yellow-500/30 flex items-center justify-center gap-2 font-medium transition-colors mb-3">
             <Plus size={18} /> New Lesson
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-6">
-          {['en-US', 'de-DE'].map(lang => {
-            const langLessons = lessonsList.filter(l => l.language === lang);
-            if (langLessons.length === 0) return null;
+          {['en-US', 'de-DE', 'trash'].map(section => {
+            let sectionLessons = [];
+            if (section === 'trash') {
+              sectionLessons = lessonsList.filter(l => l.isTrashed);
+            } else {
+              sectionLessons = lessonsList.filter(l => l.language === section && !l.isTrashed);
+            }
+            
+            if (sectionLessons.length === 0) return null;
+            
+            const isExpanded = expandedSections[section];
+            const toggleSection = () => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+            
             return (
-              <div key={lang} className="space-y-1">
-                <h3 className="px-3 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  {lang === 'en-US' ? 'English' : 'German'}
-                </h3>
-                {langLessons.map(lesson => (
+              <div key={section} className="space-y-1">
+                <button 
+                  onClick={toggleSection}
+                  className="w-full flex items-center justify-between px-3 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 hover:text-gray-300 transition-colors"
+                >
+                  <span>{section === 'en-US' ? 'English' : section === 'de-DE' ? 'German' : 'Trash'}</span>
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                
+                {isExpanded && sectionLessons.map(lesson => (
                   <div 
                     key={lesson.id} 
                     onClick={() => handleLoadLesson(lesson.id)} 
                     className={`p-3 rounded-lg cursor-pointer transition-colors group ${currentLessonId === lesson.id ? 'bg-gray-800 border border-gray-700' : 'hover:bg-gray-800/50 border border-transparent'}`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-gray-200 text-sm truncate pr-2" title={lesson.name}>{lesson.name}</h4>
+                      <h4 className="font-medium text-gray-200 text-sm truncate pr-2" title={lesson.name}>
+                        {lesson.name}
+                        {!lesson.hasAudio && <span title="Audio file missing"><AlertTriangle size={12} className="inline ml-1 text-yellow-500" /></span>}
+                      </h4>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); setLessonToDelete(lesson.id); }} 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (section === 'trash') {
+                            setLessonToDelete(lesson.id); // Will permanently delete
+                          } else {
+                            handleTrashLesson(lesson.id);
+                          }
+                        }} 
                         className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Delete lesson"
+                        title={section === 'trash' ? "Delete permanently" : "Move to trash"}
                       >
                         <Trash2 size={14}/>
                       </button>
@@ -866,8 +927,14 @@ export default function ShadowingApp() {
                     </>
                   ) : (
                     <>
-                      <Music className="w-12 h-12 text-gray-400 mb-3" />
-                      <span className="text-gray-300 font-medium">Upload Audio File</span>
+                      {currentLessonId ? (
+                        <AlertTriangle className="w-12 h-12 text-yellow-500 mb-3" />
+                      ) : (
+                        <Music className="w-12 h-12 text-gray-400 mb-3" />
+                      )}
+                      <span className="text-gray-300 font-medium text-center">
+                        {currentLessonId ? "Audio file missing. Please re-upload to continue." : "Upload Audio File"}
+                      </span>
                       <span className="text-gray-500 text-sm mt-1">MP3, WAV, M4A</span>
                     </>
                   )}
@@ -942,7 +1009,7 @@ export default function ShadowingApp() {
                      Generating IPA & Starting...
                    </>
                  ) : (
-                   <>Start Learning <Play className="w-6 h-6 fill-current" /></>
+                   <>{currentLessonId ? "Restore Lesson & Continue" : "Start Learning"} <Play className="w-6 h-6 fill-current" /></>
                  )}
                </button>
             </div>
@@ -1271,7 +1338,7 @@ export default function ShadowingApp() {
             <p className="text-gray-400 mb-6 text-sm leading-relaxed">Are you sure you want to delete this lesson? All your progress, audio files, and transcripts will be permanently removed.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setLessonToDelete(null)} className="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 font-medium transition-colors">Cancel</button>
-              <button onClick={() => handleDeleteLesson(lessonToDelete)} className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors">Delete</button>
+              <button onClick={() => handleDeletePermanently(lessonToDelete)} className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors">Delete Permanently</button>
             </div>
           </div>
         </div>

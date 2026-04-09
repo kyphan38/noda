@@ -7,13 +7,14 @@ export interface LessonDB extends DBSchema {
       id: string;
       name: string;
       language: string;
-      audioFile: File;
+      audioFile?: File | null;
       transcriptText: string;
       ipaData: Record<number, string>;
       completedSentences: Record<number, boolean>;
       totalSentences: number;
       createdAt: number;
       lastAccessed: number;
+      isTrashed?: boolean;
     };
     indexes: { 'by-language': string, 'by-accessed': number };
   };
@@ -55,6 +56,18 @@ export const getAllLessons = async () => {
 export const deleteLesson = async (id: string) => {
   const db = await initDB();
   if (db) await db.delete('lessons', id);
+};
+
+export const trashLesson = async (id: string) => {
+  const db = await initDB();
+  if (db) {
+    const lesson = await db.get('lessons', id);
+    if (lesson) {
+      lesson.audioFile = null;
+      lesson.isTrashed = true;
+      await db.put('lessons', lesson);
+    }
+  }
 };
 
 export const updateLessonProgress = async (id: string, completedSentences: Record<number, boolean>, ipaData: Record<number, string>) => {
