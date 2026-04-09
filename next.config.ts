@@ -1,8 +1,11 @@
 import type {NextConfig} from 'next';
 
+const basePath = process.env.BASE_PATH?.trim() || '';
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  basePath: '/dictation',
+  basePath,
+  assetPrefix: basePath || undefined,
   trailingSlash: true,
   eslint: {
     ignoreDuringBuilds: true,

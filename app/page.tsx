@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Upload, FileText, Music, Play, Pause, Repeat, Repeat1, Gauge, CheckCircle2, Keyboard, Mic, MicOff, Globe, FastForward, Wand2, BookOpen, Trash2, Plus, Menu, X, FolderOpen, PanelLeft } from 'lucide-react';
+import { Upload, FileText, Music, Play, Pause, Repeat, Repeat1, Gauge, CheckCircle2, Keyboard, Mic, MicOff, Globe, FastForward, Wand2, BookOpen, Trash2, Plus, Menu, X, FolderOpen, PanelLeft, Lock, User, LogOut } from 'lucide-react';
 import { GoogleGenAI, Type } from '@google/genai';
 import { initDB, saveLesson, getLesson, getAllLessons, deleteLesson, updateLessonProgress } from '@/lib/db';
 
@@ -11,6 +11,9 @@ type Sentence = {
   start: number;
   end: number;
 };
+
+const AUTH_USERNAME = process.env.NEXT_PUBLIC_USERNAME || '';
+const AUTH_PASSWORD = process.env.NEXT_PUBLIC_PASSWORD || '';
 
 const getLetters = (text: string) => {
   const letters = [];
@@ -23,6 +26,13 @@ const getLetters = (text: string) => {
 };
 
 export default function ShadowingApp() {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [transcriptText, setTranscriptText] = useState<string>('');
@@ -69,6 +79,15 @@ export default function ShadowingApp() {
 
   // Sync ref with state for the animation frame
   useEffect(() => {
+    // Check auth on mount
+    const auth = localStorage.getItem('shadowing_auth');
+    if (auth === 'true') {
+      setIsAuthenticated(true);
+    }
+    setIsAuthChecking(false);
+  }, []);
+
+  useEffect(() => {
     loopModeRef.current = loopMode;
   }, [loopMode]);
 
@@ -100,6 +119,16 @@ export default function ShadowingApp() {
       } else if (e.code === 'KeyL' || e.code === 'KeyR') {
         e.preventDefault();
         setLoopMode(prev => prev === 'none' ? 'all' : prev === 'all' ? 'one' : 'none');
+      } else if (e.key === 'Control') {
+        e.preventDefault();
+        if (loopTimeoutRef.current) {
+          clearTimeout(loopTimeoutRef.current);
+          isLoopDelayingRef.current = false;
+        }
+        if (audioRef.current && activeSentenceRef.current) {
+          audioRef.current.currentTime = activeSentenceRef.current.start;
+          audioRef.current.play().catch(() => {});
+        }
       }
     };
 
@@ -623,6 +652,95 @@ export default function ShadowingApp() {
 
   const isReady = isStarted;
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginUsername === AUTH_USERNAME && loginPassword === AUTH_PASSWORD) {
+      setIsAuthenticated(true);
+      localStorage.setItem('shadowing_auth', 'true');
+      setLoginError('');
+    } else {
+      setLoginError('Invalid username or password');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('shadowing_auth');
+    setLoginUsername('');
+    setLoginPassword('');
+  };
+
+  if (isAuthChecking) {
+    return <div className="h-screen bg-gray-950 flex items-center justify-center text-yellow-500 font-mono">Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4 font-sans selection:bg-yellow-500/30">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mb-4 border border-yellow-500/20">
+              <Lock className="w-8 h-8 text-yellow-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">Private Access</h1>
+            <p className="text-gray-400 text-sm mt-2 text-center">This application is restricted to authorized users only.</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-500" />
+                </div>
+                <input
+                  type="text"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-700 rounded-lg bg-gray-950 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-shadow"
+                  placeholder="Enter username"
+                  autoComplete="username"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-500" />
+                </div>
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-700 rounded-lg bg-gray-950 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-shadow"
+                  placeholder="Enter password"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+            </div>
+
+            {loginError && (
+              <div className="text-red-400 text-sm font-medium bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-gray-950 bg-yellow-500 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 focus:ring-offset-gray-900 transition-colors mt-6"
+            >
+              Sign In
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-yellow-500/30">
       
@@ -639,9 +757,14 @@ export default function ShadowingApp() {
         <div className={`fixed inset-y-0 left-0 w-72 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="p-4 border-b border-gray-800 flex items-center justify-between">
             <h2 className="text-lg font-bold text-white flex items-center gap-2"><FolderOpen size={18} className="text-yellow-500"/> My Lessons</h2>
-            <button onClick={() => setIsSidebarOpen(false)} className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors" title="Close Sidebar">
-              <PanelLeft size={20}/>
-            </button>
+            <div className="flex items-center gap-1">
+              <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-gray-800 transition-colors" title="Logout">
+                <LogOut size={18}/>
+              </button>
+              <button onClick={() => setIsSidebarOpen(false)} className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors" title="Close Sidebar">
+                <PanelLeft size={20}/>
+              </button>
+            </div>
           </div>
         
         <div className="p-4">
