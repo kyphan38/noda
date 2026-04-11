@@ -10,8 +10,7 @@ import { NewLessonModal } from '@/components/NewLessonModal';
 import { NewDeckModal } from '@/components/NewDeckModal';
 import { CleanupModal } from '@/components/CleanupModal';
 import { AppHeader } from '@/components/AppHeader';
-import { MobileHomePanels } from '@/components/MobileHomePanels';
-import { MobileTabBar } from '@/components/MobileTabBar';
+import { MobileUnsupported } from '@/components/MobileUnsupported';
 import { DeleteLessonModal } from '@/components/DeleteLessonModal';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -22,7 +21,8 @@ import { useLessonPlaybackLoop } from '@/hooks/useLessonPlaybackLoop';
 import { useAutoScrollActiveSentence } from '@/hooks/useAutoScrollActiveSentence';
 import { useGlobalPlaybackShortcuts } from '@/hooks/useGlobalPlaybackShortcuts';
 import { useHeaderItemMenuClickOutside } from '@/hooks/useHeaderItemMenu';
-import { LessonItem, DeckItem, AppTab, Sentence } from '@/types';
+import { useMobileViewport } from '@/hooks/use-mobile';
+import { LessonItem, DeckItem, Sentence } from '@/types';
 import { LessonView } from '@/components/LessonView';
 import { FlashcardViewer } from '@/components/FlashcardViewer';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
@@ -30,21 +30,19 @@ import { Toast } from '@/components/Toast';
 
 export default function NodaApp() {
   const [isMounted, setIsMounted] = useState(false);
+  const viewport = useMobileViewport();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<AppTab>('Lessons');
   const [uploadMode, setUploadMode] = useState<'idle' | 'lesson' | 'deck'>('idle');
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  const [mobileSidebarMenuId, setMobileSidebarMenuId] = useState<string | null>(null);
   const [headerItemMenuOpen, setHeaderItemMenuOpen] = useState(false);
-  const headerMenuRefMobile = useRef<HTMLDivElement | null>(null);
-  const headerMenuRefDesktop = useRef<HTMLDivElement | null>(null);
+  const headerMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
@@ -125,8 +123,7 @@ export default function NodaApp() {
   useHeaderItemMenuClickOutside(
     headerItemMenuOpen,
     setHeaderItemMenuOpen,
-    headerMenuRefMobile,
-    headerMenuRefDesktop
+    headerMenuRef
   );
 
   const handleHeaderRenameCurrent = () => {
@@ -308,17 +305,16 @@ export default function NodaApp() {
     setLoginPassword('');
   };
 
-  const handleMobileTrashLessonFromList = (id: string) => {
-    if (selectedItem?.id === id && !lessonsList.find((l) => l.id === id)?.isTrashed) {
-      handleTrashLesson(id);
-      setSelectedItem(null);
-    } else {
-      setLessonToDelete(id);
-    }
-  };
-
   if (!isMounted) {
     return null;
+  }
+
+  if (!viewport.decided) {
+    return null;
+  }
+
+  if (viewport.isMobile) {
+    return <MobileUnsupported />;
   }
 
   if (!isAuthenticated) {
@@ -336,7 +332,7 @@ export default function NodaApp() {
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-emerald-500/30">
-      <div className="hidden md:block">
+      <div>
         <Sidebar
           isOpen={isSidebarOpen}
           onToggle={setIsSidebarOpen}
@@ -363,44 +359,22 @@ export default function NodaApp() {
         />
       </div>
 
-      <div className="flex-1 flex flex-col h-full overflow-y-auto relative pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col h-full overflow-y-auto relative">
         <div className="max-w-4xl mx-auto w-full p-4 md:p-8 flex flex-col min-h-full">
           <AppHeader
             isSidebarOpen={isSidebarOpen}
             onOpenSidebar={() => setIsSidebarOpen(true)}
             selectedItem={selectedItem}
-            onMobileBack={handleNewLessonWrapper}
             appMode={appMode}
             onModeChange={handleModeChange}
             headerItemMenuOpen={headerItemMenuOpen}
             setHeaderItemMenuOpen={setHeaderItemMenuOpen}
-            headerMenuRefMobile={headerMenuRefMobile}
-            headerMenuRefDesktop={headerMenuRefDesktop}
+            headerMenuRef={headerMenuRef}
             onRenameCurrent={handleHeaderRenameCurrent}
             onTrashCurrent={handleHeaderTrashCurrent}
           />
 
-          {!selectedItem?.id && (
-            <MobileHomePanels
-              activeTab={activeTab}
-              selectedItemId={selectedItem?.id}
-              lessonsList={lessonsList}
-              isListLoading={isListLoading}
-              expandedSections={expandedSections}
-              onToggleSection={(section, expanded) =>
-                setExpandedSections((prev) => ({ ...prev, [section]: expanded }))
-              }
-              onItemSelect={handleItemSelect}
-              onTrashLessonFromList={handleMobileTrashLessonFromList}
-              onRenameLesson={handleRenameLesson}
-              mobileSidebarMenuId={mobileSidebarMenuId}
-              setMobileSidebarMenuId={setMobileSidebarMenuId}
-              onOpenNewLesson={openNewLessonModal}
-              onOpenNewDeck={openNewDeckModal}
-            />
-          )}
-
-          <div className={`flex-1 flex flex-col min-h-0 ${!selectedItem?.id ? 'hidden md:flex' : 'flex'}`}>
+          <div className="flex-1 flex flex-col min-h-0">
             {!selectedItem && uploadMode === 'idle' && (
               <WelcomeScreen onNewLesson={openNewLessonModal} onNewDeck={openNewDeckModal} />
             )}
@@ -515,8 +489,6 @@ export default function NodaApp() {
       />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={dismissToast} />}
-
-      <MobileTabBar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 }

@@ -46,8 +46,18 @@ export const LOOP_DELAY_MS = 1500; // 1.5 seconds delay on loop one
 export const SAVE_PROGRESS_DELAY_MS = 1000; // 1 second debounce for saving
 export const PRONUNCIATION_SCORE_THRESHOLD = 80; // Min score to show "Next" button
 
-// Gemini AI
+// Gemini AI (IPA + future features)
 export const GEMINI_MODEL = 'gemini-3-flash-preview';
+
+/** Override with NEXT_PUBLIC_GEMINI_IPA_MODEL for benchmarking or stability. */
+export const GEMINI_IPA_MODEL =
+  (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_GEMINI_IPA_MODEL?.trim()) || GEMINI_MODEL;
+
+/** Sentences per IPA API call; smaller chunks often reduce wall-clock vs one huge prompt. */
+export const IPA_CHUNK_SIZE = 18;
+
+/** Max parallel Gemini requests for IPA (avoid rate limits / tab overload). */
+export const IPA_MAX_CONCURRENT = 3;
 
 // Local storage keys
 export const STORAGE_AUTH_KEY = 'shadowing_auth';

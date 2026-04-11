@@ -3,8 +3,8 @@ import './globals.css';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
-  title: 'My Google AI Studio App',
-  description: 'My Google AI Studio App',
+  title: 'Noda.',
+  description: 'A web app for shadowing practice with synchronized audio and transcript.'
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

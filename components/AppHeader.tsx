@@ -14,13 +14,11 @@ export interface AppHeaderProps {
   isSidebarOpen: boolean;
   onOpenSidebar: () => void;
   selectedItem: HeaderSelectedItem | null;
-  onMobileBack: () => void;
   appMode: AppMode;
   onModeChange: (mode: AppMode) => void | Promise<void>;
   headerItemMenuOpen: boolean;
   setHeaderItemMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  headerMenuRefMobile: RefObject<HTMLDivElement | null>;
-  headerMenuRefDesktop: RefObject<HTMLDivElement | null>;
+  headerMenuRef: RefObject<HTMLDivElement | null>;
   onRenameCurrent: () => void;
   onTrashCurrent: () => void;
 }
@@ -29,13 +27,11 @@ export function AppHeader({
   isSidebarOpen,
   onOpenSidebar,
   selectedItem,
-  onMobileBack,
   appMode,
   onModeChange,
   headerItemMenuOpen,
   setHeaderItemMenuOpen,
-  headerMenuRefMobile,
-  headerMenuRefDesktop,
+  headerMenuRef,
   onRenameCurrent,
   onTrashCurrent,
 }: AppHeaderProps) {
@@ -46,59 +42,16 @@ export function AppHeader({
           <button
             type="button"
             onClick={onOpenSidebar}
-            className="hidden md:block p-2 -ml-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="p-2 -ml-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
             title="Open Sidebar"
           >
             <PanelLeft size={24} />
-          </button>
-        )}
-        {selectedItem?.id && (
-          <button
-            type="button"
-            onClick={onMobileBack}
-            className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
-            title="Back to List"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 18-6-6 6-6" />
-            </svg>
           </button>
         )}
         <h1 className="app-logo">
           <Headphones size={24} aria-hidden />
           <span>Noda.</span>
         </h1>
-        {selectedItem && (
-          <div ref={headerMenuRefMobile} className="relative ml-auto shrink-0 md:hidden z-20">
-            <button
-              type="button"
-              onClick={() => setHeaderItemMenuOpen((o) => !o)}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-              aria-expanded={headerItemMenuOpen}
-              aria-label="Lesson or deck actions"
-            >
-              <MoreVertical size={22} aria-hidden />
-            </button>
-            {headerItemMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 z-30">
-                <button
-                  type="button"
-                  onClick={onRenameCurrent}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
-                >
-                  <Edit2 size={14} aria-hidden /> Rename
-                </button>
-                <button
-                  type="button"
-                  onClick={onTrashCurrent}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"
-                >
-                  <Trash2 size={14} aria-hidden /> Move to Trash
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {selectedItem?.type === 'lesson' && (
@@ -145,9 +98,9 @@ export function AppHeader({
       )}
 
       <div
-        ref={headerMenuRefDesktop}
+        ref={headerMenuRef}
         className={`relative z-20 flex items-center justify-end shrink-0 ${
-          selectedItem ? 'hidden md:flex w-auto min-w-[44px]' : 'hidden md:flex md:w-[150px]'
+          selectedItem ? 'w-auto min-w-[44px]' : 'md:w-[150px]'
         }`}
       >
         {selectedItem ? (

@@ -1,5 +1,5 @@
 {
-  "name": "German Shadowing App",
-  "description": "A web app for shadowing practice with synchronized audio and transcript.",
+  "name": "Noda",
+  "description": "Luyện nghe, dictation và shadowing với audio và transcript đồng bộ.",
   "requestFramePermissions": ["microphone"]
 }

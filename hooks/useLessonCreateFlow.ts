@@ -80,14 +80,14 @@ export function useLessonCreateFlow(
         if (!ipaOk) {
           setToast({
             message:
-              'Lesson created, but IPA generation failed. Set NEXT_PUBLIC_GEMINI_API_KEY in .env.local, restart dev server, and check the browser console.',
+              'Noda: Lesson created, but IPA generation failed. Set NEXT_PUBLIC_GEMINI_API_KEY in .env.local, restart dev server, and check the browser console.',
             type: 'error',
           });
         } else {
-          setToast({ message: 'Lesson created successfully.', type: 'success' });
+          setToast({ message: 'Đã tạo bài học.', type: 'success' });
         }
       } catch {
-        setToast({ message: 'Failed to create lesson.', type: 'error' });
+        setToast({ message: 'Không tạo được bài học.', type: 'error' });
       }
     },
     [setSelectedItem, handleLoadLesson, handleModeChange, setUploadMode, setToast, fetchIPA]
@@ -143,7 +143,7 @@ export function useLessonCreateFlow(
         setUploadMode('idle');
         setToast({ message: 'Deck created successfully.', type: 'success' });
       } catch {
-        setToast({ message: 'Failed to create deck.', type: 'error' });
+        setToast({ message: 'Không tạo được bộ thẻ.', type: 'error' });
       }
     },
     [setSelectedItem, handleLoadLesson, setUploadMode, setToast]

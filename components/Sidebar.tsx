@@ -72,15 +72,6 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile Sidebar Overlay */}
-      {isOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity"
-          onClick={() => onToggle(false)}
-        />
-      )}
-
-      {/* Sidebar Container */}
       <div
         className={`shrink-0 transition-all duration-300 ease-in-out ${isOpen ? 'w-72' : 'w-0'} relative z-50`}
       >

@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Sentence, AppMode, ExpandedSections } from '@/types';
-import { DEFAULT_APP_MODE, GEMINI_MODEL, SAVE_PROGRESS_DELAY_MS } from '@/constants';
+import {
+  DEFAULT_APP_MODE,
+  GEMINI_IPA_MODEL,
+  IPA_CHUNK_SIZE,
+  IPA_MAX_CONCURRENT,
+  SAVE_PROGRESS_DELAY_MS,
+} from '@/constants';
 import { parseTranscript, getIPASystemInstruction, parseGeminiJsonArray } from '@/lib/utils';
 import { getAllLessons, getLesson, saveLesson, trashLesson, deleteLesson, updateLessonProgress } from '@/lib/db';
 
@@ -195,55 +201,80 @@ export function useLessonLogic(
       return false;
     }
     const lang = langOverride ?? recognitionLang;
+    const model = GEMINI_IPA_MODEL;
+    const ipaSchema = {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          id: { type: Type.NUMBER },
+          ipa: { type: Type.STRING },
+        },
+        required: ['id', 'ipa'],
+      },
+    };
+
+    const chunks: Sentence[][] = [];
+    for (let i = 0; i < sentencesToUse.length; i += IPA_CHUNK_SIZE) {
+      chunks.push(sentencesToUse.slice(i, i + IPA_CHUNK_SIZE));
+    }
+
     setIsGeneratingIPA(true);
     try {
       const ai = new GoogleGenAI({ apiKey });
 
-      const sentencesToTranslate = sentencesToUse.map((s) => ({ id: s.id, text: s.text }));
-
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: JSON.stringify(sentencesToTranslate),
-        config: {
-          systemInstruction: getIPASystemInstruction(lang),
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.NUMBER },
-                ipa: { type: Type.STRING },
-              },
-              required: ['id', 'ipa'],
-            },
+      const runChunk = async (chunk: Sentence[]): Promise<Record<number, string>> => {
+        const sentencesToTranslate = chunk.map((s) => ({ id: s.id, text: s.text }));
+        const response = await ai.models.generateContent({
+          model,
+          contents: JSON.stringify(sentencesToTranslate),
+          config: {
+            systemInstruction: getIPASystemInstruction(lang),
+            responseMimeType: 'application/json',
+            responseSchema: ipaSchema,
           },
-        },
-      });
+        });
 
-      if (!response.candidates?.length) {
-        throw new Error(
-          `Gemini returned no candidates: ${JSON.stringify(response.promptFeedback ?? {})}`
-        );
-      }
+        if (!response.candidates?.length) {
+          throw new Error(
+            `Gemini returned no candidates: ${JSON.stringify(response.promptFeedback ?? {})}`
+          );
+        }
 
-      const fromSdk = response.text?.trim() ?? '';
-      const fromAllParts = joinAllCandidateTextParts(response);
-      let jsonStr = fromSdk || fromAllParts || '[]';
-      if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
-      }
-      const parsed = parseGeminiJsonArray(jsonStr) as unknown[];
+        const fromSdk = response.text?.trim() ?? '';
+        const fromAllParts = joinAllCandidateTextParts(response);
+        let jsonStr = fromSdk || fromAllParts || '[]';
+        if (jsonStr.startsWith('```')) {
+          jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+        }
+        const parsed = parseGeminiJsonArray(jsonStr) as unknown[];
+
+        const partial: Record<number, string> = {};
+        chunk.forEach((s, i) => {
+          const row =
+            (parsed.find((p) => p && typeof p === 'object' && Number((p as { id?: number }).id) === s.id) as
+              | unknown
+              | undefined) ?? parsed[i];
+          const ipa = pickRowIpa(row);
+          if (ipa) partial[s.id] = ipa;
+        });
+        return partial;
+      };
 
       const newIpaData: Record<number, string> = {};
-      sentencesToUse.forEach((s, i) => {
-        const row =
-          (parsed.find((p) => p && typeof p === 'object' && Number((p as { id?: number }).id) === s.id) as
-            | unknown
-            | undefined) ?? parsed[i];
-        const ipa = pickRowIpa(row);
-        if (ipa) newIpaData[s.id] = ipa;
-      });
+      let chunkIndex = 0;
+      const workerCount = Math.min(IPA_MAX_CONCURRENT, chunks.length);
+
+      const worker = async () => {
+        for (;;) {
+          const i = chunkIndex++;
+          if (i >= chunks.length) break;
+          const partial = await runChunk(chunks[i]!);
+          Object.assign(newIpaData, partial);
+        }
+      };
+
+      await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
       const outKeyCount = Object.keys(newIpaData).length;
 
