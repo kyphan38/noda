@@ -2,8 +2,16 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Sentence, AppMode, ExpandedSections } from '@/types';
 import { DEFAULT_APP_MODE, GEMINI_MODEL, SAVE_PROGRESS_DELAY_MS } from '@/constants';
-import { parseTranscript, getIPASystemInstruction } from '@/lib/utils';
+import { parseTranscript, getIPASystemInstruction, parseGeminiJsonArray } from '@/lib/utils';
 import { getAllLessons, getLesson, saveLesson, trashLesson, deleteLesson, updateLessonProgress } from '@/lib/db';
+
+/** `GenerateContentResponse.text` skips parts with `thought: true`; Gemini 3 may emit JSON only in those parts. */
+function joinAllCandidateTextParts(response: {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+}): string {
+  const parts = response.candidates?.[0]?.content?.parts ?? [];
+  return parts.map((p) => (typeof p.text === 'string' ? p.text : '')).join('').trim();
+}
 
 export function useLessonLogic(
   audioFile: File | null,
@@ -170,13 +178,27 @@ export function useLessonLogic(
     loadLessonsList();
   };
 
-  const fetchIPA = async (sentencesToUse = transcript, langOverride?: string) => {
-    if (Object.keys(ipaDataRef.current).length > 0) return;
-    if (!sentencesToUse.length) return;
+  const pickRowIpa = (row: unknown): string => {
+    if (!row || typeof row !== 'object') return '';
+    const o = row as Record<string, unknown>;
+    const raw = o.ipa ?? o.IPA;
+    return raw != null ? String(raw).trim() : '';
+  };
+
+  const fetchIPA = async (sentencesToUse = transcript, langOverride?: string): Promise<boolean> => {
+    const ref = ipaDataRef.current;
+    const hasUsefulIpa = Object.values(ref).some((v) => typeof v === 'string' && v.trim().length > 0);
+    if (hasUsefulIpa) return true;
+    if (!sentencesToUse.length) return true;
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim();
+    if (!apiKey) {
+      console.error('IPA: NEXT_PUBLIC_GEMINI_API_KEY is missing (restart dev server after changing .env.local)');
+      return false;
+    }
     const lang = langOverride ?? recognitionLang;
     setIsGeneratingIPA(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
 
       const sentencesToTranslate = sentencesToUse.map((s) => ({ id: s.id, text: s.text }));
 
@@ -200,32 +222,48 @@ export function useLessonLogic(
         },
       });
 
-      let jsonStr = response.text?.trim() || '[]';
+      if (!response.candidates?.length) {
+        throw new Error(
+          `Gemini returned no candidates: ${JSON.stringify(response.promptFeedback ?? {})}`
+        );
+      }
+
+      const fromSdk = response.text?.trim() ?? '';
+      const fromAllParts = joinAllCandidateTextParts(response);
+      let jsonStr = fromSdk || fromAllParts || '[]';
       if (jsonStr.startsWith('```')) {
         jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
       }
-      const parsed = JSON.parse(jsonStr) as { id?: number; ipa?: string }[];
-      if (!Array.isArray(parsed)) {
-        throw new Error('IPA response was not a JSON array');
-      }
+      const parsed = parseGeminiJsonArray(jsonStr) as unknown[];
 
       const newIpaData: Record<number, string> = {};
       sentencesToUse.forEach((s, i) => {
-        const row = parsed.find((p) => Number(p?.id) === s.id) ?? parsed[i];
-        const ipa = row?.ipa != null ? String(row.ipa).trim() : '';
+        const row =
+          (parsed.find((p) => p && typeof p === 'object' && Number((p as { id?: number }).id) === s.id) as
+            | unknown
+            | undefined) ?? parsed[i];
+        const ipa = pickRowIpa(row);
         if (ipa) newIpaData[s.id] = ipa;
       });
+
+      const outKeyCount = Object.keys(newIpaData).length;
+
+      if (outKeyCount === 0) {
+        return false;
+      }
 
       ipaDataRef.current = newIpaData;
       setIpaData(newIpaData);
 
       const persistId = currentLessonIdRef.current;
-      if (persistId && Object.keys(newIpaData).length > 0) {
+      if (persistId) {
         await updateLessonProgress(persistId, completedSentencesRef.current, newIpaData);
         loadLessonsList();
       }
+      return true;
     } catch (error) {
       console.error('Failed to generate IPA', error);
+      return false;
     } finally {
       setIsGeneratingIPA(false);
     }

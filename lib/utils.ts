@@ -102,3 +102,50 @@ export const getIPASystemInstruction = (recognitionLang: string) => {
   const label = isGermanForIPA(recognitionLang) ? 'German' : 'English';
   return `You are an IPA converter. The user message is a JSON array of objects with "id" (number) and "text" (string). For each object, output ${label} IPA for "text" only. Return a JSON array of the same length, same order, with objects {"id": <same id as input>, "ipa": "<IPA string without surrounding slashes>"}. Use every input id exactly once. Output ONLY that JSON array, no markdown or prose.`;
 };
+
+/** First top-level JSON array in a string (handles prose/markdown before/after). */
+export function extractFirstJsonArray(raw: string): string | null {
+  const start = raw.indexOf('[');
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (c === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+    if (c === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (c === '[') depth++;
+    else if (c === ']') {
+      depth--;
+      if (depth === 0) return raw.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+/** Parse model output that may be wrapped in extra text or markdown fences (already stripped). */
+export function parseGeminiJsonArray(text: string): unknown[] {
+  const trimmed = text.trim();
+  const extracted = extractFirstJsonArray(trimmed);
+  const candidates = extracted ? Array.from(new Set([trimmed, extracted])) : [trimmed];
+  for (const c of candidates) {
+    try {
+      const v = JSON.parse(c);
+      if (Array.isArray(v)) return v;
+    } catch {
+      /* try next */
+    }
+  }
+  throw new Error('Could not parse a JSON array from model response');
+}

@@ -135,7 +135,7 @@ export function NewLessonModal({ onClose, onSubmit }: NewLessonModalProps) {
                 <Music2 size={40} />
               </div>
               <p className="text-lg font-medium text-white mb-1">Upload Audio File</p>
-              <p className="text-sm text-gray-400 mb-4">MP3, WAV, M4A — click or drop here</p>
+              <p className="text-sm text-gray-400 mb-4">MP3, WAV, M4A - click or drop here</p>
               <input
                 type="file"
                 accept="audio/*"
@@ -154,7 +154,7 @@ export function NewLessonModal({ onClose, onSubmit }: NewLessonModalProps) {
             >
               <FileText size={20} className="text-gray-400 shrink-0" />
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium text-gray-300">+ Add transcript (.srt) — optional</p>
+                <p className="text-sm font-medium text-gray-300">+ Add transcript (.srt) - optional</p>
                 <p className="text-xs text-gray-500 mt-0.5">Drop file here or click</p>
                 {transcriptFile && <p className="text-xs text-emerald-500 mt-1">✓ {transcriptFile.name}</p>}
               </div>

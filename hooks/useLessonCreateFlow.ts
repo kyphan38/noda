@@ -11,7 +11,7 @@ type Selected = {
   data: LessonItem | DeckItem;
 };
 
-type FetchIPA = (sentencesToUse?: Sentence[], langOverride?: string) => void | Promise<void>;
+type FetchIPA = (sentencesToUse?: Sentence[], langOverride?: string) => boolean | Promise<boolean>;
 
 export function useLessonCreateFlow(
   setSelectedItem: Dispatch<SetStateAction<Selected | null>>,
@@ -72,11 +72,20 @@ export function useLessonCreateFlow(
 
         await handleLoadLesson(lessonId);
         await handleModeChange('normal');
+        let ipaOk = true;
         if (data.generateIpa && sentences.length > 0) {
-          await fetchIPA(sentences, data.language);
+          ipaOk = await fetchIPA(sentences, data.language);
         }
         setUploadMode('idle');
-        setToast({ message: 'Lesson created successfully.', type: 'success' });
+        if (!ipaOk) {
+          setToast({
+            message:
+              'Lesson created, but IPA generation failed. Set NEXT_PUBLIC_GEMINI_API_KEY in .env.local, restart dev server, and check the browser console.',
+            type: 'error',
+          });
+        } else {
+          setToast({ message: 'Lesson created successfully.', type: 'success' });
+        }
       } catch {
         setToast({ message: 'Failed to create lesson.', type: 'error' });
       }

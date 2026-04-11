@@ -11,7 +11,7 @@ interface TrashCardProps {
 
 export function TrashCard({ id, name, originalType, language, onDeletePermanently }: TrashCardProps) {
   const typeIcon = originalType === 'lesson' ? '🎧' : '🎴';
-  const langLabel = language?.toUpperCase() || '—';
+  const langLabel = language?.toUpperCase() || '-';
 
   return (
     <div className="group flex items-center gap-2 min-w-0 ml-2 px-2 py-1.5 rounded-lg bg-gray-900/50 border border-gray-800 mb-1 transition-colors duration-200">
