@@ -53,5 +53,32 @@ export type Lesson = {
   isTrashed?: boolean;
 };
 
+export type ContentType = 'lesson' | 'deck';
+
+export interface LessonItem {
+  id: string;
+  name: string;
+  language: 'en' | 'de';
+  progress: number; // 0-100
+  hasAudio: boolean;
+  hasIpa: boolean;
+  type: 'lesson'; // CRITICAL: để phân biệt với deck
+}
+
+export interface DeckItem {
+  id: string;
+  name: string;
+  language: 'en' | 'de' | 'mixed';
+  cardCount: number;
+  type: 'deck'; // CRITICAL: để phân biệt với lesson
+}
+
+export interface TrashItem {
+  id: string;
+  name: string;
+  originalType: 'lesson' | 'deck';
+  language: string;
+}
+
 // Expanded sections state
 export type ExpandedSections = Record<string, boolean>;

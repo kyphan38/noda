@@ -123,6 +123,18 @@ export function useLessonLogic(
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
+  const handleRenameLesson = async (id: string, newName: string) => {
+    const lesson = await getLesson(id);
+    if (lesson) {
+      lesson.name = newName;
+      await saveLesson(lesson);
+      if (currentLessonId === id) {
+        setLessonName(newName);
+      }
+      loadLessonsList();
+    }
+  };
+
   const handleTrashLesson = async (id: string) => {
     await trashLesson(id);
     if (currentLessonId === id) {
@@ -309,6 +321,7 @@ export function useLessonLogic(
     transcript,
     handleLoadLesson,
     handleNewLesson,
+    handleRenameLesson,
     handleTrashLesson,
     handleDeletePermanently,
     fetchIPA,

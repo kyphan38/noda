@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, LogOut, PanelLeft } from 'lucide-react';
-import { LessonSummary, ExpandedSections } from '@/types';
+import { Music2, Layers, LogOut, PanelLeft } from 'lucide-react';
+import { LessonSummary, ExpandedSections, LessonItem, DeckItem, TrashItem } from '@/types';
 import { SidebarSection } from './SidebarSection';
-import { TrashSection } from './TrashSection';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,7 +13,9 @@ interface SidebarProps {
   expandedSections: ExpandedSections;
   onLoadLesson: (id: string) => void;
   onNewLesson: () => void;
+  onNewDeck: () => void;
   onTrashLesson: (id: string) => void;
+  onRenameLesson?: (id: string, newName: string) => void;
   onLogout: () => void;
   onToggleSection: (section: string, expanded: boolean) => void;
 }
@@ -27,11 +28,45 @@ export function Sidebar({
   expandedSections,
   onLoadLesson,
   onNewLesson,
+  onNewDeck,
   onTrashLesson,
+  onRenameLesson,
   onLogout,
   onToggleSection,
 }: SidebarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  // Map LessonSummary to the new types based on hasAudio
+  const activeLessons: LessonItem[] = lessons
+    .filter((l) => !l.isTrashed && l.hasAudio)
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      language: l.language as 'en' | 'de',
+      progress: l.progress,
+      hasAudio: l.hasAudio,
+      hasIpa: l.hasIpa,
+      type: 'lesson',
+    }));
+
+  const activeDecks: DeckItem[] = lessons
+    .filter((l) => !l.isTrashed && !l.hasAudio)
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      language: l.language as 'en' | 'de' | 'mixed',
+      cardCount: l.progress, // Using progress as a proxy for card count since it's the only number available
+      type: 'deck',
+    }));
+
+  const trashItems: TrashItem[] = lessons
+    .filter((l) => l.isTrashed)
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      originalType: l.hasAudio ? 'lesson' : 'deck',
+      language: l.language,
+    }));
 
   return (
     <>
@@ -74,51 +109,66 @@ export function Sidebar({
             </div>
           </div>
 
-          <div className="p-4">
+          <div className="actions-container flex flex-col gap-2 p-4">
             <button
               onClick={onNewLesson}
-              className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg border border-emerald-500/30 flex items-center justify-center gap-2 font-medium transition-colors mb-3"
+              className="btn-new-lesson w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
             >
-              <Plus size={18} /> New Activity
+              <Music2 size={18} /> + New Lesson
+            </button>
+            <button
+              onClick={onNewDeck}
+              className="btn-new-deck w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
+            >
+              <Layers size={18} /> + New Deck
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-6">
             {/* Audio Lessons Section */}
             <SidebarSection
-              title="Audio Lessons"
-              sections={['audio-en', 'audio-de']}
-              lessons={lessons}
+              type="lessons"
+              title="LESSONS"
+              items={activeLessons}
               currentLessonId={currentLessonId}
               expandedSections={expandedSections}
               onToggleSection={onToggleSection}
               onLoadLesson={onLoadLesson}
               onTrashLesson={onTrashLesson}
+              onRenameLesson={onRenameLesson}
               activeMenu={activeMenu}
               setActiveMenu={setActiveMenu}
             />
 
             {/* Flashcards Section */}
             <SidebarSection
-              title="Flashcards Deck"
-              sections={['flashcard-en', 'flashcard-de']}
-              lessons={lessons}
+              type="decks"
+              title="DECKS"
+              items={activeDecks}
               currentLessonId={currentLessonId}
               expandedSections={expandedSections}
               onToggleSection={onToggleSection}
               onLoadLesson={onLoadLesson}
               onTrashLesson={onTrashLesson}
+              onRenameLesson={onRenameLesson}
               activeMenu={activeMenu}
               setActiveMenu={setActiveMenu}
               emptyMessage="No flashcard decks yet."
             />
 
             {/* Trash Section */}
-            <TrashSection
-              lessons={lessons}
-              isExpanded={expandedSections['trash']}
-              onToggleSection={(expanded) => onToggleSection('trash', expanded)}
-              onDeletePermanently={onTrashLesson}
+            <SidebarSection
+              type="trash"
+              title="TRASH & CACHE"
+              items={trashItems}
+              currentLessonId={currentLessonId}
+              expandedSections={expandedSections}
+              onToggleSection={onToggleSection}
+              onLoadLesson={onLoadLesson}
+              onTrashLesson={onTrashLesson}
+              onRenameLesson={onRenameLesson}
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
             />
           </div>
         </div>

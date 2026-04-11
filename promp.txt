@@ -1,0 +1,1910 @@
+## 🎯 5 PROMPTS REFACTORING - CHI TIẾT & TUẦN TỰ
+
+---
+
+# 📦 PROMPT 1: SIDEBAR STRUCTURE REFACTORING
+
+## 🎯 Mục tiêu
+Sửa lại cấu trúc Sidebar để phân biệt rõ ràng giữa Audio Lessons và Flashcard Decks, loại bỏ sự thừa thãi.
+
+## 🛑 CRITICAL RULES
+- **KHÔNG ĐƯỢC** sửa file: `app/page.tsx`, `hooks/*`, `lib/*`
+- **CHỈ SỬA**: `components/Sidebar.tsx`, `components/SidebarSection.tsx`, `types/index.tsx`
+- **GIỮ NGUYÊN** toàn bộ logic IndexedDB, chỉ thay đổi UI rendering
+
+## 📋 REQUIREMENTS
+
+### 1. File `types/index.tsx`
+
+**THÊM MỚI** type definitions:
+
+```typescript
+// Thêm vào types/index.tsx
+
+export type ContentType = 'lesson' | 'deck';
+
+export interface LessonItem {
+  id: string;
+  name: string;
+  language: 'en' | 'de';
+  progress: number; // 0-100
+  hasAudio: boolean;
+  hasIPA: boolean;
+  type: 'lesson'; // CRITICAL: để phân biệt với deck
+}
+
+export interface DeckItem {
+  id: string;
+  name: string;
+  language: 'en' | 'de' | 'mixed';
+  cardCount: number;
+  type: 'deck'; // CRITICAL: để phân biệt với lesson
+}
+
+export interface TrashItem {
+  id: string;
+  name: string;
+  originalType: 'lesson' | 'deck';
+  language: string;
+}
+```
+
+### 2. File `components/Sidebar.tsx`
+
+**STRUCTURE MỚI:**
+
+```
+Sidebar Layout:
+├─ Header: "Noda." + Toggle icons
+├─ Quick Actions (2 buttons riêng biệt)
+│  ├─ [+ New Lesson] (Emerald green, icon: 🎧)
+│  └─ [+ New Deck] (Blue accent, icon: 🎴)
+├─ Section 1: LESSONS (collapsible)
+│  ├─ 🇬🇧 English (X) - Accordion
+│  │  └─ List of LessonCard components
+│  └─ 🇩🇪 German (X) - Accordion
+│     └─ List of LessonCard components
+├─ Section 2: DECKS (collapsible)
+│  └─ Flat list of DeckCard components
+│     (không phân theo ngôn ngữ, chỉ hiển thị tag)
+└─ Section 3: TRASH & CACHE (collapsible)
+   └─ List of TrashCard components
+```
+
+**UI SPECIFICATIONS:**
+
+**Quick Actions Area:**
+```css
+.actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.btn-new-lesson {
+  background: emerald-600; /* #059669 */
+  icon: Music note (Lucide: Music2)
+  text: "+ New Lesson"
+}
+
+.btn-new-deck {
+  background: blue-600; /* #2563eb */
+  icon: Layers (Lucide: Layers)
+  text: "+ New Deck"
+}
+```
+
+**Section Headers:**
+```
+LESSONS - font-size: 11px, uppercase, gray-500, letter-spacing: 0.05em
+DECKS - same style
+TRASH & CACHE - same style
+```
+
+**Accordion Headers (EN/DE trong Lessons):**
+```
+Format: 🇬🇧 English (5) 
+- Flag emoji + Language name + Count trong ngoặc
+- Collapsible với chevron icon
+- Khi expand: show list LessonCard bên dưới
+```
+
+**DeckCard (mới - trong DECKS section):**
+```typescript
+interface DeckCardProps {
+  name: string;
+  cardCount: number;
+  language: 'en' | 'de' | 'mixed';
+  onClick: () => void;
+}
+
+// Visual:
+┌─────────────────────────────┐
+│ 🎴 German Verbs        [🇩🇪] │
+│ 50 cards                    │
+│ Progress bar (if exists)    │
+└─────────────────────────────┘
+
+Hover state: slight scale + emerald border
+```
+
+### 3. File `components/SidebarSection.tsx`
+
+**CẬP NHẬT:**
+
+Component này hiện tại render các section. Cần sửa để:
+
+1. **Support 3 loại sections:**
+   - `type: 'lessons'` → Render accordions EN/DE
+   - `type: 'decks'` → Render flat list DeckCards
+   - `type: 'trash'` → Render trash items
+
+2. **Props interface:**
+```typescript
+interface SidebarSectionProps {
+  type: 'lessons' | 'decks' | 'trash';
+  title: string;
+  items: LessonItem[] | DeckItem[] | TrashItem[];
+  isCollapsible?: boolean;
+  defaultExpanded?: boolean;
+}
+```
+
+3. **Render logic:**
+```typescript
+if (type === 'lessons') {
+  // Group items by language
+  const englishLessons = items.filter(i => i.language === 'en');
+  const germanLessons = items.filter(i => i.language === 'de');
+  
+  return (
+    <Accordion title="🇬🇧 English (count)">
+      {englishLessons.map(lesson => <LessonCard {...lesson} />)}
+    </Accordion>
+    <Accordion title="🇩🇪 German (count)">
+      {germanLessons.map(lesson => <LessonCard {...lesson} />)}
+    </Accordion>
+  )
+}
+
+if (type === 'decks') {
+  // Flat list, NO grouping
+  return items.map(deck => <DeckCard {...deck} />)
+}
+
+if (type === 'trash') {
+  // Show mixed trash items
+  return items.map(item => <TrashCard {...item} />)
+}
+```
+
+### 4. Component mới: `components/DeckCard.tsx`
+
+**TẠO FILE MỚI** (copy từ LessonCard.tsx và modify):
+
+```typescript
+// components/DeckCard.tsx
+
+interface DeckCardProps {
+  id: string;
+  name: string;
+  cardCount: number;
+  language: 'en' | 'de' | 'mixed';
+  onClick: () => void;
+}
+
+export function DeckCard({ name, cardCount, language, onClick }: DeckCardProps) {
+  const languageFlag = {
+    en: '🇬🇧',
+    de: '🇩🇪',
+    mixed: '🌐'
+  };
+  
+  return (
+    <div className="deck-card" onClick={onClick}>
+      <div className="deck-header">
+        <span className="deck-icon">🎴</span>
+        <span className="deck-name">{name}</span>
+        <span className="deck-flag">{languageFlag[language]}</span>
+      </div>
+      <div className="deck-meta">
+        <span className="card-count">{cardCount} cards</span>
+      </div>
+    </div>
+  );
+}
+```
+
+**Styling (Tailwind classes):**
+```
+deck-card: 
+  - bg-gray-800/50
+  - border border-gray-700
+  - rounded-lg
+  - p-3
+  - cursor-pointer
+  - hover:border-blue-500
+  - transition-all
+  - mb-2
+```
+
+## ✅ ACCEPTANCE CRITERIA
+
+**Sau khi hoàn thành Prompt 1:**
+
+1. ✅ Sidebar có 2 buttons riêng biệt: "New Lesson" (emerald) và "New Deck" (blue)
+2. ✅ Section LESSONS hiển thị accordions EN/DE với count chính xác
+3. ✅ Section DECKS hiển thị flat list (không phân theo ngôn ngữ)
+4. ✅ DeckCard component mới được tạo với đúng styling
+5. ✅ TRASH section vẫn hoạt động như cũ
+6. ✅ Không có lỗi TypeScript
+7. ✅ Không ảnh hưởng đến page.tsx hay hooks
+
+## 🔍 TESTING CHECKLIST
+
+- [ ] Click expand/collapse accordions hoạt động
+- [ ] Hover vào DeckCard có hiệu ứng
+- [ ] Count hiển thị đúng (3 lessons EN, 5 lessons DE, 2 decks)
+- [ ] Icons hiển thị rõ ràng
+- [ ] Responsive trên mobile (sidebar collapse)
+
+---
+
+# 📦 PROMPT 2: UPLOAD FLOW SEPARATION
+
+## 🎯 Mục tiêu
+Tách riêng flow tạo Audio Lesson và Flashcard Deck, mỗi loại có modal/panel riêng.
+
+## 🛑 CRITICAL RULES
+- **KHÔNG ĐƯỢC** sửa: `hooks/*`, `lib/db.ts` (chỉ dùng functions có sẵn)
+- **CHỈ SỬA**: `components/UploadPanel.tsx`, `app/page.tsx` (state management)
+- **TẠO MỚI**: `components/NewLessonModal.tsx`, `components/NewDeckModal.tsx`
+
+## 📋 REQUIREMENTS
+
+### 1. File `app/page.tsx`
+
+**THÊM STATE:**
+
+```typescript
+// Thêm vào app/page.tsx
+
+const [uploadMode, setUploadMode] = useState<'idle' | 'lesson' | 'deck'>('idle');
+
+function handleNewLesson() {
+  setUploadMode('lesson');
+}
+
+function handleNewDeck() {
+  setUploadMode('deck');
+}
+
+function closeUploadModal() {
+  setUploadMode('idle');
+}
+```
+
+**UPDATE RENDER:**
+
+```typescript
+// Thay thế phần render UploadPanel hiện tại
+
+{uploadMode === 'lesson' && (
+  <NewLessonModal 
+    onClose={closeUploadModal}
+    onSubmit={handleLessonCreated} // existing function
+  />
+)}
+
+{uploadMode === 'deck' && (
+  <NewDeckModal
+    onClose={closeUploadModal}
+    onSubmit={handleDeckCreated} // NEW function - see below
+  />
+)}
+```
+
+**THÊM FUNCTION:**
+
+```typescript
+async function handleDeckCreated(deckData: {
+  name: string;
+  language: 'en' | 'de';
+  content: string; // raw text, mỗi dòng 1 item
+}) {
+  // Parse content
+  const cards = deckData.content
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+  
+  // Save to IndexedDB via lib/db.ts
+  const deck = {
+    id: generateId(),
+    name: deckData.name,
+    language: deckData.language,
+    cards: cards,
+    cardCount: cards.length,
+    type: 'deck' as const,
+    createdAt: Date.now()
+  };
+  
+  await saveToDatabase(deck); // Use existing lib/db.ts function
+  
+  // Update sidebar state
+  loadDecksFromDB(); // Trigger re-render
+  setUploadMode('idle');
+}
+```
+
+### 2. Component mới: `components/NewLessonModal.tsx`
+
+**TẠO FILE MỚI** (refactor từ UploadPanel.tsx hiện tại):
+
+```typescript
+// components/NewLessonModal.tsx
+
+interface NewLessonModalProps {
+  onClose: () => void;
+  onSubmit: (data: LessonData) => void;
+}
+
+export function NewLessonModal({ onClose, onSubmit }: NewLessonModalProps) {
+  const [lessonName, setLessonName] = useState('');
+  const [language, setLanguage] = useState<'en' | 'de'>('de');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+  
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-content">
+        {/* Modal header */}
+        <div className="modal-header">
+          <h2>🎧 Create New Audio Lesson</h2>
+          <button onClick={onClose}>✕</button>
+        </div>
+        
+        {/* Lesson name input */}
+        <input
+          placeholder="Lesson name (e.g., German A1 Basics)"
+          value={lessonName}
+          onChange={(e) => setLessonName(e.target.value)}
+        />
+        
+        {/* Language selector */}
+        <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+          <option value="de">🇩🇪 German</option>
+          <option value="en">🇬🇧 English</option>
+        </select>
+        
+        {/* Audio upload - SINGLE COMPACT ZONE */}
+        <div className="upload-zone-compact">
+          <div className="upload-primary">
+            <Music2 size={32} />
+            <p>Upload Audio File</p>
+            <p className="text-sm text-gray-400">MP3, WAV, M4A</p>
+            <input type="file" accept="audio/*" onChange={handleAudioUpload} />
+            {audioFile && <p className="text-emerald-500">✓ {audioFile.name}</p>}
+          </div>
+          
+          {/* Transcript upload - INLINE */}
+          <div className="upload-secondary">
+            <FileText size={20} />
+            <label>
+              + Add transcript (.srt) - Optional
+              <input type="file" accept=".srt" onChange={handleTranscriptUpload} />
+            </label>
+            {transcriptFile && <p className="text-sm">✓ {transcriptFile.name}</p>}
+          </div>
+        </div>
+        
+        {/* Submit button */}
+        <button 
+          className="btn-submit"
+          disabled={!audioFile || !lessonName}
+          onClick={handleSubmit}
+        >
+          Create Lesson
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+**STYLING REQUIREMENTS:**
+
+```css
+.upload-zone-compact {
+  /* Single rounded box */
+  background: rgba(31, 41, 55, 0.5); /* gray-800/50 */
+  border: 2px dashed #374151; /* gray-700 */
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.upload-primary {
+  /* Main audio upload area */
+  text-align: center;
+  padding: 32px;
+  border-bottom: 1px solid #374151;
+  margin-bottom: 16px;
+}
+
+.upload-secondary {
+  /* Transcript upload - smaller inline */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(17, 24, 39, 0.5); /* gray-900/50 */
+  border-radius: 8px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #1f2937; /* gray-800 */
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+```
+
+### 3. Component mới: `components/NewDeckModal.tsx`
+
+**TẠO FILE MỚI:**
+
+```typescript
+// components/NewDeckModal.tsx
+
+interface NewDeckModalProps {
+  onClose: () => void;
+  onSubmit: (data: DeckData) => void;
+}
+
+export function NewDeckModal({ onClose, onSubmit }: NewDeckModalProps) {
+  const [deckName, setDeckName] = useState('');
+  const [language, setLanguage] = useState<'en' | 'de'>('de');
+  const [content, setContent] = useState('');
+  const [cardCount, setCardCount] = useState(0);
+  
+  // Auto-count cards as user types
+  useEffect(() => {
+    const lines = content.split('\n').filter(l => l.trim().length > 0);
+    setCardCount(lines.length);
+  }, [content]);
+  
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-content">
+        {/* Header */}
+        <div className="modal-header">
+          <h2>🎴 Create Flashcard Deck</h2>
+          <button onClick={onClose}>✕</button>
+        </div>
+        
+        {/* Deck name */}
+        <input
+          placeholder="Deck name (e.g., German Verbs A1)"
+          value={deckName}
+          onChange={(e) => setDeckName(e.target.value)}
+        />
+        
+        {/* Language */}
+        <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+          <option value="de">🇩🇪 German</option>
+          <option value="en">🇬🇧 English</option>
+        </select>
+        
+        {/* Content textarea */}
+        <div className="deck-input-area">
+          <label>
+            Flashcard Content
+            <span className="text-gray-400 text-sm ml-2">
+              (One item per line)
+            </span>
+          </label>
+          
+          <textarea
+            className="deck-textarea"
+            placeholder={`der Apfel\ndie Katze\ndas Haus\nlernen\nmachen\n...`}
+            rows={12}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
+          
+          <div className="card-counter">
+            <Layers size={16} />
+            <span>{cardCount} cards</span>
+          </div>
+        </div>
+        
+        {/* File upload alternative */}
+        <div className="upload-option">
+          <p className="text-sm text-gray-400">or</p>
+          <label className="file-upload-label">
+            <Upload size={16} />
+            Upload .txt file
+            <input 
+              type="file" 
+              accept=".txt" 
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </label>
+        </div>
+        
+        {/* Submit */}
+        <button
+          className="btn-submit"
+          disabled={!deckName || cardCount === 0}
+          onClick={handleSubmit}
+        >
+          Create Deck ({cardCount} cards)
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+**STYLING:**
+
+```css
+.deck-textarea {
+  width: 100%;
+  min-height: 240px;
+  background: rgba(17, 24, 39, 0.8); /* gray-900/80 */
+  border: 1px solid #374151; /* gray-700 */
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: white;
+  resize: vertical;
+}
+
+.card-counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: #10b981; /* emerald-500 */
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.file-upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #374151; /* gray-700 */
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-upload-label:hover {
+  background: #4b5563; /* gray-600 */
+}
+```
+
+### 4. File `components/UploadPanel.tsx`
+
+**XÓA HOẶC DEPRECATED:**
+
+Sau khi tạo 2 modals riêng, component này có thể:
+- **Option A:** Xóa hoàn toàn
+- **Option B:** Giữ lại như fallback/legacy code (comment out)
+
+**KHUYẾN NGHỊ:** Xóa để tránh confusion.
+
+## ✅ ACCEPTANCE CRITERIA
+
+1. ✅ Click "New Lesson" button → NewLessonModal hiện lên
+2. ✅ Click "New Deck" button → NewDeckModal hiện lên
+3. ✅ Modal có backdrop blur, click outside không đóng (chỉ close button)
+4. ✅ NewLessonModal: Upload audio compactly, transcript optional inline
+5. ✅ NewDeckModal: Textarea với auto card counter
+6. ✅ Submit tạo item mới trong IndexedDB
+7. ✅ Sidebar tự động update sau khi create
+8. ✅ Upload panel cũ không còn render
+
+## 🔍 TESTING CHECKLIST
+
+- [ ] Tạo lesson với audio + transcript thành công
+- [ ] Tạo lesson chỉ với audio (no transcript) thành công
+- [ ] Tạo deck bằng paste text → count đúng
+- [ ] Tạo deck bằng upload .txt file → parse đúng
+- [ ] Modal đóng sau khi submit
+- [ ] Items xuất hiện đúng section trong Sidebar
+
+---
+
+# 📦 PROMPT 3: MAIN CONTENT ROUTING LOGIC
+
+## 🎯 Mục tiêu
+Xây dựng logic routing để render đúng UI tùy theo loại item được chọn (Lesson vs Deck), và ẩn Audio Player khi xem Flashcard.
+
+## 🛑 CRITICAL RULES
+- **KHÔNG ĐƯỢC** sửa: `components/Player.tsx`, `components/Transcript.tsx`, `hooks/useAudioPlayer.ts`
+- **CHỈ SỬA**: `app/page.tsx` (render logic)
+- **TẠO MỚI**: `components/FlashcardPlaceholder.tsx` (tạm thời)
+
+## 📋 REQUIREMENTS
+
+### 1. File `app/page.tsx`
+
+**THÊM STATE QUẢN LÝ:**
+
+```typescript
+// app/page.tsx
+
+const [selectedItem, setSelectedItem] = useState<{
+  id: string;
+  type: 'lesson' | 'deck';
+  data: LessonItem | DeckItem;
+} | null>(null);
+
+const [activeMode, setActiveMode] = useState<'listen' | 'dictation' | 'shadowing'>('listen');
+```
+
+**CALLBACK TỪ SIDEBAR:**
+
+```typescript
+function handleItemSelect(item: LessonItem | DeckItem) {
+  setSelectedItem({
+    id: item.id,
+    type: item.type, // 'lesson' or 'deck'
+    data: item
+  });
+  
+  // Reset mode nếu switch giữa lesson và deck
+  if (item.type === 'lesson') {
+    setActiveMode('listen');
+  }
+}
+```
+
+**RENDER LOGIC:**
+
+```typescript
+// app/page.tsx - return statement
+
+return (
+  <div className="app-container">
+    <Sidebar 
+      onItemSelect={handleItemSelect}
+      onNewLesson={() => setUploadMode('lesson')}
+      onNewDeck={() => setUploadMode('deck')}
+    />
+    
+    <main className="main-content">
+      {/* Header with app name */}
+      <header className="app-header">
+        <h1>🎧 Noda.</h1>
+        
+        {/* Mode tabs - CHỈ HIỆN KHI selectedItem.type === 'lesson' */}
+        {selectedItem?.type === 'lesson' && (
+          <div className="mode-tabs">
+            <button
+              className={activeMode === 'listen' ? 'active' : ''}
+              onClick={() => setActiveMode('listen')}
+            >
+              Normal (Listen)
+            </button>
+            <button
+              className={activeMode === 'dictation' ? 'active' : ''}
+              onClick={() => setActiveMode('dictation')}
+            >
+              Dictation
+            </button>
+            <button
+              className={activeMode === 'shadowing' ? 'active' : ''}
+              onClick={() => setActiveMode('shadowing')}
+            >
+              Shadowing
+            </button>
+          </div>
+        )}
+        
+        {/* NO Flashcard tab here! */}
+      </header>
+      
+      {/* Content Area */}
+      <div className="content-area">
+        {!selectedItem && <WelcomeScreen />}
+        
+        {selectedItem?.type === 'lesson' && (
+          <LessonView 
+            lesson={selectedItem.data as LessonItem}
+            mode={activeMode}
+          />
+        )}
+        
+        {selectedItem?.type === 'deck' && (
+          <DeckView 
+            deck={selectedItem.data as DeckItem}
+          />
+        )}
+      </div>
+    </main>
+  </div>
+);
+```
+
+### 2. Component mới: `components/LessonView.tsx`
+
+**TẠO FILE MỚI:**
+
+```typescript
+// components/LessonView.tsx
+
+interface LessonViewProps {
+  lesson: LessonItem;
+  mode: 'listen' | 'dictation' | 'shadowing';
+}
+
+export function LessonView({ lesson, mode }: LessonViewProps) {
+  return (
+    <div className="lesson-view">
+      {/* Audio Player - LUÔN HIỆN ở top */}
+      <Player lessonId={lesson.id} />
+      
+      {/* Mode-specific content */}
+      {mode === 'listen' && (
+        <Transcript 
+          lessonId={lesson.id}
+          readOnly={true}
+        />
+      )}
+      
+      {mode === 'dictation' && (
+        <>
+          <Transcript lessonId={lesson.id} readOnly={false} />
+          <DictationControls lessonId={lesson.id} />
+        </>
+      )}
+      
+      {mode === 'shadowing' && (
+        <ShadowingView lessonId={lesson.id} />
+      )}
+    </div>
+  );
+}
+```
+
+**QUAN TRỌNG:**
+- `Player` component **CHỈ RENDER** trong `LessonView`
+- Khi user chọn Deck, `LessonView` không được gọi → Player biến mất
+
+### 3. Component mới: `components/DeckView.tsx`
+
+**TẠO FILE MỚI (placeholder tạm thời):**
+
+```typescript
+// components/DeckView.tsx
+
+interface DeckViewProps {
+  deck: DeckItem;
+}
+
+export function DeckView({ deck }: DeckViewProps) {
+  return (
+    <div className="deck-view">
+      <div className="deck-placeholder">
+        <div className="placeholder-icon">
+          🎴
+        </div>
+        <h2>Flashcard Placeholder</h2>
+        <p>Deck: {deck.name}</p>
+        <p className="text-gray-400">
+          This section will contain the flashcard UI for reviewing<br />
+          vocabulary and sentences.
+        </p>
+        <div className="deck-info">
+          <p>{deck.cardCount} cards</p>
+          <p>Language: {deck.language === 'en' ? '🇬🇧 English' : '🇩🇪 German'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**STYLING:**
+
+```css
+.deck-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 600px;
+  padding: 48px;
+}
+
+.deck-placeholder {
+  text-align: center;
+  max-width: 500px;
+}
+
+.placeholder-icon {
+  font-size: 80px;
+  margin-bottom: 24px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.deck-info {
+  margin-top: 24px;
+  padding: 16px;
+  background: rgba(31, 41, 55, 0.5);
+  border-radius: 12px;
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+```
+
+### 4. Component mới: `components/WelcomeScreen.tsx`
+
+**TẠO FILE MỚI:**
+
+```typescript
+// components/WelcomeScreen.tsx
+
+export function WelcomeScreen() {
+  return (
+    <div className="welcome-screen">
+      <div className="welcome-content">
+        <h1 className="welcome-title">
+          🎧 Welcome to Noda
+        </h1>
+        <p className="welcome-subtitle">
+          Your AI-powered language learning companion
+        </p>
+        
+        <div className="welcome-features">
+          <div className="feature-card">
+            <Music2 size={32} className="text-emerald-500" />
+            <h3>Audio Lessons</h3>
+            <p>Listen, practice dictation, or shadow native speakers</p>
+          </div>
+          
+          <div className="feature-card">
+            <Layers size={32} className="text-blue-500" />
+            <h3>Flashcard Decks</h3>
+            <p>Review vocabulary and build fluency</p>
+          </div>
+          
+          <div className="feature-card">
+            <BarChart3 size={32} className="text-purple-500" />
+            <h3>Track Progress</h3>
+            <p>Monitor your learning journey</p>
+          </div>
+        </div>
+        
+        <div className="welcome-cta">
+          <p className="text-gray-400">
+            Get started by creating a new lesson or flashcard deck
+          </p>
+          <div className="cta-buttons">
+            <button className="btn-primary">
+              + New Lesson
+            </button>
+            <button className="btn-secondary">
+              + New Deck
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**STYLING:**
+
+```css
+.welcome-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 100px);
+  padding: 48px;
+}
+
+.welcome-content {
+  max-width: 800px;
+  text-align: center;
+}
+
+.welcome-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.welcome-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin: 48px 0;
+}
+
+.feature-card {
+  background: rgba(31, 41, 55, 0.5);
+  border: 1px solid #374151;
+  border-radius: 16px;
+  padding: 32px 24px;
+  transition: all 0.3s;
+}
+
+.feature-card:hover {
+  border-color: #10b981;
+  transform: translateY(-4px);
+}
+```
+
+### 5. Update `components/Sidebar.tsx`
+
+**THÊM PROPS:**
+
+```typescript
+// components/Sidebar.tsx
+
+interface SidebarProps {
+  onItemSelect: (item: LessonItem | DeckItem) => void;
+  onNewLesson: () => void;
+  onNewDeck: () => void;
+  selectedItemId?: string; // để highlight active item
+}
+```
+
+**CALLBACK INTEGRATION:**
+
+```typescript
+// Trong LessonCard component:
+<div 
+  className={`lesson-card ${selectedItemId === lesson.id ? 'active' : ''}`}
+  onClick={() => onItemSelect(lesson)}
+>
+  ...
+</div>
+
+// Trong DeckCard component:
+<div 
+  className={`deck-card ${selectedItemId === deck.id ? 'active' : ''}`}
+  onClick={() => onItemSelect(deck)}
+>
+  ...
+</div>
+```
+
+**ACTIVE STATE STYLING:**
+
+```css
+.lesson-card.active,
+.deck-card.active {
+  border-color: #10b981; /* emerald-500 */
+  background: rgba(16, 185, 129, 0.1);
+}
+```
+
+## ✅ ACCEPTANCE CRITERIA
+
+1. ✅ Chọn Lesson từ Sidebar → Hiện Player + Mode tabs + Transcript
+2. ✅ Chọn Deck từ Sidebar → Hiện Placeholder, KHÔNG có Player
+3. ✅ Switch giữa Listen/Dictation/Shadowing modes → UI update đúng
+4. ✅ Switch từ Lesson → Deck → Player biến mất hoàn toàn
+5. ✅ Switch từ Deck → Lesson → Player xuất hiện lại
+6. ✅ Không chọn gì → Hiện WelcomeScreen
+7. ✅ Active item có highlight trong Sidebar
+
+## 🔍 TESTING CHECKLIST
+
+- [ ] Click lesson → Player visible
+- [ ] Click deck → Player hidden
+- [ ] Click lesson → deck → lesson → Player shows/hides correctly
+- [ ] Mode tabs chỉ hiện khi xem lesson
+- [ ] Welcome screen hiện khi mới load app
+- [ ] Active highlight trong sidebar
+
+---
+
+# 📦 PROMPT 4: MODE TABS CLEANUP & RESPONSIVE
+
+## 🎯 Mục tiêu
+Hoàn thiện UI cho mode tabs (Listen/Dictation/Shadowing), đảm bảo responsive và loại bỏ hoàn toàn mọi흔 흔 tích của "Flashcard tab".
+
+## 🛑 CRITICAL RULES
+- **KHÔNG ĐƯỢC** sửa: Component logic bên trong (DictationControls, Transcript, Player)
+- **CHỈ SỬA**: `app/page.tsx` (header area), CSS/styling
+- **MỤC TIÊU**: Polish UI, không thêm tính năng mới
+
+## 📋 REQUIREMENTS
+
+### 1. File `app/page.tsx` - Header Area Refinement
+
+**CẤU TRÚC HEADER:**
+
+```tsx
+<header className="app-header">
+  {/* Left side: Logo */}
+  <div className="header-left">
+    <h1 className="app-logo">
+      <Headphones size={24} />
+      <span>Noda.</span>
+    </h1>
+  </div>
+  
+  {/* Center: Mode Tabs (chỉ khi viewing lesson) */}
+  {selectedItem?.type === 'lesson' && (
+    <div className="mode-tabs-container">
+      <div className="mode-tabs">
+        <button
+          className={`mode-tab ${activeMode === 'listen' ? 'active' : ''}`}
+          onClick={() => setActiveMode('listen')}
+        >
+          <Headphones size={18} />
+          <span>Normal (Listen)</span>
+        </button>
+        
+        <button
+          className={`mode-tab ${activeMode === 'dictation' ? 'active' : ''}`}
+          onClick={() => setActiveMode('dictation')}
+        >
+          <PenTool size={18} />
+          <span>Dictation</span>
+        </button>
+        
+        <button
+          className={`mode-tab ${activeMode === 'shadowing' ? 'active' : ''}`}
+          onClick={() => setActiveMode('shadowing')}
+        >
+          <Mic size={18} />
+          <span>Shadowing</span>
+        </button>
+      </div>
+    </div>
+  )}
+  
+  {/* Right side: User menu (future) */}
+  <div className="header-right">
+    {/* Placeholder for settings/user menu */}
+  </div>
+</header>
+```
+
+**STYLING - Mode Tabs:**
+
+```css
+/* app/globals.css or Tailwind classes */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #374151; /* gray-700 */
+  background: rgba(17, 24, 39, 0.8); /* gray-900/80 */
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-left {
+  flex-shrink: 0;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.mode-tabs-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 24px;
+}
+
+.mode-tabs {
+  display: inline-flex;
+  background: rgba(31, 41, 55, 0.6); /* gray-800/60 */
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.mode-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af; /* gray-400 */
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mode-tab:hover {
+  color: #d1d5db; /* gray-300 */
+  background: rgba(55, 65, 81, 0.5); /* gray-700/50 */
+}
+
+.mode-tab.active {
+  color: white;
+  background: #10b981; /* emerald-500 */
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.mode-tab svg {
+  flex-shrink: 0;
+}
+
+.header-right {
+  flex-shrink: 0;
+  width: 150px; /* Match header-left width for balance */
+}
+```
+
+### 2. Responsive Behavior
+
+**MOBILE (<768px):**
+
+```css
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  
+  .mode-tabs-container {
+    width: 100%;
+    padding: 0;
+  }
+  
+  .mode-tabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .mode-tab {
+    flex: 1;
+    justify-content: center;
+    padding: 12px 8px;
+  }
+  
+  .mode-tab span {
+    display: none; /* Hide text on mobile */
+  }
+  
+  .mode-tab svg {
+    margin: 0; /* Center icon */
+  }
+  
+  /* Show only icons on mobile */
+  .mode-tab[data-mode="listen"]::after {
+    content: "Listen";
+    font-size: 10px;
+    margin-top: 4px;
+  }
+  /* Repeat for other modes */
+}
+```
+
+**TABLET (768px - 1024px):**
+
+```css
+@media (min-width: 768px) and (max-width: 1024px) {
+  .mode-tab {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+```
+
+### 3. Keyboard Navigation
+
+**THÊM VÀO `app/page.tsx`:**
+
+```typescript
+// Keyboard shortcuts for mode switching (chỉ khi viewing lesson)
+useEffect(() => {
+  if (selectedItem?.type !== 'lesson') return;
+  
+  function handleKeyPress(e: KeyboardEvent) {
+    // Ctrl/Cmd + 1/2/3
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      switch(e.key) {
+        case '1':
+          e.preventDefault();
+          setActiveMode('listen');
+          break;
+        case '2':
+          e.preventDefault();
+          setActiveMode('dictation');
+          break;
+        case '3':
+          e.preventDefault();
+          setActiveMode('shadowing');
+          break;
+      }
+    }
+  }
+  
+  window.addEventListener('keydown', handleKeyPress);
+  return () => window.removeEventListener('keydown', handleKeyPress);
+}, [selectedItem]);
+```
+
+**HIỂN THỊ HINTS:**
+
+```tsx
+// Thêm tooltips vào mode tabs
+<button
+  className={`mode-tab ${activeMode === 'listen' ? 'active' : ''}`}
+  onClick={() => setActiveMode('listen')}
+  title="Switch to Listen mode (⌘1)"
+>
+  ...
+</button>
+```
+
+### 4. Animation & Transitions
+
+**SMOOTH MODE TRANSITION:**
+
+```css
+.content-area {
+  /* Add fade transition when switching modes */
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Apply to mode-specific content */
+.lesson-view > * {
+  animation: fadeIn 0.2s ease-out;
+}
+```
+
+**TAB INDICATOR SLIDE:**
+
+```tsx
+// Optional: Sliding indicator under active tab
+<div className="mode-tabs">
+  <div 
+    className="tab-indicator" 
+    style={{
+      transform: `translateX(${activeMode === 'listen' ? '0%' : activeMode === 'dictation' ? '100%' : '200%'})`
+    }}
+  />
+  {/* buttons... */}
+</div>
+```
+
+```css
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 33.33%;
+  height: 3px;
+  background: #10b981;
+  border-radius: 2px 2px 0 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+```
+
+### 5. VERIFICATION: Remove All Flashcard Tab References
+
+**SEARCH & DESTROY:**
+
+Tìm kiếm trong toàn bộ codebase:
+
+```bash
+# Search for any remaining "flashcard" tab references
+grep -r "Flashcard" app/
+grep -r "flashcard.*tab" components/
+
+# Should return ZERO results in tab-related files
+```
+
+**CHECKLIST:**
+- [ ] No "Flashcard" button in mode tabs
+- [ ] No flashcard-related props in header
+- [ ] No flashcard mode state in page.tsx
+- [ ] Mode types only include: `'listen' | 'dictation' | 'shadowing'`
+
+## ✅ ACCEPTANCE CRITERIA
+
+1. ✅ Mode tabs chỉ hiện khi `selectedItem.type === 'lesson'`
+2. ✅ 3 tabs: Listen, Dictation, Shadowing (không có Flashcard)
+3. ✅ Active tab có highlight rõ ràng (emerald background)
+4. ✅ Hover states mượt mà
+5. ✅ Keyboard shortcuts hoạt động (Cmd+1/2/3)
+6. ✅ Mobile: tabs responsive, có thể hiện icon-only
+7. ✅ Transition mượt khi switch modes
+8. ✅ KHÔNG còn dấu vết Flashcard tab
+
+## 🔍 TESTING CHECKLIST
+
+- [ ] Desktop: Tabs centered, spacing đều
+- [ ] Tablet: Tabs responsive, readable
+- [ ] Mobile: Icon-only mode hoặc stacked
+- [ ] Click tabs → content updates với fade animation
+- [ ] Cmd+1/2/3 → tabs switch correctly
+- [ ] Switch Lesson → Deck → tabs biến mất
+- [ ] Code search "flashcard.*tab" = 0 results
+
+---
+
+# 📦 PROMPT 5: POLISH & FINAL TOUCHES
+
+## 🎯 Mục tiêu
+Hoàn thiện chi tiết cuối cùng: loading states, empty states, error handling, micro-interactions, và đảm bảo toàn bộ app hoạt động mượt mà.
+
+## 🛑 CRITICAL RULES
+- **KHÔNG ĐƯỢC** thêm tính năng mới
+- **CHỈ POLISH** những gì đã có
+- **FOCUS** vào UX details & edge cases
+
+## 📋 REQUIREMENTS
+
+### 1. Loading States
+
+**FILE: `app/page.tsx`**
+
+**THÊM STATE:**
+
+```typescript
+const [isLoadingLessons, setIsLoadingLessons] = useState(true);
+const [isLoadingDecks, setIsLoadingDecks] = useState(true);
+
+useEffect(() => {
+  async function loadData() {
+    setIsLoadingLessons(true);
+    setIsLoadingDecks(true);
+    
+    try {
+      await Promise.all([
+        loadLessonsFromDB(),
+        loadDecksFromDB()
+      ]);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setIsLoadingLessons(false);
+      setIsLoadingDecks(false);
+    }
+  }
+  
+  loadData();
+}, []);
+```
+
+**COMPONENT: `components/LoadingSkeleton.tsx`**
+
+**TẠO FILE MỚI:**
+
+```typescript
+// components/LoadingSkeleton.tsx
+
+export function LessonCardSkeleton() {
+  return (
+    <div className="lesson-card-skeleton">
+      <div className="skeleton-header">
+        <div className="skeleton-line w-2/3 h-4" />
+        <div className="skeleton-circle w-8 h-8" />
+      </div>
+      <div className="skeleton-progress h-2 mt-2" />
+      <div className="skeleton-line w-1/2 h-3 mt-2" />
+    </div>
+  );
+}
+
+export function DeckCardSkeleton() {
+  return (
+    <div className="deck-card-skeleton">
+      <div className="skeleton-line w-3/4 h-4" />
+      <div className="skeleton-line w-1/3 h-3 mt-2" />
+    </div>
+  );
+}
+```
+
+**STYLING:**
+
+```css
+.skeleton-line,
+.skeleton-circle,
+.skeleton-progress {
+  background: linear-gradient(
+    90deg,
+    rgba(55, 65, 81, 0.3) 0%,
+    rgba(75, 85, 99, 0.5) 50%,
+    rgba(55, 65, 81, 0.3) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+```
+
+**USE IN SIDEBAR:**
+
+```tsx
+// components/Sidebar.tsx
+
+{isLoadingLessons ? (
+  <>
+    <LessonCardSkeleton />
+    <LessonCardSkeleton />
+    <LessonCardSkeleton />
+  </>
+) : lessons.length === 0 ? (
+  <EmptyState type="lessons" />
+) : (
+  lessons.map(lesson => <LessonCard key={lesson.id} {...lesson} />)
+)}
+```
+
+### 2. Empty States
+
+**COMPONENT: `components/EmptyState.tsx`**
+
+**TẠO FILE MỚI:**
+
+```typescript
+// components/EmptyState.tsx
+
+interface EmptyStateProps {
+  type: 'lessons' | 'decks' | 'trash';
+  onAction?: () => void;
+}
+
+export function EmptyState({ type, onAction }: EmptyStateProps) {
+  const config = {
+    lessons: {
+      icon: '🎧',
+      title: 'No lessons yet',
+      description: 'Create your first audio lesson to start learning',
+      actionText: '+ New Lesson',
+      actionVariant: 'emerald'
+    },
+    decks: {
+      icon: '🎴',
+      title: 'No flashcard decks',
+      description: 'Build a vocabulary deck to practice',
+      actionText: '+ New Deck',
+      actionVariant: 'blue'
+    },
+    trash: {
+      icon: '🗑️',
+      title: 'Trash is empty',
+      description: 'Deleted items will appear here',
+      actionText: null,
+      actionVariant: null
+    }
+  }[type];
+  
+  return (
+    <div className="empty-state">
+      <div className="empty-icon">{config.icon}</div>
+      <h3 className="empty-title">{config.title}</h3>
+      <p className="empty-description">{config.description}</p>
+      
+      {config.actionText && onAction && (
+        <button
+          className={`empty-action btn-${config.actionVariant}`}
+          onClick={onAction}
+        >
+          {config.actionText}
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**STYLING:**
+
+```css
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  opacity: 0.6;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d1d5db; /* gray-300 */
+  margin-bottom: 8px;
+}
+
+.empty-description {
+  font-size: 12px;
+  color: #9ca3af; /* gray-400 */
+  margin-bottom: 16px;
+}
+
+.empty-action {
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px dashed #4b5563; /* gray-600 */
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.empty-action:hover {
+  border-style: solid;
+  background: rgba(75, 85, 99, 0.2);
+}
+```
+
+### 3. Error Handling
+
+**COMPONENT: `components/ErrorBoundary.tsx`**
+
+**TẠO FILE MỚI:**
+
+```typescript
+// components/ErrorBoundary.tsx
+
+import React from 'react';
+
+interface Props {
+  children: React.ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <div className="error-content">
+            <h2>⚠️ Something went wrong</h2>
+            <p className="error-message">
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </p>
+            <button
+              className="btn-retry"
+              onClick={() => window.location.reload()}
+            >
+              Reload App
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    return this.props.children;
+  }
+}
+```
+
+**WRAP APP:**
+
+```tsx
+// app/page.tsx
+
+export default function Home() {
+  return (
+    <ErrorBoundary>
+      <Auth>
+        {/* Main app content */}
+      </Auth>
+    </ErrorBoundary>
+  );
+}
+```
+
+### 4. Micro-Interactions
+
+**BUTTON PRESS FEEDBACK:**
+
+```css
+/* Add to all clickable buttons */
+button:active {
+  transform: scale(0.98);
+}
+
+.lesson-card:active,
+.deck-card:active {
+  transform: scale(0.99);
+}
+
+/* Success feedback */
+@keyframes successPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.success-animation {
+  animation: successPulse 0.4s ease-out;
+}
+```
+
+**TOAST NOTIFICATIONS:**
+
+**COMPONENT: `components/Toast.tsx`**
+
+```typescript
+// components/Toast.tsx
+
+interface ToastProps {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  onClose: () => void;
+}
+
+export function Toast({ message, type, onClose }: ToastProps) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+  
+  return (
+    <div className={`toast toast-${type}`}>
+      <span className="toast-icon">
+        {type === 'success' && '✓'}
+        {type === 'error' && '✕'}
+        {type === 'info' && 'ℹ'}
+      </span>
+      <span className="toast-message">{message}</span>
+      <button className="toast-close" onClick={onClose}>✕</button>
+    </div>
+  );
+}
+```
+
+**STYLING:**
+
+```css
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: slideInRight 0.3s ease-out;
+  z-index: 100;
+}
+
+.toast-success {
+  background: #10b981;
+  color: white;
+}
+
+.toast-error {
+  background: #ef4444;
+  color: white;
+}
+
+.toast-info {
+  background: #3b82f6;
+  color: white;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+```
+
+**USE IN APP:**
+
+```tsx
+// app/page.tsx
+
+const [toast, setToast] = useState<{
+  message: string;
+  type: 'success' | 'error' | 'info';
+} | null>(null);
+
+// After successful operations:
+async function handleLessonCreated(data: LessonData) {
+  try {
+    // ... creation logic
+    setToast({ message: 'Lesson created successfully!', type: 'success' });
+  } catch (error) {
+    setToast({ message: 'Failed to create lesson', type: 'error' });
+  }
+}
+
+// Render:
+{toast && (
+  <Toast
+    message={toast.message}
+    type={toast.type}
+    onClose={() => setToast(null)}
+  />
+)}
+```
+
+### 5. Final Polish Checklist
+
+**FOCUS STATES:**
+
+```css
+/* Keyboard navigation support */
+button:focus-visible,
+.lesson-card:focus-visible,
+.deck-card:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+```
+
+**SCROLL BEHAVIOR:**
+
+```css
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+```
+
+**PERFORMANCE:**
+
+```tsx
+// Memoize expensive components
+const MemoizedTranscript = React.memo(Transcript);
+const MemoizedPlayer = React.memo(Player);
+
+// Use in LessonView:
+<MemoizedPlayer lessonId={lesson.id} />
+<MemoizedTranscript lessonId={lesson.id} readOnly={mode === 'listen'} />
+```
+
+## ✅ ACCEPTANCE CRITERIA
+
+1. ✅ Loading skeletons hiện khi fetch data
+2. ✅ Empty states với clear CTAs
+3. ✅ Error boundary bắt crashes
+4. ✅ Toast notifications cho user actions
+5. ✅ Smooth animations & transitions
+6. ✅ Focus states cho accessibility
+7. ✅ Custom scrollbar styling
+8. ✅ Performance optimizations (memoization)
+
+## 🔍 FINAL TESTING CHECKLIST
+
+**Visual Polish:**
+- [ ] All buttons have hover/active states
+- [ ] Transitions are smooth (no janky animations)
+- [ ] Loading states show during data fetch
+- [ ] Empty states are clear and actionable
+
+**Error Handling:**
+- [ ] App doesn't crash on errors (ErrorBoundary works)
+- [ ] Toast notifications appear for success/error
+- [ ] Graceful degradation if IndexedDB fails
+
+**Accessibility:**
+- [ ] Keyboard navigation works (Tab, Enter, Arrows)
+- [ ] Focus states visible
+- [ ] Screen reader friendly (semantic HTML)
+
+**Performance:**
+- [ ] No unnecessary re-renders (use React DevTools)
+- [ ] Large lists don't lag
+- [ ] Smooth scrolling
+
+**Edge Cases:**
+- [ ] Works with 0 lessons/decks
+- [ ] Works with 100+ lessons/decks
+- [ ] Handles very long lesson/deck names
+- [ ] Mobile responsive at all breakpoints
+
+---

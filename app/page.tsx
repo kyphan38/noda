@@ -3,14 +3,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PanelLeft, Trash2, Plus } from 'lucide-react';
 import { AUTH_USERNAME, AUTH_PASSWORD, STORAGE_AUTH_KEY } from '@/constants';
-import { getLetters } from '@/lib/utils';
+import { getLetters, parseTranscript } from '@/lib/utils';
+import { saveLesson } from '@/lib/db';
 import { AuthScreen } from '@/components/Auth';
 import { Sidebar } from '@/components/Sidebar';
 import { SidebarSection } from '@/components/SidebarSection';
-import { TrashSection } from '@/components/TrashSection';
 import { Player } from '@/components/Player';
 import { Transcript } from '@/components/Transcript';
-import { UploadPanel } from '@/components/UploadPanel';
+import { NewLessonModal } from '@/components/NewLessonModal';
+import { NewDeckModal } from '@/components/NewDeckModal';
+import { CleanupModal } from '@/components/CleanupModal';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
@@ -26,6 +28,101 @@ export default function NodaApp() {
 
   // Mobile Tab State
   const [activeTab, setActiveTab] = useState<AppTab>('Lessons');
+  
+  const [uploadMode, setUploadMode] = useState<'idle' | 'lesson' | 'deck'>('idle');
+
+  const openNewLessonModal = () => {
+    handleNewLesson();
+    setUploadMode('lesson');
+  };
+
+  const openNewDeckModal = () => {
+    handleNewLesson();
+    setUploadMode('deck');
+  };
+
+  const closeUploadModal = () => {
+    setUploadMode('idle');
+  };
+
+  const handleLessonCreated = async (data: {
+    name: string;
+    language: 'en' | 'de';
+    audioFile: File;
+    transcriptFile: File | null;
+  }) => {
+    let text = '';
+    if (data.transcriptFile) {
+      text = await data.transcriptFile.text();
+    }
+    
+    const sentences = parseTranscript(text);
+    const lessonId = Date.now().toString();
+    
+    const newLesson = {
+      id: lessonId,
+      type: 'audio' as const,
+      name: data.name,
+      language: data.language,
+      audioFile: data.audioFile,
+      transcriptText: text,
+      ipaData: {},
+      completedSentences: {},
+      totalSentences: sentences.length,
+      createdAt: Date.now(),
+      lastAccessed: Date.now()
+    };
+    
+    await saveLesson(newLesson);
+    
+    // We need to reload the list and select the new lesson
+    // We can do this by setting the state and then calling handleLoadLesson
+    // But handleLoadLesson is from the hook. We can just call handleLoadLesson(lessonId)
+    // Wait, handleLoadLesson will fetch from DB. But we need to update the list first.
+    // The hook doesn't expose loadLessonsList, but handleLoadLesson might trigger it, or we can just let it be.
+    // Actually, handleLoadLesson sets currentLessonId, which triggers useEffect in the hook to load the lesson.
+    // Let's just call handleLoadLesson. Wait, the hook's handleLoadLesson doesn't refresh the list.
+    // But we can just call handleLoadLesson(lessonId) and it will load the lesson.
+    handleLoadLesson(lessonId);
+    setUploadMode('idle');
+  };
+
+  const handleDeckCreated = async (deckData: {
+    name: string;
+    language: 'en' | 'de';
+    content: string;
+  }) => {
+    const lines = deckData.content
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    
+    const lessonId = Date.now().toString();
+    
+    const newLesson = {
+      id: lessonId,
+      type: 'flashcard' as const,
+      name: deckData.name,
+      language: deckData.language,
+      transcriptText: '',
+      ipaData: {},
+      completedSentences: {},
+      totalSentences: lines.length,
+      createdAt: Date.now(),
+      lastAccessed: Date.now(),
+      flashcardData: {
+        lines,
+        ratings: {},
+        currentIndex: 0,
+        isShuffled: false,
+        shuffledIndices: []
+      }
+    };
+    
+    await saveLesson(newLesson);
+    handleLoadLesson(lessonId);
+    setUploadMode('idle');
+  };
 
   const {
     audioFile, setAudioFile, audioURL, setAudioURL,
@@ -48,13 +145,34 @@ export default function NodaApp() {
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
     expandedSections, setExpandedSections,
     appModeRef, completedSentencesRef, transcript,
-    handleLoadLesson, handleNewLesson, handleTrashLesson, handleDeletePermanently,
+    handleLoadLesson, handleNewLesson, handleRenameLesson, handleTrashLesson, handleDeletePermanently,
     handleStartLearning, handleModeChange, handleTranscriptUpload, handleFlashcardUpload
   } = useLessonLogic(audioFile, setAudioFile, setAudioURL, recognitionLang, setRecognitionLang);
 
   const activeSentenceRef = useRef<Sentence | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastScrolledIndexRef = useRef<number>(-1);
+  
+  // Cleanup Modal State
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+  const prevCompletedCountRef = useRef<number>(-1);
+
+  useEffect(() => {
+    if (isStarted && transcript.length > 0 && currentLessonId) {
+      const currentCount = Object.keys(completedSentences).length;
+      const total = transcript.length;
+      
+      if (prevCompletedCountRef.current !== -1 && prevCompletedCountRef.current < total && currentCount === total) {
+        setShowCleanupModal(true);
+      }
+      
+      prevCompletedCountRef.current = currentCount;
+    }
+  }, [completedSentences, transcript, isStarted, currentLessonId]);
+
+  useEffect(() => {
+    prevCompletedCountRef.current = -1;
+  }, [currentLessonId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -288,7 +406,9 @@ export default function NodaApp() {
           currentLessonId={currentLessonId}
           expandedSections={expandedSections}
           onLoadLesson={handleLoadLesson}
-          onNewLesson={handleNewLesson}
+          onNewLesson={openNewLessonModal}
+          onNewDeck={openNewDeckModal}
+          onRenameLesson={handleRenameLesson}
           onTrashLesson={(id) => {
             if (currentLessonId === id && !lessonsList.find(l => l.id === id)?.isTrashed) {
               handleTrashLesson(id);
@@ -382,15 +502,23 @@ export default function NodaApp() {
             {!currentLessonId && activeTab === 'Lessons' && (
               <div className="space-y-6">
                 <button
-                  onClick={handleNewLesson}
+                  onClick={openNewLessonModal}
                   className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-xl border border-emerald-500/30 flex items-center justify-center gap-2 font-medium transition-colors mb-4"
                 >
                   <Plus size={20} /> New Activity
                 </button>
                 <SidebarSection
-                  title="Audio Lessons"
-                  sections={['audio-en', 'audio-de']}
-                  lessons={lessonsList}
+                  type="lessons"
+                  title="LESSONS"
+                  items={lessonsList.filter(l => !l.isTrashed && l.hasAudio).map(l => ({
+                    id: l.id,
+                    name: l.name,
+                    language: l.language as 'en' | 'de',
+                    progress: l.progress,
+                    hasAudio: l.hasAudio,
+                    hasIpa: l.hasIpa,
+                    type: 'lesson',
+                  }))}
                   currentLessonId={currentLessonId}
                   expandedSections={expandedSections}
                   onToggleSection={(section, expanded) => setExpandedSections(prev => ({ ...prev, [section]: expanded }))}
@@ -410,10 +538,22 @@ export default function NodaApp() {
 
             {!currentLessonId && activeTab === 'Flashcards' && (
               <div className="space-y-6">
+                <button
+                  onClick={openNewDeckModal}
+                  className="w-full py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-xl border border-blue-500/30 flex items-center justify-center gap-2 font-medium transition-colors mb-4"
+                >
+                  <Plus size={20} /> New Deck
+                </button>
                 <SidebarSection
-                  title="Flashcards Deck"
-                  sections={['flashcard-en', 'flashcard-de']}
-                  lessons={lessonsList}
+                  type="decks"
+                  title="DECKS"
+                  items={lessonsList.filter(l => !l.isTrashed && !l.hasAudio).map(l => ({
+                    id: l.id,
+                    name: l.name,
+                    language: l.language as 'en' | 'de' | 'mixed',
+                    cardCount: l.progress,
+                    type: 'deck',
+                  }))}
                   currentLessonId={currentLessonId}
                   expandedSections={expandedSections}
                   onToggleSection={(section, expanded) => setExpandedSections(prev => ({ ...prev, [section]: expanded }))}
@@ -444,22 +584,29 @@ export default function NodaApp() {
           {/* Desktop & Active Lesson View */}
           <div className={`flex-1 flex flex-col min-h-0 ${!currentLessonId ? 'hidden md:flex' : 'flex'}`}>
             {/* Upload Section (Hidden when ready) */}
-            {!isStarted && (
-              <UploadPanel
-                lessonName={lessonName}
-                setLessonName={setLessonName}
-                audioFile={audioFile}
-                currentLessonId={currentLessonId}
-                handleAudioUpload={handleAudioUpload}
-                transcriptText={transcriptText}
-                handleTranscriptUpload={handleTranscriptUpload}
-                recognitionLang={recognitionLang}
-                setRecognitionLang={setRecognitionLang}
-                appMode={appMode}
-                setAppMode={setAppMode}
-                isGeneratingIPA={isGeneratingIPA}
-                handleStartLearning={handleStartLearning}
-                handleFlashcardUpload={handleFlashcardUpload}
+            {!isStarted && !currentLessonId && (
+              <div className="flex-1 flex items-center justify-center bg-gray-900 rounded-2xl border border-gray-800 p-8">
+                <div className="text-center space-y-4">
+                  <div className="text-6xl">🎧</div>
+                  <h2 className="text-2xl font-bold text-white">Select or Create a Lesson</h2>
+                  <p className="text-gray-400 max-w-md mx-auto">
+                    Choose a lesson from the sidebar or create a new one to start learning.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {uploadMode === 'lesson' && (
+              <NewLessonModal 
+                onClose={closeUploadModal}
+                onSubmit={handleLessonCreated}
+              />
+            )}
+
+            {uploadMode === 'deck' && (
+              <NewDeckModal
+                onClose={closeUploadModal}
+                onSubmit={handleDeckCreated}
               />
             )}
 
@@ -553,6 +700,18 @@ export default function NodaApp() {
           </div>
         </div>
       )}
+
+      {/* Cleanup Modal */}
+      <CleanupModal
+        isOpen={showCleanupModal}
+        onKeep={() => setShowCleanupModal(false)}
+        onCleanup={() => {
+          setShowCleanupModal(false);
+          if (currentLessonId) {
+            handleTrashLesson(currentLessonId);
+          }
+        }}
+      />
 
       {/* Mobile Bottom Tab Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 flex items-center justify-around p-2 z-40 pb-safe">

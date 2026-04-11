@@ -1,83 +1,163 @@
 import React from 'react';
-import { Globe, ChevronDown, ChevronRight } from 'lucide-react';
-import { LessonSummary } from '@/types';
-import { SECTION_LABELS } from '@/constants';
+import { Globe, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import { LessonSummary, LessonItem, DeckItem, TrashItem } from '@/types';
 import { LessonCard } from './LessonCard';
+import { DeckCard } from './DeckCard';
+import { TrashCard } from './TrashCard';
 
 interface SidebarSectionProps {
+  type: 'lessons' | 'decks' | 'trash';
   title: string;
-  sections: string[];
-  lessons: LessonSummary[];
+  items: any[]; // Using any[] to accept LessonItem[], DeckItem[], or TrashItem[]
   currentLessonId: string | null;
   expandedSections: Record<string, boolean>;
   onToggleSection: (section: string, expanded: boolean) => void;
   onLoadLesson: (id: string) => void;
   onTrashLesson: (id: string) => void;
+  onRenameLesson?: (id: string, newName: string) => void;
   activeMenu: string | null;
   setActiveMenu: (id: string | null) => void;
   emptyMessage?: string;
 }
 
 export function SidebarSection({
+  type,
   title,
-  sections,
-  lessons,
+  items,
   currentLessonId,
   expandedSections,
   onToggleSection,
   onLoadLesson,
   onTrashLesson,
+  onRenameLesson,
   activeMenu,
   setActiveMenu,
   emptyMessage
 }: SidebarSectionProps) {
+  const isExpanded = expandedSections[type] ?? (type === 'lessons' || type === 'decks');
+  const toggleSection = () => onToggleSection(type, !isExpanded);
+
   return (
     <div className="space-y-1">
-      <h3 className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
+      <button
+        onClick={toggleSection}
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          {type === 'trash' && <Trash2 size={14} />}
+          {title}
+        </span>
+        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+      </button>
       
-      {sections.map((section) => {
-        const type = section.split('-')[0]; // 'audio' or 'flashcard'
-        const lang = section.split('-')[1]; // 'en' or 'de'
-        
-        const sectionLessons = lessons.filter((l) => l.language === lang && !l.isTrashed);
-        if (sectionLessons.length === 0 && !emptyMessage) return null;
+      {isExpanded && (
+        <div className="mt-2 space-y-2">
+          {items.length === 0 && emptyMessage && (
+            <div className="px-5 py-2 text-sm text-gray-500 italic">
+              {emptyMessage}
+            </div>
+          )}
 
-        const isExpanded = expandedSections[section];
-        const toggleSection = () => onToggleSection(section, !isExpanded);
+          {type === 'lessons' && (
+            <>
+              {/* English Lessons Accordion */}
+              <Accordion 
+                title={`🇬🇧 English (${items.filter(i => i.language === 'en').length})`}
+                isExpanded={expandedSections['audio-en'] ?? true}
+                onToggle={() => onToggleSection('audio-en', !(expandedSections['audio-en'] ?? true))}
+              >
+                {items.filter(i => i.language === 'en').map((lesson: LessonItem) => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson as unknown as LessonSummary}
+                    currentLessonId={currentLessonId}
+                    onLoadLesson={onLoadLesson}
+                    onTrashLesson={onTrashLesson}
+                    onRenameLesson={onRenameLesson}
+                    activeMenu={activeMenu}
+                    setActiveMenu={setActiveMenu}
+                  />
+                ))}
+              </Accordion>
 
-        return (
-          <div key={section} className="space-y-1">
-            <button
-              onClick={toggleSection}
-              className="w-full flex items-center justify-between px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <Globe size={14} className={lang === 'en' ? 'text-blue-400' : 'text-yellow-400'} />
-                {SECTION_LABELS[section]}
-              </span>
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            
-            {isExpanded && sectionLessons.length > 0 ? (
-              sectionLessons.map((lesson) => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  currentLessonId={currentLessonId}
-                  onLoadLesson={onLoadLesson}
-                  onTrashLesson={onTrashLesson}
-                  activeMenu={activeMenu}
-                  setActiveMenu={setActiveMenu}
+              {/* German Lessons Accordion */}
+              <Accordion 
+                title={`🇩🇪 German (${items.filter(i => i.language === 'de').length})`}
+                isExpanded={expandedSections['audio-de'] ?? false}
+                onToggle={() => onToggleSection('audio-de', !(expandedSections['audio-de'] ?? false))}
+              >
+                {items.filter(i => i.language === 'de').map((lesson: LessonItem) => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson as unknown as LessonSummary}
+                    currentLessonId={currentLessonId}
+                    onLoadLesson={onLoadLesson}
+                    onTrashLesson={onTrashLesson}
+                    onRenameLesson={onRenameLesson}
+                    activeMenu={activeMenu}
+                    setActiveMenu={setActiveMenu}
+                  />
+                ))}
+              </Accordion>
+            </>
+          )}
+
+          {type === 'decks' && (
+            <div className="space-y-1">
+              {items.map((deck: DeckItem) => (
+                <DeckCard
+                  key={deck.id}
+                  id={deck.id}
+                  name={deck.name}
+                  cardCount={deck.cardCount}
+                  language={deck.language}
+                  onClick={() => onLoadLesson(deck.id)}
                 />
-              ))
-            ) : isExpanded && emptyMessage ? (
-              <div className="px-5 py-2 text-sm text-gray-500 italic">
-                {emptyMessage}
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
+              ))}
+            </div>
+          )}
+
+          {type === 'trash' && (
+            <div className="space-y-1">
+              {items.length === 0 && !emptyMessage && (
+                <div className="px-5 py-2 text-sm text-gray-600 italic">
+                  Trash is empty.
+                </div>
+              )}
+              {items.map((item: TrashItem) => (
+                <TrashCard
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  originalType={item.originalType}
+                  language={item.language}
+                  onDeletePermanently={onTrashLesson}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Helper Accordion component for lessons
+function Accordion({ title, isExpanded, onToggle, children }: { title: string, isExpanded: boolean, onToggle: () => void, children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+      >
+        <span>{title}</span>
+        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+      </button>
+      {isExpanded && (
+        <div className="space-y-1">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
