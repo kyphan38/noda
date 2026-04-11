@@ -14,17 +14,17 @@ export function TrashCard({ id, name, originalType, language, onDeletePermanentl
   const langLabel = language?.toUpperCase() || '—';
 
   return (
-    <div className="group flex items-center gap-2 min-w-0 ml-2 px-2 py-1.5 rounded-lg bg-gray-900/50 border border-gray-800 mb-1">
+    <div className="group flex items-center gap-2 min-w-0 ml-2 px-2 py-1.5 rounded-lg bg-gray-900/50 border border-gray-800 mb-1 transition-colors duration-200">
       <span className="text-sm shrink-0 opacity-80" aria-hidden>
         {typeIcon}
       </span>
       <h4
-        className="font-medium text-gray-200 text-xs truncate min-w-0 flex-1"
+        className="font-medium text-gray-200 text-sm truncate min-w-0 flex-1"
         title={name}
       >
         {name}
       </h4>
-      <span className="text-[10px] text-gray-500 tabular-nums shrink-0">{langLabel}</span>
+      <span className="text-xs text-gray-500 tabular-nums shrink-0">{langLabel}</span>
       <button
         type="button"
         onClick={(e) => {

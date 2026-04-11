@@ -21,8 +21,6 @@ interface SidebarSectionProps {
   setActiveMenu: (id: string | null) => void;
   emptyMessage?: string;
   isLoading?: boolean;
-  /** One-line muted hint under the section title (LESSONS / DECKS). */
-  sectionHint?: string;
 }
 
 export function SidebarSection({
@@ -39,7 +37,6 @@ export function SidebarSection({
   setActiveMenu,
   emptyMessage,
   isLoading,
-  sectionHint,
 }: SidebarSectionProps) {
   const isExpanded = expandedSections[type] ?? (type === 'lessons' || type === 'decks');
   const toggleSection = () => onToggleSection(type, !isExpanded);
@@ -48,17 +45,14 @@ export function SidebarSection({
     <div className="space-y-1">
       <button
         onClick={toggleSection}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 text-sm font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors duration-200"
       >
         <span className="flex items-center gap-2">
-          {type === 'trash' && <Trash2 size={14} />}
+          {type === 'trash' && <Trash2 size={15} />}
           {title}
         </span>
-        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
       </button>
-      {sectionHint && (
-        <p className="px-3 text-[10px] text-gray-600 leading-snug -mt-0.5 mb-1">{sectionHint}</p>
-      )}
 
       {isExpanded && (
         <div className="mt-2 space-y-2">
@@ -182,10 +176,10 @@ function Accordion({ title, isExpanded, onToggle, children }: { title: string, i
     <div className="space-y-1">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+        className="w-full flex items-center justify-between px-3 py-1.5 text-base font-medium text-gray-300 hover:text-white transition-colors duration-200"
       >
         <span>{title}</span>
-        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
       </button>
       {isExpanded && (
         <div className="space-y-1">

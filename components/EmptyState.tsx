@@ -8,16 +8,15 @@ const config = {
   lessons: {
     icon: '🎧',
     title: 'No audio lessons',
-    description: "Click the '+ Audio' button above to start learning.",
+    description: "Click the '+ Audio' button above to add a lesson.",
   },
   decks: {
     icon: '🎴',
     title: 'No flashcard decks',
-    description: "Click the '+ Deck' button above to build your vocabulary.",
+    description: "Click the '+ Deck' button above to add a deck.",
   },
   trash: {
     title: 'Trash is empty',
-    description: 'Deleted items will appear here',
   },
 } as const;
 
@@ -27,8 +26,7 @@ export function EmptyState({ type }: EmptyStateProps) {
   if (type === 'trash') {
     return (
       <div className="empty-state px-3 py-2 text-left">
-        <p className="text-[11px] text-gray-500 leading-snug">{c.title}</p>
-        <p className="text-[10px] text-gray-600 mt-0.5">{c.description}</p>
+        <p className="text-xs text-gray-500 leading-snug">{c.title}</p>
       </div>
     );
   }
@@ -41,7 +39,7 @@ export function EmptyState({ type }: EmptyStateProps) {
         {cl.icon}
       </div>
       <h3 className="text-sm font-semibold text-gray-300 mb-2">{cl.title}</h3>
-      <p className="text-xs text-gray-400 max-w-[220px] mx-auto">{cl.description}</p>
+      <p className="text-sm text-gray-400 max-w-[220px] mx-auto">{cl.description}</p>
     </div>
   );
 }

@@ -120,11 +120,11 @@ export function AppHeader({
               aria-selected={appMode === 'normal'}
               data-mode="listen"
               className={`mode-tab ${appMode === 'normal' ? 'active' : ''}`}
-              title="Listen mode (⌘1 / Ctrl+1)"
+              title="Normal mode (⌘1 / Ctrl+1)"
               onClick={() => void onModeChange('normal')}
             >
               <Headphones size={18} aria-hidden />
-              <span className="mode-tab-label">Normal (Listen)</span>
+              <span className="mode-tab-label">Normal</span>
             </button>
             <button
               type="button"
@@ -147,19 +147,30 @@ export function AppHeader({
               title="Shadowing mode (⌘3 / Ctrl+3)"
               onClick={() => void onModeChange('shadowing')}
             >
-              {isGeneratingIPA && appMode === 'shadowing' ? (
-                <span className="w-[18px] h-[18px] border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" aria-hidden />
-              ) : (
-                <Mic size={18} aria-hidden />
-              )}
+              <Mic size={18} aria-hidden />
               <span className="mode-tab-label">Shadowing</span>
             </button>
           </div>
           {appMode === 'shadowing' && (
-            <div className="px-2 sm:px-3 pb-2 pt-2 border-t border-gray-800/80">
+            <div className="shadowing-ipa-panel w-full max-w-xl mx-auto px-2 sm:px-3 pb-2 pt-2 border-t border-gray-800/80 transition-opacity duration-200">
+              {isGeneratingIPA && (
+                <div
+                  className="flex items-center gap-2 text-xs text-emerald-400/95 mb-2 px-1"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span
+                    className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin"
+                    aria-hidden
+                  />
+                  Generating pronunciation…
+                </div>
+              )}
               <label
                 className={`flex items-start gap-3 rounded-lg p-2 -mx-1 transition-colors ${
-                  transcript.length === 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-900/40'
+                  transcript.length === 0 || isGeneratingIPA
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'cursor-pointer hover:bg-gray-900/40'
                 }`}
               >
                 <span className="relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
@@ -167,7 +178,7 @@ export function AppHeader({
                     type="checkbox"
                     className="peer sr-only"
                     checked={shadowingGenerateIpa}
-                    disabled={transcript.length === 0}
+                    disabled={transcript.length === 0 || isGeneratingIPA}
                     onChange={(e) => {
                       const on = e.target.checked;
                       setShadowingGenerateIpa(on);

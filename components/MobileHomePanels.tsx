@@ -3,7 +3,6 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { SidebarSection } from '@/components/SidebarSection';
-import { SIDEBAR_DECKS_SECTION_HINT, SIDEBAR_LESSONS_SECTION_HINT } from '@/constants';
 import type { AppTab, DeckItem, LessonItem, LessonSummary } from '@/types';
 
 export interface MobileHomePanelsProps {
@@ -51,7 +50,6 @@ export function MobileHomePanels({
           <SidebarSection
             type="lessons"
             title="LESSONS"
-            sectionHint={SIDEBAR_LESSONS_SECTION_HINT}
             items={lessonsList
               .filter((l) => !l.isTrashed && l.kind === 'audio')
               .map((l) => ({
@@ -88,7 +86,6 @@ export function MobileHomePanels({
           <SidebarSection
             type="decks"
             title="DECKS"
-            sectionHint={SIDEBAR_DECKS_SECTION_HINT}
             items={lessonsList
               .filter((l) => !l.isTrashed && l.kind === 'flashcard')
               .map((l) => ({

@@ -24,6 +24,14 @@ export function NewDeckModal({ onClose, onSubmit }: NewDeckModalProps) {
     setCardCount(lines.length);
   }, [content]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const ingestTextFile = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -60,8 +68,8 @@ export function NewDeckModal({ onClose, onSubmit }: NewDeckModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="bg-gray-800 rounded-2xl p-8 max-w-2xl w-[90%] max-h-[90vh] overflow-y-auto">
+    <div className="app-modal-backdrop fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="app-modal-panel bg-gray-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700/80">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">🎴 Create Flashcard Deck</h2>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-white text-xl">✕</button>

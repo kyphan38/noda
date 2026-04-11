@@ -59,7 +59,7 @@ export function DeckCard({
       onClick={() => {
         if (!isRenaming) onItemSelect(deck);
       }}
-      className={`group relative flex items-center gap-2 min-w-0 px-2 py-1.5 rounded-lg cursor-pointer transition-colors mb-1 deck-card border ${
+      className={`group relative flex items-center gap-2 min-w-0 px-2 py-1.5 rounded-lg cursor-pointer transition-colors duration-200 mb-1 deck-card border ${
         selectedItemId === deck.id
           ? 'active border-emerald-500 bg-emerald-500/10'
           : 'border-gray-700/80 bg-gray-800/40 hover:border-gray-600 hover:bg-gray-800/60'
@@ -79,7 +79,7 @@ export function DeckCard({
             type="text"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            className="w-full min-w-0 bg-gray-950 border border-blue-500/50 text-white text-xs rounded px-1.5 py-0.5 outline-none"
+            className="w-full min-w-0 bg-gray-950 border border-blue-500/50 text-white text-sm rounded px-1.5 py-0.5 outline-none"
             onBlur={() => handleRenameSubmit()}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -90,12 +90,12 @@ export function DeckCard({
           />
         </form>
       ) : (
-        <span className="font-medium text-gray-200 text-xs truncate min-w-0 flex-1" title={deck.name}>
+        <span className="font-medium text-gray-200 text-sm truncate min-w-0 flex-1" title={deck.name}>
           {deck.name}
         </span>
       )}
-      <span className="text-[10px] text-gray-500 tabular-nums shrink-0 whitespace-nowrap">{deck.cardCount} cards</span>
-      <span className="text-xs shrink-0" title={deck.language}>
+      <span className="text-xs text-gray-500 tabular-nums shrink-0 whitespace-nowrap">{deck.cardCount} cards</span>
+      <span className="text-sm shrink-0" title={deck.language}>
         {languageFlag[deck.language] || '🌐'}
       </span>
       <div className="relative shrink-0">

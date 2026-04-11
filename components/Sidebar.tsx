@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Music2, Layers, LogOut, PanelLeft } from 'lucide-react';
-import { SIDEBAR_DECKS_SECTION_HINT, SIDEBAR_LESSONS_SECTION_HINT } from '@/constants';
 import { LessonSummary, ExpandedSections, LessonItem, DeckItem, TrashItem } from '@/types';
 import { SidebarSection } from './SidebarSection';
 
@@ -91,7 +90,7 @@ export function Sidebar({
           }`}
         >
           <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
               Noda.
             </h2>
             <div className="flex items-center gap-1">
@@ -115,7 +114,7 @@ export function Sidebar({
           <div className="actions-container flex flex-row gap-2 p-4">
             <button
               onClick={onNewLesson}
-              className="btn-new-lesson flex-1 py-2 px-2 text-sm bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors"
+              className="btn-new-lesson flex-1 py-2.5 px-2 text-base bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
               title="New audio lesson"
             >
               <Music2 size={16} aria-hidden />
@@ -123,7 +122,7 @@ export function Sidebar({
             </button>
             <button
               onClick={onNewDeck}
-              className="btn-new-deck flex-1 py-2 px-2 text-sm bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors"
+              className="btn-new-deck flex-1 py-2.5 px-2 text-base bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
               title="New flashcard deck"
             >
               <Layers size={16} aria-hidden />
@@ -136,7 +135,6 @@ export function Sidebar({
             <SidebarSection
               type="lessons"
               title="LESSONS"
-              sectionHint="Audio lessons with optional .srt transcript — listen, dictation, shadowing."
               items={activeLessons}
               isLoading={isListLoading}
               selectedItemId={selectedItemId}
@@ -153,7 +151,6 @@ export function Sidebar({
             <SidebarSection
               type="decks"
               title="DECKS"
-              sectionHint={SIDEBAR_DECKS_SECTION_HINT}
               items={activeDecks}
               isLoading={isListLoading}
               selectedItemId={selectedItemId}

@@ -53,7 +53,7 @@ export function LessonCard({
       onClick={() => {
         if (!isRenaming) onItemSelect(lesson);
       }}
-      className={`relative ml-2 rounded-lg cursor-pointer transition-colors group lesson-card ${
+      className={`relative ml-2 rounded-lg cursor-pointer transition-colors duration-200 group lesson-card ${
         selectedItemId === lesson.id
           ? 'active bg-emerald-500/10 border border-emerald-500'
           : 'hover:bg-gray-800/50 border border-transparent'
@@ -71,7 +71,7 @@ export function LessonCard({
               type="text"
               value={editName}
               onChange={e => setEditName(e.target.value)}
-              className="w-full min-w-0 bg-gray-950 border border-emerald-500/50 text-white text-xs rounded px-1.5 py-0.5 outline-none"
+              className="w-full min-w-0 bg-gray-950 border border-emerald-500/50 text-white text-sm rounded px-1.5 py-0.5 outline-none"
               onBlur={() => handleRenameSubmit()}
               onKeyDown={e => {
                 if (e.key === 'Escape') {
@@ -94,7 +94,7 @@ export function LessonCard({
                 </span>
               )}
             </h4>
-            <span className="flex items-center gap-0.5 text-[10px] text-gray-500 tabular-nums shrink-0">
+            <span className="flex items-center gap-0.5 text-xs text-gray-500 tabular-nums shrink-0">
               <CheckCircle2
                 size={11}
                 className={lesson.progress === 100 ? 'text-green-400' : 'text-gray-600'}
