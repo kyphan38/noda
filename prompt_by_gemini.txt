@@ -1,0 +1,315 @@
+🎯 Mục tiêu
+Xây dựng Module Flashcard hoàn chỉnh với cơ chế hiển thị một mặt (Single-sided), hệ thống xử lý mảng (Array Engine) không dùng Anki, tích hợp phím tắt và tự động ẩn Player khi sử dụng.
+
+🛑 CRITICAL RULES
+KHÔNG ĐƯỢC sửa logic bên trong: components/Player.tsx, components/DictationControls.tsx, components/Transcript.tsx.
+
+TUYỆT ĐỐI KHÔNG sử dụng thuật toán Spaced Repetition (Anki) tính toán ngày tháng. Chỉ xử lý mảng (Array) đơn giản trong một phiên học.
+
+CHỈ SỬA: app/page.tsx (Render logic).
+
+TẠO MỚI: hooks/useFlashcardEngine.ts, components/FlashcardViewer.tsx.
+
+📋 REQUIREMENTS
+1. File app/page.tsx (Auto-hide Player)
+CẬP NHẬT RENDER LOGIC:
+Tìm đến khu vực render Player và sửa lại điều kiện để ẩn Player khi tab hiện tại là Flashcards.
+
+TypeScript
+// Trong app/page.tsx
+
+{/* Audio Player - CHỈ HIỆN KHI KHÔNG PHẢI TAB FLASHCARD */}
+{activeTab !== 'Flashcards' && selectedItem?.type === 'lesson' && (
+  <Player lessonId={selectedItem.data.id} />
+)}
+
+{/* Khu vực Main Content */}
+<div className="content-area">
+  {activeTab === 'Flashcards' && selectedItem?.type === 'deck' && (
+    <FlashcardViewer 
+      deck={selectedItem.data as DeckItem} 
+      onComplete={() => triggerCleanupModal()} // Gọi hàm mở CleanupModal đã tạo ở Phase 2
+    />
+  )}
+  {/* Các tab khác giữ nguyên */}
+</div>
+2. TẠO Component mới components/FlashcardViewer.tsx
+TẠO FILE MỚI:
+Đây là giao diện chính hiển thị thẻ từ vựng (Single-sided).
+
+TypeScript
+// components/FlashcardViewer.tsx
+import { useState } from 'react';
+import { useFlashcardEngine } from '../hooks/useFlashcardEngine';
+import { DeckItem } from '../types';
+
+interface FlashcardViewerProps {
+  deck: DeckItem;
+  onComplete: () => void;
+}
+
+export function FlashcardViewer({ deck, onComplete }: FlashcardViewerProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(deck.content || ''); // Giả sử deck có trường content lưu raw text
+
+  const { 
+    currentCard, 
+    progress, 
+    currentIndex,
+    totalCards, 
+    isShuffle,
+    toggleShuffle,
+    handleRating,
+    flashedButton 
+  } = useFlashcardEngine(deck.content, onComplete);
+
+  if (isEditing) {
+    return (
+      <div className="flashcard-editor">
+        <textarea 
+          value={editText} 
+          onChange={(e) => setEditText(e.target.value)}
+          className="deck-textarea"
+          rows={10}
+        />
+        <button className="btn-primary mt-4" onClick={() => {
+           // Lưu logic cập nhật deck.content vào DB tại đây
+           setIsEditing(false);
+        }}>Save & Resume</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flashcard-viewer-container">
+      {/* Header */}
+      <div className="flashcard-header">
+        <div className="progress-wrapper">
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="progress-text">{progress}% • Card {currentIndex + 1} / {totalCards}</span>
+        </div>
+        
+        <div className="header-actions">
+          <button onClick={toggleShuffle} className={`btn-ghost ${isShuffle ? 'active' : ''}`}>
+            🔀 {isShuffle ? 'Shuffle' : 'Sequential'}
+          </button>
+          <button onClick={() => setIsEditing(true)} className="btn-ghost">
+            📝 Edit
+          </button>
+        </div>
+      </div>
+
+      {/* Main Card (Single-sided) */}
+      <div className="flashcard-main">
+        <h2 className="flashcard-text">{currentCard}</h2>
+      </div>
+
+      {/* Rating Buttons */}
+      <div className="flashcard-controls">
+        <button 
+          className={`rate-btn btn-again ${flashedButton === '1' ? 'flash-active' : ''}`}
+          onClick={() => handleRating('again')}
+        ><span className="shortcut-hint">1</span> ❌ Again</button>
+        
+        <button 
+          className={`rate-btn btn-hard ${flashedButton === '2' ? 'flash-active' : ''}`}
+          onClick={() => handleRating('hard')}
+        ><span className="shortcut-hint">2</span> 😐 Hard</button>
+        
+        <button 
+          className={`rate-btn btn-good ${flashedButton === '3' ? 'flash-active' : ''}`}
+          onClick={() => handleRating('good')}
+        ><span className="shortcut-hint">3</span> 😊 Good</button>
+        
+        <button 
+          className={`rate-btn btn-easy ${flashedButton === '4' ? 'flash-active' : ''}`}
+          onClick={() => handleRating('easy')}
+        ><span className="shortcut-hint">4</span> 🎯 Easy</button>
+        
+        <button 
+          className={`rate-btn btn-done ${flashedButton === '5' ? 'flash-active' : ''}`}
+          onClick={() => handleRating('done')}
+        ><span className="shortcut-hint">5</span> ✅ Done</button>
+      </div>
+    </div>
+  );
+}
+3. TẠO Hook mới hooks/useFlashcardEngine.ts
+TẠO FILE MỚI:
+Đây là bộ não xử lý mảng (Array) và bắt sự kiện bàn phím.
+
+TypeScript
+// hooks/useFlashcardEngine.ts
+import { useState, useEffect, useCallback } from 'react';
+
+export function useFlashcardEngine(initialContent: string, onComplete: () => void) {
+  const [cards, setCards] = useState<string[]>([]);
+  const [originalTotal, setOriginalTotal] = useState(0);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [flashedButton, setFlashedButton] = useState<string | null>(null);
+
+  // Khởi tạo mảng
+  useEffect(() => {
+    if (!initialContent) return;
+    let parsed = initialContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (isShuffle) {
+      parsed = parsed.sort(() => Math.random() - 0.5);
+    }
+    setCards(parsed);
+    setOriginalTotal(parsed.length);
+  }, [initialContent, isShuffle]);
+
+  const progress = originalTotal === 0 ? 0 : Math.round(((originalTotal - cards.length) / originalTotal) * 100);
+
+  // Xử lý logic nút bấm
+  const handleRating = useCallback((rating: 'again' | 'hard' | 'good' | 'easy' | 'done') => {
+    if (cards.length === 0) return;
+
+    setCards(prev => {
+      const newArray = [...prev];
+      const currentCard = newArray.shift(); // Lấy item đầu tiên ra
+
+      if (!currentCard) return prev;
+
+      if (rating === 'again' || rating === 'hard') {
+        // Đẩy xuống cuối mảng
+        newArray.push(currentCard);
+      } else if (rating === 'good' || rating === 'easy') {
+        // Đẩy lùi vài index (ví dụ: lùi 3 bước, nếu mảng ngắn thì xuống cuối)
+        const insertIndex = Math.min(3, newArray.length);
+        newArray.splice(insertIndex, 0, currentCard);
+      }
+      // Nếu là 'done', item đã bị shift() loại bỏ hoàn toàn.
+      
+      return newArray;
+    });
+  }, [cards]);
+
+  // Bắt sự kiện bàn phím
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (cards.length === 0) return;
+      
+      const keyMap: Record<string, 'again' | 'hard' | 'good' | 'easy' | 'done'> = {
+        '1': 'again',
+        '2': 'hard',
+        '3': 'good',
+        '4': 'easy',
+        '5': 'done'
+      };
+
+      if (keyMap[e.key]) {
+        setFlashedButton(e.key);
+        handleRating(keyMap[e.key]);
+        setTimeout(() => setFlashedButton(null), 150); // Tắt hiệu ứng flash sau 150ms
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cards.length, handleRating]);
+
+  // Kích hoạt Modal khi học xong
+  useEffect(() => {
+    if (originalTotal > 0 && cards.length === 0) {
+      onComplete();
+    }
+  }, [cards.length, originalTotal, onComplete]);
+
+  return {
+    currentCard: cards[0] || "All caught up!",
+    progress,
+    currentIndex: originalTotal - cards.length,
+    totalCards: originalTotal,
+    isShuffle,
+    toggleShuffle: () => setIsShuffle(!isShuffle),
+    handleRating,
+    flashedButton
+  };
+}
+4. STYLING REQUIREMENTS (Emerald Green & Flat UI)
+Thêm các CSS sau vào globals.css:
+
+CSS
+/* Flashcard Container */
+.flashcard-viewer-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Card Style (Flat, Bo góc) */
+.flashcard-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.05); /* Emerald 10% */
+  border: 1px solid #10b981; /* Nét liền */
+  border-radius: 24px;
+  margin: 32px 0;
+  padding: 48px;
+}
+.flashcard-text {
+  font-size: 2rem;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
+  color: white;
+}
+
+/* 5 Nút đánh giá Flat UI */
+.flashcard-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.rate-btn {
+  flex: 1;
+  padding: 16px 8px;
+  border-radius: 12px;
+  border: none;
+  background: #1f2937; /* gray-800 */
+  color: #d1d5db;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.rate-btn:hover { background: #374151; color: white; }
+
+/* Flash Animation khi bấm phím */
+.flash-active {
+  background: #10b981 !important; /* Emerald nháy sáng */
+  color: white !important;
+  transform: scale(0.95);
+}
+
+/* Shortcut Hint (Số 1-5 nhỏ ở góc) */
+.shortcut-hint {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  font-size: 10px;
+  color: #6b7280;
+  background: rgba(0,0,0,0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+✅ ACCEPTANCE CRITERIA
+✅ Khi chuyển sang tab Flashcard, Audio Player và Dictation Controls biến mất hoàn toàn.
+
+✅ Thẻ từ vựng chỉ hiện 1 mặt (hiển thị từng dòng text), chữ to căn giữa.
+
+✅ Không dùng ngày tháng hay Anki. Bấm Done thẻ biến mất, bấm Again thẻ nhảy xuống cuối.
+
+✅ Nhấn phím 1, 2, 3, 4, 5 hoạt động chính xác tương đương click chuột.
+
+✅ Nút UI nháy sáng chớp nhoáng (flash) khi nhận tín hiệu từ bàn phím.
+
+✅ Khi mảng về 0 (Progress 100%), hàm onComplete kích hoạt CleanupModal.

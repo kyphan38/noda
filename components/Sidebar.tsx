@@ -9,9 +9,9 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: (open: boolean) => void;
   lessons: LessonSummary[];
-  currentLessonId: string | null;
+  selectedItemId?: string;
   expandedSections: ExpandedSections;
-  onLoadLesson: (id: string) => void;
+  onItemSelect: (item: LessonItem | DeckItem) => void;
   onNewLesson: () => void;
   onNewDeck: () => void;
   onTrashLesson: (id: string) => void;
@@ -24,9 +24,9 @@ export function Sidebar({
   isOpen,
   onToggle,
   lessons,
-  currentLessonId,
+  selectedItemId,
   expandedSections,
-  onLoadLesson,
+  onItemSelect,
   onNewLesson,
   onNewDeck,
   onTrashLesson,
@@ -130,10 +130,10 @@ export function Sidebar({
               type="lessons"
               title="LESSONS"
               items={activeLessons}
-              currentLessonId={currentLessonId}
+              selectedItemId={selectedItemId}
               expandedSections={expandedSections}
               onToggleSection={onToggleSection}
-              onLoadLesson={onLoadLesson}
+              onItemSelect={onItemSelect}
               onTrashLesson={onTrashLesson}
               onRenameLesson={onRenameLesson}
               activeMenu={activeMenu}
@@ -145,10 +145,10 @@ export function Sidebar({
               type="decks"
               title="DECKS"
               items={activeDecks}
-              currentLessonId={currentLessonId}
+              selectedItemId={selectedItemId}
               expandedSections={expandedSections}
               onToggleSection={onToggleSection}
-              onLoadLesson={onLoadLesson}
+              onItemSelect={onItemSelect}
               onTrashLesson={onTrashLesson}
               onRenameLesson={onRenameLesson}
               activeMenu={activeMenu}
@@ -161,10 +161,10 @@ export function Sidebar({
               type="trash"
               title="TRASH & CACHE"
               items={trashItems}
-              currentLessonId={currentLessonId}
+              selectedItemId={selectedItemId}
               expandedSections={expandedSections}
               onToggleSection={onToggleSection}
-              onLoadLesson={onLoadLesson}
+              onItemSelect={onItemSelect}
               onTrashLesson={onTrashLesson}
               onRenameLesson={onRenameLesson}
               activeMenu={activeMenu}

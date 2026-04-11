@@ -9,10 +9,10 @@ interface SidebarSectionProps {
   type: 'lessons' | 'decks' | 'trash';
   title: string;
   items: any[]; // Using any[] to accept LessonItem[], DeckItem[], or TrashItem[]
-  currentLessonId: string | null;
+  selectedItemId?: string;
   expandedSections: Record<string, boolean>;
   onToggleSection: (section: string, expanded: boolean) => void;
-  onLoadLesson: (id: string) => void;
+  onItemSelect: (item: LessonItem | DeckItem) => void;
   onTrashLesson: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
   activeMenu: string | null;
@@ -24,10 +24,10 @@ export function SidebarSection({
   type,
   title,
   items,
-  currentLessonId,
+  selectedItemId,
   expandedSections,
   onToggleSection,
-  onLoadLesson,
+  onItemSelect,
   onTrashLesson,
   onRenameLesson,
   activeMenu,
@@ -69,9 +69,9 @@ export function SidebarSection({
                 {items.filter(i => i.language === 'en').map((lesson: LessonItem) => (
                   <LessonCard
                     key={lesson.id}
-                    lesson={lesson as unknown as LessonSummary}
-                    currentLessonId={currentLessonId}
-                    onLoadLesson={onLoadLesson}
+                    lesson={lesson}
+                    selectedItemId={selectedItemId}
+                    onItemSelect={onItemSelect}
                     onTrashLesson={onTrashLesson}
                     onRenameLesson={onRenameLesson}
                     activeMenu={activeMenu}
@@ -89,9 +89,9 @@ export function SidebarSection({
                 {items.filter(i => i.language === 'de').map((lesson: LessonItem) => (
                   <LessonCard
                     key={lesson.id}
-                    lesson={lesson as unknown as LessonSummary}
-                    currentLessonId={currentLessonId}
-                    onLoadLesson={onLoadLesson}
+                    lesson={lesson}
+                    selectedItemId={selectedItemId}
+                    onItemSelect={onItemSelect}
                     onTrashLesson={onTrashLesson}
                     onRenameLesson={onRenameLesson}
                     activeMenu={activeMenu}
@@ -107,11 +107,9 @@ export function SidebarSection({
               {items.map((deck: DeckItem) => (
                 <DeckCard
                   key={deck.id}
-                  id={deck.id}
-                  name={deck.name}
-                  cardCount={deck.cardCount}
-                  language={deck.language}
-                  onClick={() => onLoadLesson(deck.id)}
+                  deck={deck}
+                  selectedItemId={selectedItemId}
+                  onItemSelect={onItemSelect}
                 />
               ))}
             </div>

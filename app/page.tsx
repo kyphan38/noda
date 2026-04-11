@@ -16,7 +16,10 @@ import { CleanupModal } from '@/components/CleanupModal';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
-import { Sentence, AppMode, AppTab } from '@/types';
+import { LessonItem, DeckItem, AppMode, AppTab, Sentence } from '@/types';
+import { LessonView } from '@/components/LessonView';
+import { DeckView } from '@/components/DeckView';
+import { WelcomeScreen } from '@/components/WelcomeScreen';
 
 export default function NodaApp() {
   // Authentication State
@@ -31,13 +34,39 @@ export default function NodaApp() {
   
   const [uploadMode, setUploadMode] = useState<'idle' | 'lesson' | 'deck'>('idle');
 
-  const openNewLessonModal = () => {
+  const [selectedItem, setSelectedItem] = useState<{
+    id: string;
+    type: 'lesson' | 'deck';
+    data: LessonItem | DeckItem;
+  } | null>(null);
+
+  const handleItemSelect = (item: LessonItem | DeckItem) => {
+    setSelectedItem({
+      id: item.id,
+      type: item.type,
+      data: item
+    });
+    
+    // Load the lesson logic
+    handleLoadLesson(item.id);
+    
+    if (item.type === 'lesson') {
+      handleModeChange('normal');
+    }
+  };
+
+  const handleNewLessonWrapper = () => {
     handleNewLesson();
+    setSelectedItem(null);
+  };
+
+  const openNewLessonModal = () => {
+    handleNewLessonWrapper();
     setUploadMode('lesson');
   };
 
   const openNewDeckModal = () => {
-    handleNewLesson();
+    handleNewLessonWrapper();
     setUploadMode('deck');
   };
 
@@ -75,15 +104,24 @@ export default function NodaApp() {
     
     await saveLesson(newLesson);
     
-    // We need to reload the list and select the new lesson
-    // We can do this by setting the state and then calling handleLoadLesson
-    // But handleLoadLesson is from the hook. We can just call handleLoadLesson(lessonId)
-    // Wait, handleLoadLesson will fetch from DB. But we need to update the list first.
-    // The hook doesn't expose loadLessonsList, but handleLoadLesson might trigger it, or we can just let it be.
-    // Actually, handleLoadLesson sets currentLessonId, which triggers useEffect in the hook to load the lesson.
-    // Let's just call handleLoadLesson. Wait, the hook's handleLoadLesson doesn't refresh the list.
-    // But we can just call handleLoadLesson(lessonId) and it will load the lesson.
+    const lessonItem: LessonItem = {
+      id: lessonId,
+      name: data.name,
+      language: data.language,
+      progress: 0,
+      hasAudio: true,
+      hasIpa: false,
+      type: 'lesson'
+    };
+    
+    setSelectedItem({
+      id: lessonId,
+      type: 'lesson',
+      data: lessonItem
+    });
+    
     handleLoadLesson(lessonId);
+    handleModeChange('normal');
     setUploadMode('idle');
   };
 
@@ -120,6 +158,21 @@ export default function NodaApp() {
     };
     
     await saveLesson(newLesson);
+    
+    const deckItem: DeckItem = {
+      id: lessonId,
+      name: deckData.name,
+      language: deckData.language,
+      cardCount: lines.length,
+      type: 'deck'
+    };
+    
+    setSelectedItem({
+      id: lessonId,
+      type: 'deck',
+      data: deckItem
+    });
+    
     handleLoadLesson(lessonId);
     setUploadMode('idle');
   };
@@ -141,7 +194,7 @@ export default function NodaApp() {
     transcriptText, setTranscriptText, appMode, setAppMode,
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
     isStarted, isGeneratingIPA, ipaData, lessonsList,
-    currentLessonId, lessonName, setLessonName,
+    lessonName, setLessonName,
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
     expandedSections, setExpandedSections,
     appModeRef, completedSentencesRef, transcript,
@@ -158,7 +211,7 @@ export default function NodaApp() {
   const prevCompletedCountRef = useRef<number>(-1);
 
   useEffect(() => {
-    if (isStarted && transcript.length > 0 && currentLessonId) {
+    if (isStarted && transcript.length > 0 && selectedItem?.id) {
       const currentCount = Object.keys(completedSentences).length;
       const total = transcript.length;
       
@@ -168,11 +221,11 @@ export default function NodaApp() {
       
       prevCompletedCountRef.current = currentCount;
     }
-  }, [completedSentences, transcript, isStarted, currentLessonId]);
+  }, [completedSentences, transcript, isStarted, selectedItem?.id]);
 
   useEffect(() => {
     prevCompletedCountRef.current = -1;
-  }, [currentLessonId]);
+  }, [selectedItem?.id]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -403,15 +456,16 @@ export default function NodaApp() {
           isOpen={isSidebarOpen}
           onToggle={setIsSidebarOpen}
           lessons={lessonsList}
-          currentLessonId={currentLessonId}
+          selectedItemId={selectedItem?.id}
           expandedSections={expandedSections}
-          onLoadLesson={handleLoadLesson}
+          onItemSelect={handleItemSelect}
           onNewLesson={openNewLessonModal}
           onNewDeck={openNewDeckModal}
           onRenameLesson={handleRenameLesson}
           onTrashLesson={(id) => {
-            if (currentLessonId === id && !lessonsList.find(l => l.id === id)?.isTrashed) {
+            if (selectedItem?.id === id && !lessonsList.find(l => l.id === id)?.isTrashed) {
               handleTrashLesson(id);
+              handleNewLessonWrapper();
             } else {
               setLessonToDelete(id);
             }
@@ -433,9 +487,11 @@ export default function NodaApp() {
                   <PanelLeft size={24} />
                 </button>
               )}
-              {currentLessonId && (
+              {selectedItem?.id && (
                 <button 
-                  onClick={handleNewLesson} 
+                  onClick={() => {
+                    handleNewLessonWrapper();
+                  }} 
                   className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors" 
                   title="Back to List"
                 >
@@ -448,7 +504,7 @@ export default function NodaApp() {
             </div>
 
             {/* Tabs */}
-            {isStarted && (
+            {isStarted && selectedItem?.type === 'lesson' && (
               <div className="flex bg-gray-800 rounded-lg p-1 border border-gray-700 overflow-x-auto">
                 <button
                   onClick={() => handleModeChange('normal')}
@@ -483,23 +539,13 @@ export default function NodaApp() {
                   )}
                   Shadowing
                 </button>
-                <button
-                  onClick={() => handleModeChange('flashcard' as AppMode)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                    appMode === 'flashcard' as AppMode
-                      ? 'bg-blue-500/40 text-blue-100'
-                      : 'text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  Flashcard
-                </button>
               </div>
             )}
           </header>
 
           {/* Mobile Views (Only visible on mobile when no lesson is selected) */}
           <div className="md:hidden flex-1 overflow-y-auto">
-            {!currentLessonId && activeTab === 'Lessons' && (
+            {!selectedItem?.id && activeTab === 'Lessons' && (
               <div className="space-y-6">
                 <button
                   onClick={openNewLessonModal}
@@ -519,13 +565,14 @@ export default function NodaApp() {
                     hasIpa: l.hasIpa,
                     type: 'lesson',
                   }))}
-                  currentLessonId={currentLessonId}
+                  selectedItemId={selectedItem?.id}
                   expandedSections={expandedSections}
                   onToggleSection={(section, expanded) => setExpandedSections(prev => ({ ...prev, [section]: expanded }))}
-                  onLoadLesson={handleLoadLesson}
+                  onItemSelect={handleItemSelect}
                   onTrashLesson={(id) => {
-                    if (currentLessonId === id && !lessonsList.find(l => l.id === id)?.isTrashed) {
+                    if (selectedItem?.id === id && !lessonsList.find(l => l.id === id)?.isTrashed) {
                       handleTrashLesson(id);
+                      setSelectedItem(null);
                     } else {
                       setLessonToDelete(id);
                     }
@@ -536,7 +583,7 @@ export default function NodaApp() {
               </div>
             )}
 
-            {!currentLessonId && activeTab === 'Flashcards' && (
+            {!selectedItem?.id && activeTab === 'Flashcards' && (
               <div className="space-y-6">
                 <button
                   onClick={openNewDeckModal}
@@ -554,13 +601,14 @@ export default function NodaApp() {
                     cardCount: l.progress,
                     type: 'deck',
                   }))}
-                  currentLessonId={currentLessonId}
+                  selectedItemId={selectedItem?.id}
                   expandedSections={expandedSections}
                   onToggleSection={(section, expanded) => setExpandedSections(prev => ({ ...prev, [section]: expanded }))}
-                  onLoadLesson={handleLoadLesson}
+                  onItemSelect={handleItemSelect}
                   onTrashLesson={(id) => {
-                    if (currentLessonId === id && !lessonsList.find(l => l.id === id)?.isTrashed) {
+                    if (selectedItem?.id === id && !lessonsList.find(l => l.id === id)?.isTrashed) {
                       handleTrashLesson(id);
+                      setSelectedItem(null);
                     } else {
                       setLessonToDelete(id);
                     }
@@ -572,7 +620,7 @@ export default function NodaApp() {
               </div>
             )}
 
-            {!currentLessonId && activeTab === 'Stats' && (
+            {!selectedItem?.id && activeTab === 'Stats' && (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
                 <div className="text-6xl">📊</div>
                 <h2 className="text-xl font-bold text-white">Stats</h2>
@@ -582,18 +630,13 @@ export default function NodaApp() {
           </div>
 
           {/* Desktop & Active Lesson View */}
-          <div className={`flex-1 flex flex-col min-h-0 ${!currentLessonId ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`flex-1 flex flex-col min-h-0 ${!selectedItem?.id ? 'hidden md:flex' : 'flex'}`}>
             {/* Upload Section (Hidden when ready) */}
-            {!isStarted && !currentLessonId && (
-              <div className="flex-1 flex items-center justify-center bg-gray-900 rounded-2xl border border-gray-800 p-8">
-                <div className="text-center space-y-4">
-                  <div className="text-6xl">🎧</div>
-                  <h2 className="text-2xl font-bold text-white">Select or Create a Lesson</h2>
-                  <p className="text-gray-400 max-w-md mx-auto">
-                    Choose a lesson from the sidebar or create a new one to start learning.
-                  </p>
-                </div>
-              </div>
+            {!selectedItem && uploadMode === 'idle' && (
+              <WelcomeScreen 
+                onNewLesson={openNewLessonModal}
+                onNewDeck={openNewDeckModal}
+              />
             )}
             
             {uploadMode === 'lesson' && (
@@ -627,16 +670,15 @@ export default function NodaApp() {
               />
             )}
 
-            {/* Player & Transcript Section */}
-            {isStarted && appMode !== 'flashcard' && (
-              <div className="flex flex-col flex-1 min-h-0 gap-6">
-              
-              <Player
+            {/* Content Area */}
+            {selectedItem?.type === 'lesson' && isStarted && (
+              <LessonView
+                lesson={selectedItem.data as LessonItem}
+                mode={appMode}
                 isPlaying={isPlaying}
                 duration={duration}
                 currentTime={currentTime}
                 playbackRate={playbackRate}
-                appMode={appMode}
                 loopMode={loopMode}
                 isGeneratingIPA={isGeneratingIPA}
                 onPlayPause={togglePlayPause}
@@ -644,12 +686,7 @@ export default function NodaApp() {
                 onSpeedChange={changeSpeed}
                 onModeChange={handleModeChange}
                 onLoopModeChange={toggleLoopMode}
-              />
-
-              <Transcript
                 transcript={transcript}
-                currentTime={currentTime}
-                appMode={appMode}
                 dictationInputs={dictationInputs}
                 completedSentences={completedSentences}
                 isRecording={isRecording}
@@ -664,21 +701,10 @@ export default function NodaApp() {
                 onSkip={handleSkip}
                 onSimulateSuccess={handleSimulateSuccess}
               />
-
-              </div>
             )}
 
-            {/* Flashcard Placeholder */}
-            {isStarted && appMode === 'flashcard' && (
-              <div className="flex-1 flex items-center justify-center bg-gray-900 rounded-2xl border border-gray-800 p-8">
-                <div className="text-center space-y-4">
-                  <div className="text-6xl">🎴</div>
-                  <h2 className="text-2xl font-bold text-white">Flashcard Placeholder</h2>
-                  <p className="text-gray-400 max-w-md mx-auto">
-                    This section will contain the flashcard UI for reviewing vocabulary and sentences.
-                  </p>
-                </div>
-              </div>
+            {selectedItem?.type === 'deck' && (
+              <DeckView deck={selectedItem.data as DeckItem} />
             )}
           </div>
         </div>
@@ -707,8 +733,9 @@ export default function NodaApp() {
         onKeep={() => setShowCleanupModal(false)}
         onCleanup={() => {
           setShowCleanupModal(false);
-          if (currentLessonId) {
-            handleTrashLesson(currentLessonId);
+          if (selectedItem?.id) {
+            handleTrashLesson(selectedItem.id);
+            setSelectedItem(null);
           }
         }}
       />

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2, Wand2, MoreVertical, Edit2, Trash2 } from 'lucide-react';
-import { LessonSummary } from '@/types';
+import { LessonSummary, LessonItem } from '@/types';
 
 interface LessonCardProps {
-  lesson: LessonSummary;
-  currentLessonId: string | null;
-  onLoadLesson: (id: string) => void;
+  lesson: LessonItem;
+  selectedItemId?: string;
+  onItemSelect: (item: LessonItem) => void;
   onTrashLesson: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
   activeMenu: string | null;
@@ -14,8 +14,8 @@ interface LessonCardProps {
 
 export function LessonCard({
   lesson,
-  currentLessonId,
-  onLoadLesson,
+  selectedItemId,
+  onItemSelect,
   onTrashLesson,
   onRenameLesson,
   activeMenu,
@@ -44,11 +44,11 @@ export function LessonCard({
   return (
     <div
       onClick={() => {
-        if (!isRenaming) onLoadLesson(lesson.id);
+        if (!isRenaming) onItemSelect(lesson);
       }}
-      className={`relative p-3 ml-2 rounded-lg cursor-pointer transition-colors group ${
-        currentLessonId === lesson.id
-          ? 'bg-gray-800 border border-gray-700'
+      className={`relative p-3 ml-2 rounded-lg cursor-pointer transition-colors group lesson-card ${
+        selectedItemId === lesson.id
+          ? 'active bg-emerald-500/10 border border-emerald-500'
           : 'hover:bg-gray-800/50 border border-transparent'
       }`}
     >
