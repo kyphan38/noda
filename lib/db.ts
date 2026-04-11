@@ -1,10 +1,19 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
+export interface FlashcardData {
+  lines: string[];
+  ratings: Record<number, 'again' | 'hard' | 'good' | 'easy' | 'done'>;
+  currentIndex: number;
+  isShuffled: boolean;
+  shuffledIndices: number[];
+}
+
 export interface LessonDB extends DBSchema {
   lessons: {
     key: string;
     value: {
       id: string;
+      type?: 'audio' | 'flashcard';
       name: string;
       language: string;
       audioFile?: File | null;
@@ -15,6 +24,7 @@ export interface LessonDB extends DBSchema {
       createdAt: number;
       lastAccessed: number;
       isTrashed?: boolean;
+      flashcardData?: FlashcardData;
     };
     indexes: { 'by-language': string, 'by-accessed': number };
   };
@@ -25,11 +35,13 @@ let dbPromise: Promise<IDBPDatabase<LessonDB>>;
 export const initDB = () => {
   if (typeof window === 'undefined') return null;
   if (!dbPromise) {
-    dbPromise = openDB<LessonDB>('shadowing-app-db', 1, {
-      upgrade(db) {
-        const store = db.createObjectStore('lessons', { keyPath: 'id' });
-        store.createIndex('by-language', 'language');
-        store.createIndex('by-accessed', 'lastAccessed');
+    dbPromise = openDB<LessonDB>('shadowing-app-db', 2, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          const store = db.createObjectStore('lessons', { keyPath: 'id' });
+          store.createIndex('by-language', 'language');
+          store.createIndex('by-accessed', 'lastAccessed');
+        }
       },
     });
   }
