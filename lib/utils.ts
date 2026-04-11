@@ -1,13 +1,13 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { Sentence } from "@/types"
-import { PLAYBACK_SPEEDS } from "@/constants"
+import { Sentence } from '@/types';
+import { PLAYBACK_SPEEDS } from '@/constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getLetters(text: string) {
+export const getLetters = (text: string) => {
   const letters = [];
   for (let i = 0; i < text.length; i++) {
     if (/[\p{L}\p{N}]/u.test(text[i])) {
@@ -15,16 +15,16 @@ export function getLetters(text: string) {
     }
   }
   return letters;
-}
+};
 
-export function formatTime(time: number) {
+export const formatTime = (time: number) => {
   if (isNaN(time)) return "0:00";
   const minutes = Math.floor(time / 60);
   const seconds = Math.floor(time % 60);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
+};
 
-export function parseTranscript(text: string): Sentence[] {
+export const parseTranscript = (text: string): Sentence[] => {
   const sentences: Sentence[] = [];
   if (!text) return sentences;
   // Normalize line endings and split by double newline
@@ -57,9 +57,9 @@ export function parseTranscript(text: string): Sentence[] {
     }
   }
   return sentences;
-}
+};
 
-export function compareSentences(target: string, spoken: string) {
+export const compareSentences = (target: string, spoken: string) => {
   const clean = (s: string) => s.toLowerCase().replace(/[.,?!;:()]/g, '').trim();
   const targetWords = clean(target).split(/\s+/).filter(w => w);
   const spokenWords = clean(spoken).split(/\s+/).filter(w => w);
@@ -87,14 +87,13 @@ export function compareSentences(target: string, spoken: string) {
 
   const score = targetWords.length > 0 ? Math.round((correctCount / targetWords.length) * 100) : 0;
   return { score, diff, text: spoken };
-}
+};
 
-export function getNextPlaybackSpeed(currentSpeed: number) {
-  const currentIndex = PLAYBACK_SPEEDS.findIndex(speed => speed === currentSpeed);
-  const nextIndex = (currentIndex + 1) % PLAYBACK_SPEEDS.length;
-  return PLAYBACK_SPEEDS[nextIndex];
-}
+export const getNextPlaybackSpeed = (currentSpeed: number) => {
+  const currentIndex = PLAYBACK_SPEEDS.indexOf(currentSpeed as any);
+  return PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.length];
+};
 
-export function getIPASystemInstruction(recognitionLang: string) {
+export const getIPASystemInstruction = (recognitionLang: string) => {
   return `You are an IPA converter. Convert the user's text into ${recognitionLang === 'de-DE' ? 'German' : 'English'} IPA. Output ONLY raw JSON. Do not add any greetings, explanations, or formatting.`;
-}
+};

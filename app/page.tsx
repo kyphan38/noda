@@ -70,10 +70,13 @@ export default function NodaApp() {
   const [lessonName, setLessonName] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
   
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
-    'en-US': true,
-    'de-DE': true,
+    'audio-en': true,
+    'audio-de': false,
+    'flashcard-en': true,
+    'flashcard-de': false,
     'trash': true
   });
 
@@ -519,14 +522,6 @@ export default function NodaApp() {
     }
   }, [currentTime, transcript]);
 
-  // Format time (seconds to mm:ss)
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return "0:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (audioRef.current.paused) {
@@ -854,7 +849,7 @@ export default function NodaApp() {
                 if (audioRef.current) {
                   audioRef.current.currentTime = time;
                   setCurrentTime(time);
-                  lastScrolledIndexRef.current = -1; // Force scroll on seek
+                  lastScrolledIndexRef.current = -1;
                   if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
                   isLoopDelayingRef.current = false;
                 }

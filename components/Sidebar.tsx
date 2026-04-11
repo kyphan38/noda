@@ -84,7 +84,7 @@ export function Sidebar({
             {/* Audio Lessons Section */}
             <div className="space-y-1">
               <h3 className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">Audio Lessons</h3>
-
+              
               {['audio-en', 'audio-de'].map((section) => {
                 const sectionLessons = lessons.filter((l) => l.language === section.replace('audio-', '') && !l.isTrashed);
                 if (sectionLessons.length === 0) return null;
@@ -104,7 +104,7 @@ export function Sidebar({
                       </span>
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </button>
-
+                    
                     {isExpanded && sectionLessons.map((lesson) => (
                       <div
                         key={lesson.id}
@@ -171,7 +171,7 @@ export function Sidebar({
             {/* Flashcards Section */}
             <div className="space-y-1">
               <h3 className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">Flashcards Deck</h3>
-
+              
               {['flashcard-en', 'flashcard-de'].map((section) => {
                 const sectionLessons = lessons.filter((l) => l.language === section.replace('flashcard-', '') && !l.isTrashed);
                 if (sectionLessons.length === 0) return null;
@@ -191,7 +191,7 @@ export function Sidebar({
                       </span>
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </button>
-
+                    
                     {isExpanded && sectionLessons.length > 0 ? (
                       sectionLessons.map((lesson) => (
                         <div
@@ -263,7 +263,7 @@ export function Sidebar({
                 </span>
                 {expandedSections['trash'] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
-
+              
               {expandedSections['trash'] && lessons.filter((l) => l.isTrashed).length > 0 ? (
                 lessons.filter((l) => l.isTrashed).map((lesson) => (
                   <div
