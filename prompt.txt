@@ -1,23 +1,33 @@
-Plan: Clean Up IPA Debug and Add Loading Indicator
-TL;DR: Remove console error logs from IPA generation and add a loading spinner in the Create Lesson modal during IPA auto-generation.
+hiện tại ở chức năng dictation, nó show 1 dòng original và 1 dòng mà tôi gõ: bây giò tôi muốn biến đổi dòng orignal (lowercase, ignore các kí tự y như điều kiên hoàn thành hiện tại (chỉ cần gõ đúng chữ và đúng khoảng cách), nhung vẫn giữ các dấu "***" tương úng vói các chữ cái nhé
 
-Steps
+ỏ shadowing: hiện tại có 3 dòng icon, gộp lại thành 1 dòng giúp tôi
 
-Remove the two console.error statements in useLessonLogic.ts (lines 195 and 265) related to IPA API key missing and generation failure.
-Modify NewLessonModal.tsx to display a loading indicator (spinner and text) when the Auto-Generate IPA option is selected and lesson creation is in progress. Integrate with the existing isGeneratingIPA state from useLessonLogic hook.
-Relevant files
+các màu ở Again Hard Good Eassy Done trong flashcard nó không có ý nghĩa (vì không rõ để phân biệt), vui lòng thay đổi style hiện đại, sang, đơn giản và không màu mè
 
-useLessonLogic.ts — Remove console.error logs in fetchIPA function
-NewLessonModal.tsx — Add loading UI elements during IPA generation
-Verification
+flashcard sau khi hoàn thành (all Done) thì hiện tại không có câu hỏi muốn clean up như audio không? => Fixx giúp tôi để giống Audio là hỏi clean up sau khi hoàn thành
 
-Run the application and create a new lesson with Auto-Generate IPA enabled; verify no console errors appear and a loading indicator shows in the modal during IPA generation.
-Test error scenarios (e.g., missing API key) to ensure graceful handling without console logs.
-Decisions
+thêm ở phần dictation, có nút reset lại progress 
 
-Remove only the specified console.error statements, as they are the instrumentation debug code mentioned.
-For the loading indicator, reuse the existing isGeneratingIPA boolean from useLessonLogic and display a spinner with text like "Generating IPA..." in the modal.
-Scope: Only affect the NewLessonModal for Create Lesson; UploadPanel already has loading implemented.
-Further Considerations
+thêm ở phần flashcard cũng hiện thanh progress ở dưới item giống thanh audio luôn, cũng thêm nút reset lại luôn
 
-Ensure the loading state doesn't interfere with modal closure or other interactions.
+nếu có câu hỏi quan trọng nào hãy hỏi tôi nhé, tôi thích bạn hỏi để tôi hoàn thành tốt hơn
+
+thêm tính năng hide captions ở normal only
+
+note: tôi dang dùng máy windows nhé
+
+tôi thấy có statics cho learning, bỏ luôn giúp tôi, kiểm tra xem mobile (điện thoại) bỏ hoàn toàn chưa?
+
+dictation: orignal xóa luôn các dấu "," "'", "?", etc., còn tab thì vẫn full lowercase chứ không uppercase khi transcript nó là uppercase
+
+
+dictation, vui lòng cho phép phím "Tab" để gợi ý từ cũng phải có khoảng cách giống như original vì khi tôi test
+
+original ví dụ: lektion eins
+nhưng tab: lektioneins vẫn cho phép -> SAI -> đáng lẽ tab tất cả vẫn ra lektion eins
+---
+khi hoàn thành câu đó ở dictation, có icon re-try nhé
+---
+hãy kiểm tra phần hỏi để xóa sau khi hoàn thành (dictation) và (Flashcard đang không work nhu tôi mong đợi đó)
+---
+hiện color ở các phím 1-> 5 cho flashard không nhu tôi mong đọi luôn, kiểm tra lại
