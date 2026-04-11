@@ -9,6 +9,7 @@ export type Sentence = {
 // Learning modes
 export type LoopMode = 'none' | 'all' | 'one';
 export type AppMode = 'normal' | 'dictation' | 'shadowing' | 'flashcard';
+export type AppTab = 'Lessons' | 'Flashcards' | 'Stats';
 // Pronunciation result
 export type SpokenResult = {
   text: string;
