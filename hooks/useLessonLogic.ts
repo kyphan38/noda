@@ -71,13 +71,12 @@ export function useLessonLogic(
 
   const transcript = useMemo(() => parseTranscript(transcriptText), [transcriptText]);
 
-  const loadLessonsList = async (opts?: { trackLoading?: boolean }) => {
+  const loadLessonsList = useCallback(async (opts?: { trackLoading?: boolean }) => {
     const trackLoading = opts?.trackLoading === true;
     if (trackLoading) setIsListLoading(true);
     try {
       const dbLessons = await getAllLessons();
-      dbLessons.sort((a, b) => b.lastAccessed - a.lastAccessed);
-      setLessonsList(dbLessons.map(l => {
+      const rows = dbLessons.map((l) => {
         const kind: 'audio' | 'flashcard' = l.type === 'flashcard' ? 'flashcard' : 'audio';
         const audioProgress =
           l.totalSentences > 0
@@ -97,15 +96,17 @@ export function useLessonLogic(
           kind,
           hasIpa: Object.keys(l.ipaData || {}).length > 0,
           isTrashed: !!l.isTrashed,
-          hasAudio: !!l.audioFile
+          hasAudio: !!l.audioFile,
         };
-      }));
+      });
+      rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+      setLessonsList(rows);
     } catch (e) {
       console.error("Failed to load lessons", e);
     } finally {
       if (trackLoading) setIsListLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadLessonsList({ trackLoading: true });
@@ -145,9 +146,6 @@ export function useLessonLogic(
 
   /** Cancel debounced progress save and persist latest progress so a later put cannot resurrect cleared audio. */
   const prepareForLessonMediaClear = useCallback(async (lessonId: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7303/ingest/e06af307-892f-439f-a0fc-7ef70f1b69d6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'753b75'},body:JSON.stringify({sessionId:'753b75',location:'useLessonLogic.ts:prepareForLessonMediaClear',message:'flush progress before media clear',data:{lessonId,activeId:currentLessonIdRef.current,isStarted},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
     if (progressSaveTimeoutRef.current) {
       clearTimeout(progressSaveTimeoutRef.current);
       progressSaveTimeoutRef.current = null;
@@ -226,6 +224,24 @@ export function useLessonLogic(
       loadLessonsList();
     }
   };
+
+  const handleUpdateItemLanguage = useCallback(
+    async (id: string, language: 'en' | 'de'): Promise<{ ipaNote: boolean }> => {
+      const lesson = await getLesson(id);
+      if (!lesson) return { ipaNote: false };
+      const prev = lesson.language;
+      if (prev === language) return { ipaNote: false };
+      const ipaNote = Object.keys(lesson.ipaData || {}).length > 0;
+      lesson.language = language;
+      await saveLesson(lesson);
+      if (currentLessonId === id) {
+        setRecognitionLang(language);
+      }
+      await loadLessonsList();
+      return { ipaNote };
+    },
+    [currentLessonId, setRecognitionLang, loadLessonsList]
+  );
 
   const handleDeletePermanently = async (id: string) => {
     await deleteLesson(id);
@@ -504,6 +520,7 @@ export function useLessonLogic(
     handleTranscriptUpload,
     handleFlashcardUpload,
     loadLessonsList,
-    prepareForLessonMediaClear
+    prepareForLessonMediaClear,
+    handleUpdateItemLanguage
   };
 }

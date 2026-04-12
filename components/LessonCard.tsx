@@ -1,6 +1,15 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, CheckCircle2, Wand2, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Wand2,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Globe,
+  Check,
+} from 'lucide-react';
 import { LessonItem } from '@/types';
 
 interface LessonCardProps {
@@ -9,6 +18,7 @@ interface LessonCardProps {
   onItemSelect: (item: LessonItem) => void;
   onDeleteLesson: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
+  onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   activeMenu: string | null;
   setActiveMenu: (id: string | null) => void;
 }
@@ -19,8 +29,9 @@ export function LessonCard({
   onItemSelect,
   onDeleteLesson,
   onRenameLesson,
+  onChangeLanguage,
   activeMenu,
-  setActiveMenu
+  setActiveMenu,
 }: LessonCardProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [editName, setEditName] = useState(lesson.name);
@@ -38,7 +49,10 @@ export function LessonCard({
     setEditName(lesson.name);
   }, [lesson.name]);
 
-  const menuOpen = activeMenu === lesson.id;
+  const langMenuKey = `language-${lesson.id}`;
+  const mainMenuOpen = activeMenu === lesson.id;
+  const langMenuOpen = activeMenu === langMenuKey;
+  const menuOpen = mainMenuOpen || langMenuOpen;
 
   useLayoutEffect(() => {
     if (!menuOpen || !menuBtnRef.current) {
@@ -66,7 +80,8 @@ export function LessonCard({
       const t = e.target as Node;
       if (menuBtnRef.current?.contains(t)) return;
       const panel = document.getElementById(`lesson-card-menu-${lesson.id}`);
-      if (panel?.contains(t)) return;
+      const langPanel = document.getElementById(`lesson-lang-menu-${lesson.id}`);
+      if (panel?.contains(t) || langPanel?.contains(t)) return;
       setActiveMenu(null);
     };
     document.addEventListener('mousedown', onDown);
@@ -164,13 +179,13 @@ export function LessonCard({
                 <MoreVertical size={14} />
               </button>
 
-              {menuOpen &&
+              {mainMenuOpen &&
                 menuPos &&
                 createPortal(
                   <div
                     id={`lesson-card-menu-${lesson.id}`}
                     role="menu"
-                    className="fixed w-36 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[210] py-1 overflow-hidden"
+                    className="fixed w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[210] py-1 overflow-hidden"
                     style={{ top: menuPos.top, right: menuPos.right }}
                     onMouseDown={(e) => e.stopPropagation()}
                   >
@@ -185,6 +200,18 @@ export function LessonCard({
                     >
                       <Edit2 size={14} /> Rename
                     </button>
+                    {onChangeLanguage && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenu(langMenuKey);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
+                      >
+                        <Globe size={14} /> Change language
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -195,6 +222,50 @@ export function LessonCard({
                       className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors"
                     >
                       <Trash2 size={14} /> Delete
+                    </button>
+                  </div>,
+                  document.body
+                )}
+              {langMenuOpen &&
+                menuPos &&
+                onChangeLanguage &&
+                createPortal(
+                  <div
+                    id={`lesson-lang-menu-${lesson.id}`}
+                    role="menu"
+                    className="fixed w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[210] py-1 overflow-hidden"
+                    style={{ top: menuPos.top, right: menuPos.right }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      aria-label="Set language to English"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onChangeLanguage(lesson.id, 'en');
+                        setActiveMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
+                    >
+                      <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+                        {lesson.language === 'en' ? <Check size={14} className="text-emerald-400" /> : null}
+                      </span>
+                      en
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Set language to German"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onChangeLanguage(lesson.id, 'de');
+                        setActiveMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
+                    >
+                      <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+                        {lesson.language === 'de' ? <Check size={14} className="text-emerald-400" /> : null}
+                      </span>
+                      de
                     </button>
                   </div>,
                   document.body

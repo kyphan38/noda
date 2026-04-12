@@ -74,7 +74,7 @@ export default function NodaApp() {
     handleLoadLesson, handleNewLesson, handleRenameLesson, handleDeletePermanently,
     handleModeChange,
     expandSidebarForItem,
-    loadLessonsList, fetchIPA, prepareForLessonMediaClear
+    loadLessonsList, fetchIPA, prepareForLessonMediaClear, handleUpdateItemLanguage
   } = useLessonLogic(audioFile, setAudioFile, setAudioURL, recognitionLang, setRecognitionLang);
 
   const getTakenAudioLessonNames = useCallback(
@@ -90,6 +90,26 @@ export default function NodaApp() {
         .filter((l) => l.kind === 'flashcard' && !l.isTrashed)
         .map((l) => l.name),
     [lessonsList]
+  );
+
+  const onChangeItemLanguage = useCallback(
+    async (id: string, lang: 'en' | 'de') => {
+      const { ipaNote } = await handleUpdateItemLanguage(id, lang);
+      if (ipaNote) {
+        setToast({
+          type: 'info',
+          message: 'Language changed. IPA data remains from the original language.',
+        });
+      }
+      setSelectedItem((prev) => {
+        if (!prev || prev.id !== id) return prev;
+        if (prev.type === 'lesson') {
+          return { ...prev, data: { ...(prev.data as LessonItem), language: lang } };
+        }
+        return { ...prev, data: { ...(prev.data as DeckItem), language: lang } };
+      });
+    },
+    [handleUpdateItemLanguage]
   );
 
   const { handleLessonCreated, handleDeckCreated } = useLessonCreateFlow(
@@ -432,6 +452,7 @@ export default function NodaApp() {
           onNewLesson={openNewLessonModal}
           onNewDeck={openNewDeckModal}
           onRenameLesson={handleRenameLesson}
+          onChangeLanguage={onChangeItemLanguage}
           onDeleteLesson={(id) => setLessonToDelete(id)}
           onLogout={handleLogout}
           onToggleSection={(section, expanded) =>
@@ -582,9 +603,6 @@ export default function NodaApp() {
                   setIsPlaying(false);
                   await prepareForLessonMediaClear(id);
                   await handleDeletePermanently(id);
-                  // #region agent log
-                  fetch('http://127.0.0.1:7303/ingest/e06af307-892f-439f-a0fc-7ef70f1b69d6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'753b75'},body:JSON.stringify({sessionId:'753b75',location:'page.tsx:onRemoveAudio:afterDelete',message:'lesson removed after cleanup confirm',data:{id},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-                  // #endregion
                   handleNewLessonWrapper();
                 } catch {
                   setToast({

@@ -17,6 +17,7 @@ interface SidebarProps {
   onNewDeck: () => void;
   onDeleteLesson: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
+  onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   onLogout: () => void;
   onToggleSection: (section: string, expanded: boolean) => void;
 }
@@ -33,6 +34,7 @@ export function Sidebar({
   onNewDeck,
   onDeleteLesson,
   onRenameLesson,
+  onChangeLanguage,
   onLogout,
   onToggleSection,
 }: SidebarProps) {
@@ -113,7 +115,7 @@ export function Sidebar({
           <div className="flex-1 overflow-y-auto p-2 space-y-6">
             <SidebarSection
               type="lessons"
-              title="LESSONS"
+              title="AUDIO"
               items={activeLessons}
               isLoading={isListLoading}
               selectedItemId={selectedItemId}
@@ -122,6 +124,7 @@ export function Sidebar({
               onItemSelect={onItemSelect}
               onDeleteLesson={onDeleteLesson}
               onRenameLesson={onRenameLesson}
+              onChangeLanguage={onChangeLanguage}
               activeMenu={activeMenu}
               setActiveMenu={setActiveMenu}
             />
@@ -137,6 +140,7 @@ export function Sidebar({
               onItemSelect={onItemSelect}
               onDeleteLesson={onDeleteLesson}
               onRenameLesson={onRenameLesson}
+              onChangeLanguage={onChangeLanguage}
               activeMenu={activeMenu}
               setActiveMenu={setActiveMenu}
             />

@@ -16,6 +16,7 @@ interface SidebarSectionProps {
   onItemSelect: (item: LessonItem | DeckItem) => void;
   onDeleteLesson: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
+  onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   activeMenu: string | null;
   setActiveMenu: (id: string | null) => void;
   emptyMessage?: string;
@@ -32,6 +33,7 @@ export function SidebarSection({
   onItemSelect,
   onDeleteLesson,
   onRenameLesson,
+  onChangeLanguage,
   activeMenu,
   setActiveMenu,
   emptyMessage,
@@ -92,6 +94,7 @@ export function SidebarSection({
                         onItemSelect={onItemSelect}
                         onDeleteLesson={onDeleteLesson}
                         onRenameLesson={onRenameLesson}
+                        onChangeLanguage={onChangeLanguage}
                         activeMenu={activeMenu}
                         setActiveMenu={setActiveMenu}
                       />
@@ -112,6 +115,7 @@ export function SidebarSection({
                         onItemSelect={onItemSelect}
                         onDeleteLesson={onDeleteLesson}
                         onRenameLesson={onRenameLesson}
+                        onChangeLanguage={onChangeLanguage}
                         activeMenu={activeMenu}
                         setActiveMenu={setActiveMenu}
                       />
@@ -142,6 +146,7 @@ export function SidebarSection({
                         onItemSelect={onItemSelect}
                         onDeleteLesson={onDeleteLesson}
                         onRenameLesson={onRenameLesson}
+                        onChangeLanguage={onChangeLanguage}
                         activeMenu={activeMenu}
                         setActiveMenu={setActiveMenu}
                       />
@@ -164,6 +169,7 @@ export function SidebarSection({
                         onItemSelect={onItemSelect}
                         onDeleteLesson={onDeleteLesson}
                         onRenameLesson={onRenameLesson}
+                        onChangeLanguage={onChangeLanguage}
                         activeMenu={activeMenu}
                         setActiveMenu={setActiveMenu}
                       />

@@ -13,6 +13,16 @@ function shuffleIndices(n: number): number[] {
   return a;
 }
 
+function isTypingInField(): boolean {
+  const ae = document.activeElement;
+  if (!ae) return false;
+  if (ae instanceof HTMLInputElement || ae instanceof HTMLTextAreaElement || ae instanceof HTMLSelectElement) {
+    return true;
+  }
+  if (ae instanceof HTMLElement && ae.isContentEditable) return true;
+  return false;
+}
+
 export function useFlashcardEngine(
   initialLines: string[],
   onComplete: () => void,
@@ -63,14 +73,16 @@ export function useFlashcardEngine(
       const idx = prev[0];
       onRateRef.current?.(idx, rating);
       const rest = prev.slice(1);
-      if (rating === 'again' || rating === 'hard') {
-        return [...rest, idx];
+
+      if (rating === 'done') {
+        return rest;
       }
       if (rating === 'good' || rating === 'easy') {
-        const insertAt = Math.min(3, rest.length);
-        const next = [...rest];
-        next.splice(insertAt, 0, idx);
-        return next;
+        return [...rest, idx];
+      }
+      if (rating === 'again' || rating === 'hard') {
+        if (rest.length === 0) return [idx];
+        return [rest[0]!, idx, ...rest.slice(1)];
       }
       return rest;
     });
@@ -85,16 +97,15 @@ export function useFlashcardEngine(
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTypingInField()) return;
       const el = e.target as HTMLElement;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el.isContentEditable) {
         return;
       }
       const keyMap: Record<string, FlashcardRating> = {
         '1': 'again',
-        '2': 'hard',
-        '3': 'good',
-        '4': 'easy',
-        '5': 'done',
+        '2': 'good',
+        '3': 'done',
       };
       const rating = keyMap[e.key];
       if (!rating) return;

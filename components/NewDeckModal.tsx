@@ -112,8 +112,8 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames }: 
               value={language}
               onChange={(e) => setLanguage(e.target.value as 'en' | 'de')}
             >
-              <option value="de">German</option>
-              <option value="en">English</option>
+              <option value="de">de</option>
+              <option value="en">en</option>
             </select>
           </div>
 
@@ -134,9 +134,9 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames }: 
               className={`rounded-xl transition-[box-shadow,background-color] ${dropActive ? 'ring-2 ring-blue-500/40 bg-blue-500/5' : ''}`}
             >
               <textarea
-                className="w-full min-h-[240px] bg-gray-900/80 border border-gray-700 rounded-xl p-4 font-mono text-sm leading-relaxed text-white resize-y focus:outline-none focus:border-blue-500"
+                className="w-full min-h-[200px] max-h-[280px] bg-gray-900/80 border border-gray-700 rounded-xl p-4 font-mono text-sm leading-relaxed text-white resize-y focus:outline-none focus:border-blue-500"
                 placeholder={`der Apfel\ndie Katze\ndas Haus\nlernen\nmachen\n...`}
-                rows={12}
+                rows={10}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               />

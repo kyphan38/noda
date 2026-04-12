@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Meh, Smile, Target, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, Check, BadgeCheck } from 'lucide-react';
 import { useFlashcardEngine } from '@/hooks/useFlashcardEngine';
 import type { FlashcardRating } from '@/hooks/useFlashcardEngine';
 import { DeckItem } from '@/types';
@@ -153,7 +153,7 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
           value={editText}
           onChange={(e) => setEditText(e.target.value)}
           className="deck-textarea"
-          rows={12}
+          rows={18}
           aria-label="Deck lines, one card per line"
         />
         <div className="flex gap-2 mt-4">
@@ -188,24 +188,24 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
         <div className="header-actions w-full flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-gray-500 tabular-nums shrink-0">{lines.length} cards</span>
           <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleResetDeck}
-            title="Reset deck progress"
-            className="flashcard-btn-ghost border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
-          >
-            Reset deck
-          </button>
-          <button
-            type="button"
-            onClick={engine.toggleShuffle}
-            className={`flashcard-btn-ghost ${engine.isShuffle ? 'active' : ''}`}
-          >
-            {engine.isShuffle ? 'Shuffle on' : 'Sequential'}
-          </button>
-          <button type="button" className="flashcard-btn-ghost" onClick={() => setIsEditing(true)}>
-            Edit
-          </button>
+            <button
+              type="button"
+              onClick={handleResetDeck}
+              title="Reset deck progress"
+              className="flashcard-btn-ghost border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+            >
+              Reset deck
+            </button>
+            <button
+              type="button"
+              onClick={engine.toggleShuffle}
+              className={`flashcard-btn-ghost ${engine.isShuffle ? 'active' : ''}`}
+            >
+              {engine.isShuffle ? 'Shuffle on' : 'Sequential'}
+            </button>
+            <button type="button" className="flashcard-btn-ghost" onClick={() => setIsEditing(true)}>
+              Edit
+            </button>
           </div>
         </div>
       </div>
@@ -218,47 +218,35 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
         <div className="flashcard-controls">
           <button
             type="button"
+            tabIndex={-1}
+            onMouseDown={(e) => e.preventDefault()}
             className={`rate-btn btn-again ${keyFlash('1') ? 'flash-active' : ''}`}
             onClick={() => flashAndRate('1', 'again')}
           >
             <span className="shortcut-hint">1</span>
-            <X className="w-4 h-4 shrink-0" strokeWidth={2.25} aria-hidden />
+            <RotateCcw className="w-4 h-4 shrink-0" strokeWidth={2.25} aria-hidden />
             Again
           </button>
           <button
             type="button"
-            className={`rate-btn btn-hard ${keyFlash('2') ? 'flash-active' : ''}`}
-            onClick={() => flashAndRate('2', 'hard')}
+            tabIndex={-1}
+            onMouseDown={(e) => e.preventDefault()}
+            className={`rate-btn btn-good ${keyFlash('2') ? 'flash-active' : ''}`}
+            onClick={() => flashAndRate('2', 'good')}
           >
             <span className="shortcut-hint">2</span>
-            <Meh className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
-            Hard
-          </button>
-          <button
-            type="button"
-            className={`rate-btn btn-good ${keyFlash('3') ? 'flash-active' : ''}`}
-            onClick={() => flashAndRate('3', 'good')}
-          >
-            <span className="shortcut-hint">3</span>
-            <Smile className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+            <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} aria-hidden />
             Good
           </button>
           <button
             type="button"
-            className={`rate-btn btn-easy ${keyFlash('4') ? 'flash-active' : ''}`}
-            onClick={() => flashAndRate('4', 'easy')}
+            tabIndex={-1}
+            onMouseDown={(e) => e.preventDefault()}
+            className={`rate-btn btn-done ${keyFlash('3') ? 'flash-active' : ''}`}
+            onClick={() => flashAndRate('3', 'done')}
           >
-            <span className="shortcut-hint">4</span>
-            <Target className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
-            Easy
-          </button>
-          <button
-            type="button"
-            className={`rate-btn btn-done ${keyFlash('5') ? 'flash-active' : ''}`}
-            onClick={() => flashAndRate('5', 'done')}
-          >
-            <span className="shortcut-hint">5</span>
-            <CheckCircle2 className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+            <span className="shortcut-hint">3</span>
+            <BadgeCheck className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
             Done
           </button>
         </div>

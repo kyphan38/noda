@@ -170,8 +170,8 @@ export function NewLessonModal({
               onChange={(e) => setLanguage(e.target.value as 'en' | 'de')}
               disabled={isGeneratingIPA}
             >
-              <option value="de">German</option>
-              <option value="en">English</option>
+              <option value="de">de</option>
+              <option value="en">en</option>
             </select>
           </div>
 
