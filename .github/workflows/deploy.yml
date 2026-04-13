@@ -40,7 +40,7 @@ jobs:
           NEXT_PUBLIC_AUTH_PASSWORD_HASH: ${{ secrets.NEXT_PUBLIC_AUTH_PASSWORD_HASH }}
           NEXT_PUBLIC_GIST_TOKEN: ${{ secrets.NEXT_PUBLIC_GIST_TOKEN }}
           NEXT_PUBLIC_GIST_ID: ${{ secrets.NEXT_PUBLIC_GIST_ID }}
-          BASE_PATH: /dictation
+          BASE_PATH: /noda
 
       - name: Check build output
         run: ls -la out/
