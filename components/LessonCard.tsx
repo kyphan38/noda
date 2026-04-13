@@ -203,7 +203,7 @@ export function LessonCard({
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
                       >
-                        <Globe size={14} /> Change language
+                        <Globe size={14} /> Language
                       </button>
                     )}
                     <button
