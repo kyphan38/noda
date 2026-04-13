@@ -302,6 +302,9 @@ export default function NodaApp() {
     }
   };
 
+  // Revoke blob URLs whenever audioURL changes or the app unmounts. handleLoadLesson / handleNewLesson
+  // and other paths call setAudioURL without revoking the previous URL; handleAudioUpload revokes in its
+  // setter — a second revoke on the same URL is harmless (no-op per spec).
   useEffect(() => {
     return () => {
       if (audioURL) URL.revokeObjectURL(audioURL);

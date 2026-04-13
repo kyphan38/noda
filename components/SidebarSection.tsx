@@ -19,7 +19,6 @@ interface SidebarSectionProps {
   onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   activeMenu: string | null;
   setActiveMenu: (id: string | null) => void;
-  emptyMessage?: string;
   isLoading?: boolean;
 }
 
@@ -36,7 +35,6 @@ export function SidebarSection({
   onChangeLanguage,
   activeMenu,
   setActiveMenu,
-  emptyMessage,
   isLoading,
 }: SidebarSectionProps) {
   const isExpanded = expandedSections[type] ?? (type === 'lessons' || type === 'decks');
