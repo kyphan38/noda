@@ -97,10 +97,10 @@ export const getAllLessons = async (): Promise<LessonRecord[]> => {
   return [];
 };
 
-/** Active (non-trashed) lessons only — for Gist push. */
+/** Active, non-trashed flashcard decks only — for Gist push (audio lessons excluded). */
 export const getLessonsForGistExport = async (): Promise<LessonRecord[]> => {
   const all = await getAllLessons();
-  return all.filter((l) => !l.isTrashed);
+  return all.filter((l) => !l.isTrashed && l.type === 'flashcard');
 };
 
 export const deleteLesson = async (id: string) => {

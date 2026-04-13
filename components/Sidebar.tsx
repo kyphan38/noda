@@ -157,6 +157,8 @@ interface SidebarProps {
   isMobile?: boolean;
   gistSyncState?: GistSyncUiState;
   gistLastSyncLabel?: string | null;
+  /** Sanitized error text from last failed sync (no secrets). */
+  gistSyncErrorDetail?: string | null;
   onGistPush?: () => void;
   onGistPull?: () => void;
 }
@@ -181,6 +183,7 @@ export function Sidebar({
   isMobile = false,
   gistSyncState = 'idle',
   gistLastSyncLabel,
+  gistSyncErrorDetail = null,
   onGistPush,
   onGistPull,
 }: SidebarProps) {
@@ -213,10 +216,20 @@ export function Sidebar({
 
   const gistBusy = gistSyncState === 'loading';
 
+  const flexColWidth = isMobile ? 'w-0' : isOpen ? 'w-72' : 'w-0';
+
   return (
     <>
+      {isMobile && isOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 bg-black/50 touch-manipulation"
+          onClick={() => onToggle(false)}
+        />
+      )}
       <div
-        className={`shrink-0 transition-all duration-300 ease-in-out ${isOpen ? 'w-72' : 'w-0'} relative z-50`}
+        className={`shrink-0 transition-all duration-300 ease-in-out ${flexColWidth} relative z-50`}
       >
         <div
           className={`fixed inset-y-0 left-0 w-72 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out ${
@@ -367,7 +380,17 @@ export function Sidebar({
                 </p>
               )}
               {gistSyncState === 'error' && (
-                <p className="text-[10px] text-red-400">Sync failed — check token and network.</p>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-red-400">Sync failed — check token and network.</p>
+                  {gistSyncErrorDetail && (
+                    <p
+                      className="text-[10px] text-red-300/90 break-words max-h-24 overflow-y-auto leading-snug"
+                      title={gistSyncErrorDetail}
+                    >
+                      {gistSyncErrorDetail}
+                    </p>
+                  )}
+                </div>
               )}
               {gistSyncState === 'success' && (
                 <p className="text-[10px] text-emerald-500/90">Done.</p>

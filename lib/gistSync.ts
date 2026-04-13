@@ -21,16 +21,63 @@ export type NodaExportLesson = {
   flashcardData?: FlashcardData;
 };
 
-function getToken(): string {
-  const t = process.env.NEXT_PUBLIC_GIST_TOKEN?.trim();
-  if (!t) throw new Error('NEXT_PUBLIC_GIST_TOKEN is not set');
+/** Trim and strip accidental `Bearer ` if the whole header was pasted into .env */
+function normalizePat(raw: string | undefined): string {
+  let t = (raw ?? '').trim();
+  if (/^bearer\s+/i.test(t)) t = t.replace(/^bearer\s+/i, '').trim();
   return t;
 }
 
+function getToken(): string {
+  const t = normalizePat(process.env.NEXT_PUBLIC_GIST_TOKEN);
+  if (!t) {
+    throw new Error(
+      'NEXT_PUBLIC_GIST_TOKEN is missing or empty. For this app (static export), vars are baked in at build time — set secrets for CI, then rebuild/redeploy; locally run `npm run dev` or `npm run build` after editing .env.local.'
+    );
+  }
+  return t;
+}
+
+/** Accepts bare hex id or full gist URL; GitHub API path needs the id only. */
+function parseGistIdFromEnv(raw: string): string {
+  let s = normalizePat(raw);
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      if (u.hostname === 'gist.github.com' || u.hostname === 'www.gist.github.com') {
+        const parts = u.pathname.split('/').filter(Boolean);
+        const last = parts[parts.length - 1];
+        if (last && /^[0-9a-f]{20,40}$/i.test(last)) s = last;
+      }
+    } catch {
+      /* keep s */
+    }
+  }
+  return s;
+}
+
 function getGistId(): string {
-  const id = process.env.NEXT_PUBLIC_GIST_ID?.trim();
-  if (!id) throw new Error('NEXT_PUBLIC_GIST_ID is not set');
+  const id = parseGistIdFromEnv(process.env.NEXT_PUBLIC_GIST_ID ?? '');
+  if (!id) {
+    throw new Error(
+      'NEXT_PUBLIC_GIST_ID is missing or empty. Use the gist id (hex string) or paste the full https://gist.github.com/... URL.'
+    );
+  }
   return id;
+}
+
+async function readGithubErrorBody(res: Response): Promise<string> {
+  const text = await res.text();
+  try {
+    const j = JSON.parse(text) as { message?: string; documentation_url?: string };
+    if (j?.message) {
+      return `${res.status} ${j.message}${j.documentation_url ? ` — ${j.documentation_url}` : ''}`;
+    }
+  } catch {
+    /* use raw */
+  }
+  return `${res.status} ${text.slice(0, 280)}${text.length > 280 ? '…' : ''}`;
 }
 
 export function lessonToExportRow(lesson: LessonRecord): NodaExportLesson {
@@ -82,26 +129,41 @@ export async function pushToGist(): Promise<void> {
   const gistId = getGistId();
   const lessons = await getLessonsForGistExport();
   const rows: NodaExportLesson[] = lessons.map(lessonToExportRow);
-  const content = JSON.stringify(rows);
+  if (rows.length === 0) {
+    return;
+  }
+  let content: string;
+  try {
+    content = JSON.stringify(rows);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Cannot serialize lessons for Gist: ${msg}`);
+  }
 
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-    method: 'PATCH',
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      files: {
-        [GIST_FILENAME]: { content },
+  let res: Response;
+  try {
+    res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'PATCH',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json',
       },
-    }),
-  });
+      body: JSON.stringify({
+        files: {
+          [GIST_FILENAME]: { content },
+        },
+      }),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Network error calling GitHub: ${msg}`);
+  }
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gist push failed: ${res.status} ${errText}`);
+    const detail = await readGithubErrorBody(res);
+    throw new Error(`Gist push failed: ${detail}`);
   }
 
   if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
@@ -113,17 +175,23 @@ export async function pullFromGist(): Promise<void> {
   const token = getToken();
   const gistId = getGistId();
 
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Network error calling GitHub: ${msg}`);
+  }
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gist fetch failed: ${res.status} ${errText}`);
+    const detail = await readGithubErrorBody(res);
+    throw new Error(`Gist fetch failed: ${detail}`);
   }
 
   const body = (await res.json()) as {
@@ -138,6 +206,7 @@ export async function pullFromGist(): Promise<void> {
   const remotes = parseExportPayload(content);
   for (const row of remotes) {
     if (!row?.id) continue;
+    if (row.type !== 'flashcard') continue;
     await mergeRemoteLesson(row);
   }
 }

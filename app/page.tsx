@@ -70,6 +70,7 @@ export default function NodaApp() {
   const [gistLastSyncLabel, setGistLastSyncLabel] = useState<string | null>(() =>
     typeof window !== 'undefined' ? formatGistLastSync(getLastSyncTime()) : null
   );
+  const [gistSyncErrorDetail, setGistSyncErrorDetail] = useState<string | null>(null);
 
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
@@ -78,6 +79,7 @@ export default function NodaApp() {
   } | null>(null);
 
   const urlHydratedRef = useRef(false);
+  const mobileSidebarInitialCloseRef = useRef(false);
 
   const {
     audioFile, setAudioFile, audioURL, setAudioURL,
@@ -105,6 +107,12 @@ export default function NodaApp() {
     expandSidebarForItem,
     loadLessonsList, prepareForLessonMediaClear, handleUpdateItemLanguage
   } = useLessonLogic(audioFile, setAudioFile, setAudioURL, recognitionLang, setRecognitionLang);
+
+  useEffect(() => {
+    if (!viewport.decided || !viewport.isMobile || mobileSidebarInitialCloseRef.current) return;
+    mobileSidebarInitialCloseRef.current = true;
+    setIsSidebarOpen(false);
+  }, [viewport.decided, viewport.isMobile, setIsSidebarOpen]);
 
   const lessonsListRef = useRef<typeof lessonsList>([]);
   useEffect(() => {
@@ -265,24 +273,32 @@ export default function NodaApp() {
 
   const handleGistPush = async () => {
     setGistSyncState('loading');
+    setGistSyncErrorDetail(null);
     try {
       await pushToGist();
       setGistSyncState('success');
       setGistLastSyncLabel(formatGistLastSync(getLastSyncTime()));
+      setGistSyncErrorDetail(null);
       await loadLessonsList();
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setGistSyncErrorDetail(msg);
       setGistSyncState('error');
     }
   };
 
   const handleGistPull = async () => {
     setGistSyncState('loading');
+    setGistSyncErrorDetail(null);
     try {
       await pullFromGist();
       setGistSyncState('success');
       setGistLastSyncLabel(formatGistLastSync(getLastSyncTime()));
+      setGistSyncErrorDetail(null);
       await loadLessonsList();
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setGistSyncErrorDetail(msg);
       setGistSyncState('error');
     }
   };
@@ -653,6 +669,7 @@ export default function NodaApp() {
           isMobile={viewport.isMobile}
           gistSyncState={gistSyncState}
           gistLastSyncLabel={gistLastSyncLabel}
+          gistSyncErrorDetail={gistSyncErrorDetail}
           onGistPush={handleGistPush}
           onGistPull={handleGistPull}
         />
