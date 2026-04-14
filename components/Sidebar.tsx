@@ -196,7 +196,8 @@ export function Sidebar({
       name: l.name,
       language: l.language as 'en' | 'de',
       progress: l.progress,
-      hasAudio: l.hasAudio,
+      hasMedia: l.hasMedia,
+      mediaType: l.mediaType,
       type: 'lesson',
     }));
 

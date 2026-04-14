@@ -15,7 +15,7 @@ export function useGlobalPlaybackShortcuts(
   toggleLoopMode: () => void,
   loopTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
   isLoopDelayingRef: MutableRefObject<boolean>,
-  audioRef: RefObject<HTMLAudioElement | null>,
+  audioRef: RefObject<HTMLMediaElement | null>,
   activeSentenceRef: MutableRefObject<Sentence | null>
 ) {
   useEffect(() => {

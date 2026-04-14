@@ -22,7 +22,13 @@ export function useLessonCreateFlow(
   expandSidebarForItem: (kind: 'audio' | 'flashcard', language: string) => void
 ) {
   const handleLessonCreated = useCallback(
-    async (data: { name: string; language: 'en' | 'de'; audioFile: File; transcriptFile: File | null }) => {
+    async (data: {
+      name: string;
+      language: 'en' | 'de';
+      mediaFile: File;
+      mediaType: 'audio' | 'video';
+      transcriptFile: File | null;
+    }) => {
       try {
         let text = '';
         if (data.transcriptFile) {
@@ -40,7 +46,8 @@ export function useLessonCreateFlow(
           type: 'audio',
           name: uniqueName,
           language: data.language,
-          audioFile: data.audioFile,
+          mediaFile: data.mediaFile,
+          mediaType: data.mediaType,
           transcriptText: text,
           completedSentences: {},
           totalSentences: sentences.length,
@@ -56,7 +63,8 @@ export function useLessonCreateFlow(
           name: uniqueName,
           language: data.language,
           progress: 0,
-          hasAudio: true,
+          hasMedia: true,
+          mediaType: data.mediaType,
           type: 'lesson',
         };
 

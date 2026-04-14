@@ -145,13 +145,13 @@ function NormalMode({
     <div className="flex flex-col gap-2">
       <p
         className={`
-          text-lg leading-relaxed
+          font-sans text-lg leading-loose
           ${
             isActive
               ? 'text-emerald-400 font-medium text-xl'
               : isPast
-                ? 'text-gray-400'
-                : 'text-gray-200'
+                ? 'text-gray-300'
+                : 'text-gray-100'
           }
           ${hideCaptions ? 'invisible select-none' : ''}
         `}

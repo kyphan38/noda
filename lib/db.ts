@@ -14,7 +14,10 @@ export interface LessonRecord {
   type?: 'audio' | 'flashcard';
   name: string;
   language: string;
-  audioFile?: File | null;
+  /** Lesson media blob (audio or video). */
+  mediaFile?: File | null;
+  /** Audio vs video lesson; flashcard rows omit or use 'audio' as unused. */
+  mediaType?: 'audio' | 'video';
   transcriptText: string;
   completedSentences: Record<number, boolean>;
   totalSentences: number;
@@ -61,18 +64,45 @@ async function migrateV3(
   }
 }
 
+/** v3 → v4: audioFile → mediaFile; default mediaType 'audio'. */
+async function migrateV4(
+  transaction: IDBPTransaction<LessonDB, ('lessons')[], 'versionchange'>
+): Promise<void> {
+  const store = transaction.objectStore('lessons');
+  let cursor = await store.openCursor();
+  while (cursor) {
+    const raw = cursor.value as unknown as Record<string, unknown>;
+    const legacy = raw.audioFile;
+    if (legacy !== undefined && legacy !== null) {
+      raw.mediaFile = legacy;
+      delete raw.audioFile;
+    } else if (legacy === null) {
+      raw.mediaFile = null;
+      delete raw.audioFile;
+    }
+    if (raw.mediaType == null || raw.mediaType === '') {
+      raw.mediaType = 'audio';
+    }
+    await cursor.update(raw as unknown as LessonRecord);
+    cursor = await cursor.continue();
+  }
+}
+
 export const initDB = () => {
   if (typeof window === 'undefined') return null;
   if (!dbPromise) {
-    dbPromise = openDB<LessonDB>('shadowing-app-db', 3, {
-      upgrade(db, oldVersion, _newVersion, transaction) {
+    dbPromise = openDB<LessonDB>('shadowing-app-db', 4, {
+      async upgrade(db, oldVersion, _newVersion, transaction) {
         if (oldVersion < 1) {
           const store = db.createObjectStore('lessons', { keyPath: 'id' });
           store.createIndex('by-language', 'language');
           store.createIndex('by-accessed', 'lastAccessed');
         }
         if (oldVersion < 3) {
-          return migrateV3(transaction);
+          await migrateV3(transaction);
+        }
+        if (oldVersion < 4) {
+          await migrateV4(transaction);
         }
       },
     });
@@ -133,7 +163,7 @@ export const restoreLesson = async (id: string) => {
   }
 };
 
-/** Remove audio file only; keep transcript, progress, and lesson in library (not trashed). */
+/** Remove media file only; keep transcript, progress, and lesson in library (not trashed). */
 export const clearLessonMedia = async (id: string) => {
   const db = await initDB();
   if (!db) throw new Error('Database not available');
@@ -141,8 +171,9 @@ export const clearLessonMedia = async (id: string) => {
   if (!lesson || lesson.type === 'flashcard') {
     throw new Error('Lesson not found or cannot clear media for this item');
   }
-  lesson.audioFile = null;
+  lesson.mediaFile = null;
   lesson.type = 'audio';
+  lesson.mediaType = 'audio';
   lesson.isTrashed = false;
   bumpLessonUpdatedAt(lesson);
   await db.put('lessons', lesson);

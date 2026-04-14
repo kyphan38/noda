@@ -12,7 +12,7 @@ import { NewDeckModal } from '@/components/NewDeckModal';
 import { CleanupModal } from '@/components/CleanupModal';
 import { AppHeader } from '@/components/AppHeader';
 import { DeleteLessonModal } from '@/components/DeleteLessonModal';
-import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { useMediaPlayer } from '@/hooks/useMediaPlayer';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
 import { useLessonCreateFlow } from '@/hooks/useLessonCreateFlow';
@@ -22,7 +22,7 @@ import { useAutoScrollActiveSentence } from '@/hooks/useAutoScrollActiveSentence
 import { useGlobalPlaybackShortcuts } from '@/hooks/useGlobalPlaybackShortcuts';
 import { useHeaderItemMenuClickOutside } from '@/hooks/useHeaderItemMenu';
 import { useMobileViewport } from '@/hooks/use-mobile';
-import { LessonItem, DeckItem, Sentence } from '@/types';
+import { LessonItem, DeckItem, Sentence, type AppMode } from '@/types';
 import { LessonView } from '@/components/LessonView';
 import { FlashcardViewer } from '@/components/FlashcardViewer';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
@@ -82,12 +82,12 @@ export default function NodaApp() {
   const mobileSidebarInitialCloseRef = useRef(false);
 
   const {
-    audioFile, setAudioFile, audioURL, setAudioURL,
+    mediaFile, setMediaFile, mediaURL, setMediaURL,
     duration, setDuration, currentTime, setCurrentTime,
     isPlaying, setIsPlaying, playbackRate, loopMode, setLoopMode,
-    audioRef, loopTimeoutRef, isLoopDelayingRef, loopModeRef,
+    mediaRef, loopTimeoutRef, isLoopDelayingRef, loopModeRef,
     togglePlayPause, handleSeek, changeSpeed, toggleLoopMode
-  } = useAudioPlayer();
+  } = useMediaPlayer();
 
   const {
     isRecording, recognitionLang, setRecognitionLang,
@@ -103,10 +103,29 @@ export default function NodaApp() {
     expandedSections, setExpandedSections,
     appModeRef, completedSentencesRef, transcript,
     handleLoadLesson, bumpLessonLoadGeneration, handleNewLesson, handleRenameLesson, handleDeletePermanently,
-    handleModeChange,
+    handleModeChange: applyLessonAppMode,
     expandSidebarForItem,
     loadLessonsList, prepareForLessonMediaClear, handleUpdateItemLanguage
-  } = useLessonLogic(audioFile, setAudioFile, setAudioURL, recognitionLang, setRecognitionLang);
+  } = useLessonLogic(mediaFile, setMediaFile, setMediaURL, recognitionLang, setRecognitionLang);
+
+  const selectedItemRef = useRef(selectedItem);
+  selectedItemRef.current = selectedItem;
+
+  const handleModeChange = useCallback(
+    async (mode: AppMode) => {
+      if (selectedItemRef.current?.type === 'lesson') {
+        const el = mediaRef.current;
+        if (el) {
+          el.pause();
+          el.currentTime = 0;
+        }
+        setCurrentTime(0);
+        setIsPlaying(false);
+      }
+      await applyLessonAppMode(mode);
+    },
+    [applyLessonAppMode, mediaRef, setCurrentTime, setIsPlaying]
+  );
 
   useEffect(() => {
     if (!viewport.decided || !viewport.isMobile || mobileSidebarInitialCloseRef.current) return;
@@ -186,7 +205,8 @@ export default function NodaApp() {
         kind: 'audio' | 'flashcard';
         progress: number;
         totalSentences: number;
-        hasAudio: boolean;
+        hasMedia: boolean;
+        mediaType: 'audio' | 'video';
       },
       opts?: { pushHistory?: boolean }
     ) => {
@@ -212,35 +232,18 @@ export default function NodaApp() {
         name: row.name,
         language: row.language as 'en' | 'de',
         progress: row.progress,
-        hasAudio: row.hasAudio,
+        hasMedia: row.hasMedia,
+        mediaType: row.mediaType ?? 'audio',
         type: 'lesson',
       };
       expandSidebarForItem('audio', row.language);
       setSelectedItem({ id: row.id, type: 'lesson', data: lesson });
 
-      if (viewport.isMobile) {
-        bumpLessonLoadGeneration();
-        setAudioFile(null);
-        setAudioURL(null);
-        setIsPlaying(false);
-        if (pushHistory) pushItemHistoryState(row.id, 'lesson');
-        return;
-      }
-
       void handleLoadLesson(row.id);
       void handleModeChange('normal');
       if (pushHistory) pushItemHistoryState(row.id, 'lesson');
     },
-    [
-      bumpLessonLoadGeneration,
-      expandSidebarForItem,
-      handleLoadLesson,
-      handleModeChange,
-      setAudioFile,
-      setAudioURL,
-      setIsPlaying,
-      viewport.isMobile,
-    ]
+    [expandSidebarForItem, handleLoadLesson, handleModeChange]
   );
 
   const handleItemSelect = (item: LessonItem | DeckItem) => {
@@ -302,14 +305,14 @@ export default function NodaApp() {
     }
   };
 
-  // Revoke blob URLs whenever audioURL changes or the app unmounts. handleLoadLesson / handleNewLesson
-  // and other paths call setAudioURL without revoking the previous URL; handleAudioUpload revokes in its
+  // Revoke blob URLs whenever mediaURL changes or the app unmounts. handleLoadLesson / handleNewLesson
+  // and other paths call setMediaURL without revoking the previous URL; handleMediaUpload revokes in its
   // setter — a second revoke on the same URL is harmless (no-op per spec).
   useEffect(() => {
     return () => {
-      if (audioURL) URL.revokeObjectURL(audioURL);
+      if (mediaURL) URL.revokeObjectURL(mediaURL);
     };
-  }, [audioURL]);
+  }, [mediaURL]);
 
   useEffect(() => {
     setHeaderItemMenuOpen(false);
@@ -412,17 +415,17 @@ export default function NodaApp() {
   const lastScrolledIndexRef = useRef<number>(-1);
 
   const togglePlayPauseLesson = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    const media = mediaRef.current;
+    if (!media) return;
     const mode = appModeRef.current;
     if (
-      audio.paused &&
+      media.paused &&
       (mode === 'shadowing' || mode === 'dictation') &&
       activeSentenceRef.current
     ) {
       const s = activeSentenceRef.current;
-      if (audio.currentTime >= s.end - 0.08) {
-        audio.currentTime = s.start;
+      if (media.currentTime >= s.end - 0.08) {
+        media.currentTime = s.start;
         setCurrentTime(s.start);
         lastScrolledIndexRef.current = -1;
         if (loopTimeoutRef.current) {
@@ -433,7 +436,7 @@ export default function NodaApp() {
       }
     }
     togglePlayPause();
-  }, [togglePlayPause, setCurrentTime, audioRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef]);
+  }, [togglePlayPause, setCurrentTime, mediaRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef]);
 
   const {
     showCleanupModal,
@@ -452,20 +455,16 @@ export default function NodaApp() {
     return () => clearTimeout(timer);
   }, []);
 
-  const isMobileLessonBlocked = viewport.isMobile && selectedItem?.type === 'lesson';
-
   useGlobalPlaybackShortcuts(
-    isMobileLessonBlocked ? undefined : selectedItem?.type,
+    selectedItem?.type,
     appMode,
-    selectedItem?.type === 'lesson' && !isMobileLessonBlocked
-      ? () => setHideCaptions((v) => !v)
-      : undefined,
+    selectedItem?.type === 'lesson' ? () => setHideCaptions((v) => !v) : undefined,
     handleModeChange,
     togglePlayPauseLesson,
     toggleLoopMode,
     loopTimeoutRef,
     isLoopDelayingRef,
-    audioRef,
+    mediaRef,
     activeSentenceRef
   );
 
@@ -473,7 +472,7 @@ export default function NodaApp() {
     isPlaying,
     transcript,
     setCurrentTime,
-    audioRef,
+    mediaRef,
     loopTimeoutRef,
     isLoopDelayingRef,
     loopModeRef,
@@ -490,21 +489,21 @@ export default function NodaApp() {
       completedSentencesRef.current = next;
       return next;
     });
-    if (audioRef.current) {
-      audioRef.current.currentTime = sentence.end + 0.05;
-      audioRef.current.play().catch(() => {});
+    if (mediaRef.current) {
+      mediaRef.current.currentTime = sentence.end + 0.05;
+      mediaRef.current.play().catch(() => {});
     }
   };
 
   const handleSentenceClick = (sentence: Sentence) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = sentence.start;
+    if (mediaRef.current) {
+      mediaRef.current.currentTime = sentence.start;
       setCurrentTime(sentence.start);
       lastScrolledIndexRef.current = -1;
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
       isLoopDelayingRef.current = false;
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => {});
+      if (mediaRef.current.paused) {
+        mediaRef.current.play().catch(() => {});
       }
     }
   };
@@ -533,16 +532,16 @@ export default function NodaApp() {
       const idx = transcript.findIndex((s) => s.id === sentence.id);
       const nextSentence = idx >= 0 && idx < transcript.length - 1 ? transcript[idx + 1] : null;
 
-      if (audioRef.current) {
+      if (mediaRef.current) {
         if (nextSentence) {
-          audioRef.current.currentTime = nextSentence.start;
+          mediaRef.current.currentTime = nextSentence.start;
           setCurrentTime(nextSentence.start);
           lastScrolledIndexRef.current = -1;
         } else {
-          audioRef.current.currentTime = sentence.end + 0.05;
+          mediaRef.current.currentTime = sentence.end + 0.05;
           setCurrentTime(sentence.end + 0.05);
         }
-        audioRef.current.play().catch(() => {});
+        mediaRef.current.play().catch(() => {});
       }
     }
   };
@@ -565,9 +564,9 @@ export default function NodaApp() {
         clearTimeout(loopTimeoutRef.current);
         isLoopDelayingRef.current = false;
       }
-      if (audioRef.current) {
-        audioRef.current.currentTime = sentence.start;
-        audioRef.current.play().catch(() => {});
+      if (mediaRef.current) {
+        mediaRef.current.currentTime = sentence.start;
+        mediaRef.current.play().catch(() => {});
       }
     }
   };
@@ -622,9 +621,6 @@ export default function NodaApp() {
     window.history.replaceState({}, '', window.location.pathname);
   };
 
-  const showLessonAudio =
-    selectedItem?.type === 'lesson' && !viewport.isMobile && !isMobileLessonBlocked;
-
   if (!isMounted) {
     return null;
   }
@@ -677,8 +673,8 @@ export default function NodaApp() {
         />
       </div>
 
-      <div className="flex-1 flex flex-col h-full overflow-y-auto relative">
-        <div className="max-w-4xl mx-auto w-full p-4 md:p-8 flex flex-col min-h-full">
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        <div className="max-w-4xl mx-auto w-full p-3 md:p-4 flex flex-col h-full min-h-0">
           <AppHeader
             isSidebarOpen={isSidebarOpen}
             onOpenSidebar={() => setIsSidebarOpen(true)}
@@ -697,13 +693,9 @@ export default function NodaApp() {
             }}
           />
 
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {!selectedItem && uploadMode === 'idle' && (
-              <WelcomeScreen
-                onNewLesson={openNewLessonModal}
-                onNewDeck={openNewDeckModal}
-                hideAudio={viewport.isMobile}
-              />
+              <WelcomeScreen onNewLesson={openNewLessonModal} onNewDeck={openNewDeckModal} />
             )}
 
             {uploadMode === 'lesson' && (
@@ -711,6 +703,7 @@ export default function NodaApp() {
                 onClose={closeUploadModal}
                 onSubmit={handleLessonCreated}
                 getTakenAudioLessonNames={getTakenAudioLessonNames}
+                onNotify={(message, type) => setToast({ message, type })}
               />
             )}
 
@@ -722,31 +715,8 @@ export default function NodaApp() {
               />
             )}
 
-            {(audioURL || showLessonAudio) && (
-              <audio
-                ref={audioRef}
-                src={audioURL || undefined}
-                loop={false}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-                onEnded={() => setIsPlaying(false)}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-              />
-            )}
-
-            {isMobileLessonBlocked && (
-              <div className="flex flex-col flex-1 min-h-0 items-center justify-center p-8 text-center border border-gray-800 rounded-2xl bg-gray-900/40">
-                <p className="text-gray-300 text-lg font-medium max-w-md">
-                  Audio lessons are not available on mobile — use a larger screen.
-                </p>
-                <p className="text-gray-500 text-sm mt-4 max-w-sm">
-                  Flashcard decks work on this device. Create or open a deck from the sidebar.
-                </p>
-              </div>
-            )}
-
-            {selectedItem?.type === 'lesson' && !isMobileLessonBlocked && (
-              <div key={appMode} className="mode-content-fade flex flex-col flex-1 min-h-0">
+            {selectedItem?.type === 'lesson' && (
+              <div key={`${selectedItem.id}-${appMode}`} className="mode-content-fade flex flex-col flex-1 min-h-0">
                 <LessonView
                   lesson={selectedItem.data as LessonItem}
                   mode={appMode}
@@ -776,6 +746,11 @@ export default function NodaApp() {
                   onResetDictation={handleResetDictationProgress}
                   hideCaptions={hideCaptions}
                   onToggleHideCaptions={() => setHideCaptions((v) => !v)}
+                  mediaRef={mediaRef}
+                  mediaURL={mediaURL}
+                  isMobile={viewport.isMobile}
+                  setDuration={setDuration}
+                  setIsPlaying={setIsPlaying}
                 />
               </div>
             )}
@@ -824,11 +799,11 @@ export default function NodaApp() {
                 if (!id || selectedItem?.type !== 'lesson') return;
                 setShowCleanupModal(false);
                 try {
-                  if (audioURL) {
-                    URL.revokeObjectURL(audioURL);
+                  if (mediaURL) {
+                    URL.revokeObjectURL(mediaURL);
                   }
-                  setAudioURL(null);
-                  setAudioFile(null);
+                  setMediaURL(null);
+                  setMediaFile(null);
                   setIsPlaying(false);
                   await prepareForLessonMediaClear(id);
                   await handleDeletePermanently(id);

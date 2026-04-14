@@ -6,7 +6,7 @@ import { LEARNING_MODES } from '@/constants';
 interface UploadPanelProps {
   lessonName: string;
   setLessonName: (name: string) => void;
-  audioFile: File | null;
+  mediaFile: File | null;
   currentLessonId: string | null;
   handleAudioUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   transcriptText: string;
@@ -22,7 +22,7 @@ interface UploadPanelProps {
 export function UploadPanel({
   lessonName,
   setLessonName,
-  audioFile,
+  mediaFile,
   currentLessonId,
   handleAudioUpload,
   transcriptText,
@@ -59,19 +59,19 @@ export function UploadPanel({
               type="text" 
               value={lessonName}
               onChange={(e) => setLessonName(e.target.value)}
-              placeholder={audioFile ? audioFile.name.replace(/\.[^/.]+$/, "") : "My awesome lesson"}
+              placeholder={mediaFile ? mediaFile.name.replace(/\.[^/.]+$/, "") : "My awesome lesson"}
               className="w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-3 outline-none"
             />
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Audio Upload */}
-            <div className={`p-6 rounded-xl border-2 border-dashed transition-colors ${audioFile ? 'border-green-500 bg-green-500/10' : 'border-gray-700 hover:border-gray-500 bg-gray-900/50'}`}>
+            <div className={`p-6 rounded-xl border-2 border-dashed transition-colors ${mediaFile ? 'border-green-500 bg-green-500/10' : 'border-gray-700 hover:border-gray-500 bg-gray-900/50'}`}>
               <label className="flex flex-col items-center justify-center cursor-pointer h-full min-h-[160px]">
-                {audioFile ? (
+                {mediaFile ? (
                   <>
                     <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
-                    <span className="text-green-400 font-medium text-center">{audioFile.name}</span>
+                    <span className="text-green-400 font-medium text-center">{mediaFile.name}</span>
                   </>
                 ) : (
                   <>
@@ -141,7 +141,7 @@ export function UploadPanel({
              </div>
              
              <button 
-               disabled={!audioFile || !transcriptText}
+               disabled={!mediaFile || !transcriptText}
                onClick={handleStartLearning}
                className="w-full max-w-md py-4 bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-bold text-lg rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95"
              >

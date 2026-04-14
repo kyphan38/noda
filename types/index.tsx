@@ -34,7 +34,10 @@ export type LessonSummary = {
   /** Library section: audio lessons vs flashcard decks (independent of whether audio file is present). */
   kind: 'audio' | 'flashcard';
   isTrashed: boolean;
-  hasAudio: boolean;
+  /** Whether a media blob exists in IndexedDB (audio or video). */
+  hasMedia: boolean;
+  /** For kind=audio: audio vs video lesson; for flashcard unused (always 'audio'). */
+  mediaType: 'audio' | 'video';
   trashedAt?: number;
 };
 
@@ -44,7 +47,8 @@ export type Lesson = {
   type?: 'audio' | 'flashcard';
   name: string;
   language: string;
-  audioFile?: File;
+  mediaFile?: File;
+  mediaType?: 'audio' | 'video';
   transcriptText: string;
   completedSentences: CompletedSentences;
   totalSentences: number;
@@ -60,7 +64,8 @@ export interface LessonItem {
   name: string;
   language: 'en' | 'de';
   progress: number; // 0-100
-  hasAudio: boolean;
+  hasMedia: boolean;
+  mediaType: 'audio' | 'video';
   type: 'lesson'; // CRITICAL: để phân biệt với deck
 }
 

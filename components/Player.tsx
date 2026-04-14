@@ -15,6 +15,16 @@ interface PlayerProps {
   onSeek: (time: number) => void;
   onSpeedChange: () => void;
   onLoopModeChange: () => void;
+  seekDisabled?: boolean;
+  showVideoToggle?: boolean;
+  videoHidden?: boolean;
+  onToggleVideoHidden?: () => void;
+  showCaptionsToggle?: boolean;
+  captionsHidden?: boolean;
+  onToggleCaptions?: () => void;
+  showReset?: boolean;
+  onReset?: () => void;
+  variant?: 'panel' | 'overlay';
 }
 
 export function Player({
@@ -27,13 +37,26 @@ export function Player({
   onSeek,
   onSpeedChange,
   onLoopModeChange,
+  seekDisabled = false,
+  showVideoToggle = false,
+  videoHidden = false,
+  onToggleVideoHidden,
+  showCaptionsToggle = false,
+  captionsHidden = false,
+  onToggleCaptions,
+  showReset = false,
+  onReset,
+  variant = 'panel',
 }: PlayerProps) {
+  const overlay = variant === 'overlay';
   return (
-    <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shrink-0">
+    <div className={overlay ? 'w-full' : 'bg-gray-900 rounded-2xl p-5 border border-gray-800 shrink-0'}>
       <PlaybackSeekBar
         duration={duration}
         currentTime={currentTime}
         onSeek={onSeek}
+        seekDisabled={seekDisabled}
+        compact={overlay}
       />
       <PlayerControls
         isPlaying={isPlaying}
@@ -42,6 +65,15 @@ export function Player({
         onPlayPause={onPlayPause}
         onSpeedChange={onSpeedChange}
         onLoopModeChange={onLoopModeChange}
+        showVideoToggle={showVideoToggle}
+        videoHidden={videoHidden}
+        onToggleVideoHidden={onToggleVideoHidden}
+        showCaptionsToggle={showCaptionsToggle}
+        captionsHidden={captionsHidden}
+        onToggleCaptions={onToggleCaptions}
+        showReset={showReset}
+        onReset={onReset}
+        compact={overlay}
       />
     </div>
   );

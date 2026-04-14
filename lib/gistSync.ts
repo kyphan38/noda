@@ -7,6 +7,8 @@ const LAST_SYNC_KEY = 'noda_last_sync';
 export type NodaExportLesson = {
   id: string;
   type?: 'audio' | 'flashcard';
+  /** Omitted from JSON file; set on merge for audio lessons. */
+  mediaType?: 'audio' | 'video';
   name: string;
   language: string;
   transcriptText: string;
@@ -81,7 +83,7 @@ async function readGithubErrorBody(res: Response): Promise<string> {
 }
 
 export function lessonToExportRow(lesson: LessonRecord): NodaExportLesson {
-  const { audioFile: _omit, ...rest } = lesson;
+  const { mediaFile: _omit, ...rest } = lesson;
   return rest as NodaExportLesson;
 }
 
@@ -94,7 +96,7 @@ function parseExportPayload(text: string): NodaExportLesson[] {
 /** Merge one remote row: blob preservation order; winner by updatedAt. */
 export async function mergeRemoteLesson(remote: NodaExportLesson): Promise<void> {
   const existing = await getLesson(remote.id);
-  const localBlob = existing?.audioFile;
+  const localBlob = existing?.mediaFile;
 
   const rU = typeof remote.updatedAt === 'number' ? remote.updatedAt : 0;
   const lU = existing && typeof existing.updatedAt === 'number' ? existing.updatedAt : 0;
@@ -104,23 +106,28 @@ export async function mergeRemoteLesson(remote: NodaExportLesson): Promise<void>
   if (!existing) {
     winner = {
       ...remote,
-      audioFile: localBlob ?? null,
+      mediaFile: localBlob ?? null,
+      mediaType: remote.mediaType ?? 'audio',
       updatedAt: typeof remote.updatedAt === 'number' ? remote.updatedAt : Date.now(),
     } as LessonRecord;
   } else if (rU >= lU) {
     winner = {
       ...existing,
       ...remote,
-      audioFile: localBlob ?? null,
+      mediaFile: localBlob ?? null,
+      mediaType: remote.mediaType ?? existing.mediaType ?? 'audio',
     } as LessonRecord;
   } else {
     winner = {
       ...existing,
-      audioFile: localBlob ?? null,
+      mediaFile: localBlob ?? null,
     };
   }
 
-  winner.audioFile = localBlob ?? null;
+  winner.mediaFile = localBlob ?? null;
+  if (winner.type !== 'flashcard' && winner.mediaType == null) {
+    winner.mediaType = 'audio';
+  }
   await saveLesson(winner);
 }
 

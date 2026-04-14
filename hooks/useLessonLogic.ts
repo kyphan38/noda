@@ -13,9 +13,9 @@ import {
 } from '@/lib/db';
 
 export function useLessonLogic(
-  audioFile: File | null,
-  setAudioFile: (file: File | null) => void,
-  setAudioURL: (url: string | null) => void,
+  mediaFile: File | null,
+  setMediaFile: (file: File | null) => void,
+  setMediaURL: (url: string | null) => void,
   recognitionLang: string,
   setRecognitionLang: (lang: string) => void
 ) {
@@ -36,7 +36,8 @@ export function useLessonLogic(
       totalSentences: number;
       kind: 'audio' | 'flashcard';
       isTrashed: boolean;
-      hasAudio: boolean;
+      hasMedia: boolean;
+      mediaType: 'audio' | 'video';
       trashedAt?: number;
     }>
   >([]);
@@ -90,7 +91,8 @@ export function useLessonLogic(
           totalSentences: l.totalSentences ?? 0,
           kind,
           isTrashed: !!l.isTrashed,
-          hasAudio: !!l.audioFile,
+          hasMedia: !!l.mediaFile,
+          mediaType: kind === 'flashcard' ? 'audio' : (l.mediaType ?? 'audio'),
           trashedAt: l.trashedAt,
         };
       });
@@ -162,18 +164,18 @@ export function useLessonLogic(
         setLessonName(lesson.name);
         setRecognitionLang(lesson.language);
 
-        if (lesson.audioFile) {
-          setAudioFile(lesson.audioFile);
-          setAudioURL(URL.createObjectURL(lesson.audioFile));
+        if (lesson.mediaFile) {
+          setMediaFile(lesson.mediaFile);
+          setMediaURL(URL.createObjectURL(lesson.mediaFile));
         } else {
-          setAudioFile(null);
-          setAudioURL(null);
+          setMediaFile(null);
+          setMediaURL(null);
         }
 
         setTranscriptText(lesson.transcriptText);
         setCompletedSentences(lesson.completedSentences || {});
         const hasTranscript = !!(lesson.transcriptText && lesson.transcriptText.trim());
-        setIsStarted(!!lesson.audioFile || hasTranscript);
+        setIsStarted(!!lesson.mediaFile || hasTranscript);
         setAppMode('normal');
 
         lesson.lastAccessed = Date.now();
@@ -196,8 +198,8 @@ export function useLessonLogic(
     currentLessonIdRef.current = null;
     setCurrentLessonId(null);
     setLessonName('');
-    setAudioFile(null);
-    setAudioURL(null);
+    setMediaFile(null);
+    setMediaURL(null);
     setTranscriptText('');
     setCompletedSentences({});
     setIsStarted(false);
@@ -244,21 +246,26 @@ export function useLessonLogic(
   };
 
   const handleStartLearning = async () => {
-    if (!audioFile || !transcriptText) return;
+    if (!mediaFile || !transcriptText) return;
 
     let lessonId = currentLessonId;
     const sentences = parseTranscript(transcriptText);
+    const inferredMediaType: 'audio' | 'video' = mediaFile.type.startsWith('video/')
+      ? 'video'
+      : 'audio';
 
     if (!lessonId) {
       lessonId = Date.now().toString();
-      const name = lessonName.trim() || audioFile.name.replace(/\.[^/.]+$/, '');
+      const name = lessonName.trim() || mediaFile.name.replace(/\.[^/.]+$/, '');
       const now = Date.now();
 
       const newLesson: LessonRecord = {
         id: lessonId,
+        type: 'audio',
         name,
         language: recognitionLang,
-        audioFile,
+        mediaFile,
+        mediaType: inferredMediaType,
         transcriptText,
         completedSentences: {},
         totalSentences: sentences.length,
@@ -275,7 +282,8 @@ export function useLessonLogic(
     } else {
       const existingLesson = await getLesson(lessonId);
       if (existingLesson) {
-        existingLesson.audioFile = audioFile;
+        existingLesson.mediaFile = mediaFile;
+        existingLesson.mediaType = inferredMediaType;
         existingLesson.isTrashed = false;
         existingLesson.lastAccessed = Date.now();
         bumpLessonUpdatedAt(existingLesson);
@@ -307,7 +315,7 @@ export function useLessonLogic(
     });
   }, []);
 
-  const handleModeChange = async (mode: AppMode) => {
+  const applyAppMode = async (mode: AppMode) => {
     appModeRef.current = mode;
     setAppMode(mode);
   };
@@ -396,7 +404,7 @@ export function useLessonLogic(
     handleRenameLesson,
     handleDeletePermanently,
     handleStartLearning,
-    handleModeChange,
+    handleModeChange: applyAppMode,
     expandSidebarForItem,
     handleTranscriptUpload,
     handleFlashcardUpload,

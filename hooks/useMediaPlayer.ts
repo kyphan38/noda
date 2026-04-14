@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { LoopMode } from '@/types';
-import { DEFAULT_LOOP_MODE, LOOP_DELAY_MS } from '@/constants';
+import { DEFAULT_LOOP_MODE } from '@/constants';
 import { getNextPlaybackSpeed } from '@/lib/utils';
 
-export function useAudioPlayer() {
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioURL, setAudioURL] = useState<string | null>(null);
+export function useMediaPlayer() {
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaURL, setMediaURL] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   const [loopMode, setLoopMode] = useState<LoopMode>(DEFAULT_LOOP_MODE);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mediaRef = useRef<HTMLMediaElement | null>(null);
   const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoopDelayingRef = useRef<boolean>(false);
   const loopModeRef = useRef<LoopMode>(loopMode);
@@ -23,35 +23,35 @@ export function useAudioPlayer() {
 
   useEffect(() => {
     setIsPlaying(false);
-    if (audioRef.current) {
-      audioRef.current.pause();
+    if (mediaRef.current) {
+      mediaRef.current.pause();
     }
-  }, [audioURL]);
+  }, [mediaURL]);
 
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAudioURL((prev) => {
+      setMediaURL((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return URL.createObjectURL(file);
       });
-      setAudioFile(file);
+      setMediaFile(file);
     }
   };
 
   const togglePlayPause = () => {
-    if (audioRef.current) {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => {});
+    if (mediaRef.current) {
+      if (mediaRef.current.paused) {
+        mediaRef.current.play().catch(() => {});
       } else {
-        audioRef.current.pause();
+        mediaRef.current.pause();
       }
     }
   };
 
   const handleSeek = (time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
+    if (mediaRef.current) {
+      mediaRef.current.currentTime = time;
       setCurrentTime(time);
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
       isLoopDelayingRef.current = false;
@@ -61,8 +61,8 @@ export function useAudioPlayer() {
   const changeSpeed = () => {
     const nextSpeed = getNextPlaybackSpeed(playbackRate);
     setPlaybackRate(nextSpeed);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = nextSpeed;
+    if (mediaRef.current) {
+      mediaRef.current.playbackRate = nextSpeed;
     }
   };
 
@@ -71,10 +71,10 @@ export function useAudioPlayer() {
   };
 
   return {
-    audioFile,
-    setAudioFile,
-    audioURL,
-    setAudioURL,
+    mediaFile,
+    setMediaFile,
+    mediaURL,
+    setMediaURL,
     duration,
     setDuration,
     currentTime,
@@ -84,14 +84,14 @@ export function useAudioPlayer() {
     playbackRate,
     loopMode,
     setLoopMode,
-    audioRef,
+    mediaRef,
     loopTimeoutRef,
     isLoopDelayingRef,
     loopModeRef,
-    handleAudioUpload,
+    handleMediaUpload,
     togglePlayPause,
     handleSeek,
     changeSpeed,
-    toggleLoopMode
+    toggleLoopMode,
   };
 }

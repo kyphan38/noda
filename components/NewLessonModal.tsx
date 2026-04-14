@@ -1,22 +1,52 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Music2, FileText } from 'lucide-react';
+import { Music2, FileText, Loader2 } from 'lucide-react';
 import { isLessonNameTaken } from '@/lib/utils';
 
-interface LessonData {
+const MEDIA_MAX_BYTES = 200 * 1024 * 1024;
+const MEDIA_WARN_BYTES = 100 * 1024 * 1024;
+
+export interface LessonData {
   name: string;
   language: 'en' | 'de';
-  audioFile: File;
+  mediaFile: File;
+  mediaType: 'audio' | 'video';
   transcriptFile: File | null;
 }
 
 interface NewLessonModalProps {
   onClose: () => void;
-  onSubmit: (data: LessonData) => void;
+  onSubmit: (data: LessonData) => void | Promise<void>;
   getTakenAudioLessonNames: () => string[];
+  onNotify?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
-function isAudioFile(file: File) {
-  return file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac|webm)$/i.test(file.name);
+function isAcceptedLessonMedia(file: File): boolean {
+  const name = file.name.toLowerCase();
+  if (file.type.startsWith('audio/')) return true;
+  if (file.type === 'video/mp4' || file.type === 'video/webm') return true;
+  if (/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name)) return true;
+  if (name.endsWith('.webm') && (file.type === '' || file.type === 'application/octet-stream')) return true;
+  if (name.endsWith('.mp4')) {
+    if (file.type === '' || file.type === 'application/octet-stream') return true;
+    return file.type.startsWith('video/');
+  }
+  return false;
+}
+
+/** Reject obvious extension vs MIME mismatch (AC 1.1.4). */
+function isExtensionMimeMismatch(file: File): boolean {
+  const name = file.name.toLowerCase();
+  const t = file.type;
+  if (!t || t === 'application/octet-stream') return false;
+  if (name.endsWith('.mp4')) return !t.startsWith('video/');
+  if (name.endsWith('.webm')) return !t.startsWith('video/') && !t.startsWith('audio/');
+  return false;
+}
+
+function mediaTypeFromFile(file: File): 'audio' | 'video' {
+  if (file.type.startsWith('video/')) return 'video';
+  if (file.name.toLowerCase().endsWith('.mp4')) return 'video';
+  return 'audio';
 }
 
 function isSrtFile(file: File) {
@@ -27,14 +57,16 @@ export function NewLessonModal({
   onClose,
   onSubmit,
   getTakenAudioLessonNames,
+  onNotify,
 }: NewLessonModalProps) {
   const [lessonName, setLessonName] = useState('');
   const [language, setLanguage] = useState<'en' | 'de'>('de');
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
-  const [audioDrag, setAudioDrag] = useState(false);
+  const [mediaDrag, setMediaDrag] = useState(false);
   const [transcriptDrag, setTranscriptDrag] = useState(false);
-  const [audioNameConflict, setAudioNameConflict] = useState<string | null>(null);
+  const [mediaNameConflict, setMediaNameConflict] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -44,22 +76,44 @@ export function NewLessonModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const applyAudioFile = useCallback(
+  const applyMediaFile = useCallback(
     (file: File) => {
-      if (!isAudioFile(file)) return;
+      if (file.size > MEDIA_MAX_BYTES) {
+        onNotify?.(
+          'File is too large (200MB max). Compress the video or extract audio before importing.',
+          'error'
+        );
+        return;
+      }
+      if (file.size >= MEDIA_WARN_BYTES) {
+        onNotify?.(
+          'Large files may feel sluggish when seeking. If that happens, try an audio-only export (e.g. MP3).',
+          'info'
+        );
+      }
+
+      if (!isAcceptedLessonMedia(file)) {
+        onNotify?.('Invalid file. Supported: common audio formats, MP4, and WebM.', 'error');
+        return;
+      }
+      if (isExtensionMimeMismatch(file)) {
+        onNotify?.('File type does not match extension (e.g. use real MP4/WebM).', 'error');
+        return;
+      }
+
       const stem = file.name.replace(/\.[^/.]+$/, '');
       const taken = getTakenAudioLessonNames();
       if (isLessonNameTaken(stem, taken)) {
-        setAudioNameConflict(
+        setMediaNameConflict(
           `A lesson named "${stem}" already exists. Use another file or rename the lesson after choosing a file with a different name.`
         );
         return;
       }
-      setAudioNameConflict(null);
-      setAudioFile(file);
+      setMediaNameConflict(null);
+      setMediaFile(file);
       setLessonName(stem);
     },
-    [getTakenAudioLessonNames]
+    [getTakenAudioLessonNames, onNotify]
   );
 
   const applyTranscriptFile = useCallback((file: File) => {
@@ -67,9 +121,9 @@ export function NewLessonModal({
     setTranscriptFile(file);
   }, []);
 
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) applyAudioFile(file);
+    if (file) applyMediaFile(file);
     e.target.value = '';
   };
 
@@ -78,12 +132,12 @@ export function NewLessonModal({
     if (file) applyTranscriptFile(file);
   };
 
-  const handleAudioDrop = (e: React.DragEvent) => {
+  const handleMediaDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setAudioDrag(false);
+    setMediaDrag(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) applyAudioFile(file);
+    if (file) applyMediaFile(file);
   };
 
   const handleTranscriptDrop = (e: React.DragEvent) => {
@@ -94,14 +148,21 @@ export function NewLessonModal({
     if (file) applyTranscriptFile(file);
   };
 
-  const handleSubmit = () => {
-    if (audioFile && lessonName) {
-      onSubmit({
-        name: lessonName,
-        language,
-        audioFile,
-        transcriptFile,
-      });
+  const handleSubmit = async () => {
+    if (!mediaFile || !lessonName || isSaving) return;
+    setIsSaving(true);
+    try {
+      await Promise.resolve(
+        onSubmit({
+          name: lessonName,
+          language,
+          mediaFile,
+          mediaType: mediaTypeFromFile(mediaFile),
+          transcriptFile,
+        })
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -109,7 +170,7 @@ export function NewLessonModal({
     <div className="app-modal-backdrop fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="app-modal-panel relative bg-gray-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700/80">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">🎧 New Audio</h2>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">🎧 New Lesson</h2>
           <button
             type="button"
             onClick={onClose}
@@ -119,7 +180,7 @@ export function NewLessonModal({
           </button>
         </div>
 
-        <div className="space-y-6">
+        <div className={`space-y-6 ${isSaving ? 'pointer-events-none opacity-70' : ''}`}>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Name</label>
             <input
@@ -128,10 +189,11 @@ export function NewLessonModal({
               value={lessonName}
               onChange={(e) => {
                 setLessonName(e.target.value);
-                setAudioNameConflict(null);
+                setMediaNameConflict(null);
               }}
               autoCorrect="off"
               autoCapitalize="off"
+              disabled={isSaving}
             />
           </div>
 
@@ -141,6 +203,7 @@ export function NewLessonModal({
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
               value={language}
               onChange={(e) => setLanguage(e.target.value as 'en' | 'de')}
+              disabled={isSaving}
             >
               <option value="de">de</option>
               <option value="en">en</option>
@@ -151,37 +214,38 @@ export function NewLessonModal({
             <div
               onDragEnter={(e) => {
                 e.preventDefault();
-                setAudioDrag(true);
+                setMediaDrag(true);
               }}
               onDragLeave={(e) => {
                 e.preventDefault();
-                if (!e.currentTarget.contains(e.relatedTarget as Node)) setAudioDrag(false);
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setMediaDrag(false);
               }}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'copy';
               }}
-              onDrop={handleAudioDrop}
-              className={`text-center pb-6 border-b border-gray-700 mb-4 relative rounded-xl transition-colors ${audioDrag ? 'bg-emerald-500/10 border border-dashed border-emerald-500/50' : ''}`}
+              onDrop={handleMediaDrop}
+              className={`text-center pb-6 border-b border-gray-700 mb-4 relative rounded-xl transition-colors ${mediaDrag ? 'bg-emerald-500/10 border border-dashed border-emerald-500/50' : ''}`}
             >
               <div className="flex justify-center mb-3 text-emerald-500">
                 <Music2 size={40} />
               </div>
-              <p className="text-lg font-medium text-white mb-1">Upload Audio File</p>
-              <p className="text-sm text-gray-400 mb-4">MP3, WAV, M4A - click or drop here</p>
+              <p className="text-lg font-medium text-white mb-1">Upload audio or video</p>
+              <p className="text-sm text-gray-400 mb-4">MP3, WAV, M4A, MP4, WebM — click or drop here</p>
               <input
                 type="file"
-                accept="audio/*"
-                onChange={handleAudioUpload}
+                accept="audio/*,video/mp4,video/webm,.mp4,.webm"
+                onChange={handleMediaUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isSaving}
               />
-              {audioNameConflict && (
+              {mediaNameConflict && (
                 <p className="text-sm text-amber-400 relative z-10 px-2 mb-2" role="alert">
-                  {audioNameConflict}
+                  {mediaNameConflict}
                 </p>
               )}
-              {audioFile && !audioNameConflict && (
-                <p className="text-emerald-500 font-medium relative z-10 pointer-events-none">✓ {audioFile.name}</p>
+              {mediaFile && !mediaNameConflict && (
+                <p className="text-emerald-500 font-medium relative z-10 pointer-events-none">✓ {mediaFile.name}</p>
               )}
             </div>
 
@@ -212,21 +276,29 @@ export function NewLessonModal({
                 accept=".srt"
                 onChange={handleTranscriptUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isSaving}
               />
             </div>
           </div>
 
           <button
             type="button"
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-colors ${
-              audioFile && lessonName
+            className={`w-full py-4 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 ${
+              mediaFile && lessonName && !isSaving
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             }`}
-            disabled={!audioFile || !lessonName}
-            onClick={handleSubmit}
+            disabled={!mediaFile || !lessonName || isSaving}
+            onClick={() => void handleSubmit()}
           >
-            Create
+            {isSaving ? (
+              <>
+                <Loader2 className="animate-spin shrink-0" size={22} aria-hidden />
+                Saving…
+              </>
+            ) : (
+              'Create'
+            )}
           </button>
         </div>
       </div>

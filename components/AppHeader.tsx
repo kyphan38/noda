@@ -1,7 +1,7 @@
 'use client';
 
-import React, { type RefObject } from 'react';
-import { PanelLeft, Trash2, Headphones, PenTool, Mic, MoreVertical, Edit2 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { PanelLeft, Trash2, MoreVertical, Edit2, ChevronDown } from 'lucide-react';
 import type { AppMode, LessonItem, DeckItem } from '@/types';
 
 export type HeaderSelectedItem = {
@@ -38,6 +38,34 @@ export function AppHeader({
   onRenameCurrent,
   onDeleteCurrent,
 }: AppHeaderProps) {
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const modeMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!modeMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (modeMenuRef.current?.contains(t)) return;
+      setModeMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [modeMenuOpen]);
+
+  const modeLabel = useMemo(() => {
+    if (appMode === 'dictation') return 'Dictation';
+    if (appMode === 'shadowing') return 'Shadowing';
+    return 'Normal';
+  }, [appMode]);
+
+  const modeChoices = useMemo(
+    () =>
+      (['normal', 'dictation', 'shadowing'] as AppMode[]).filter(
+        (mode) => mode !== appMode
+      ),
+    [appMode]
+  );
+
   return (
     <header className="app-header">
       <div className="header-left">
@@ -51,51 +79,50 @@ export function AppHeader({
             <PanelLeft size={24} />
           </button>
         )}
-        <h1 className="app-logo">
-          <Headphones size={24} aria-hidden />
-          <span>Noda.</span>
-        </h1>
       </div>
 
       {selectedItem?.type === 'lesson' && !isMobile && (
         <div className="mode-tabs-container">
-          <div className="mode-tabs" role="tablist" aria-label="Lesson mode">
+          <div ref={modeMenuRef} className="relative">
             <button
               type="button"
-              role="tab"
-              aria-selected={appMode === 'normal'}
-              data-mode="listen"
-              className={`mode-tab ${appMode === 'normal' ? 'active' : ''}`}
-              title="Normal mode (⌘1 / Ctrl+1)"
-              onClick={() => void onModeChange('normal')}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-900/80 px-3 py-1.5 text-sm font-medium text-gray-200 hover:bg-gray-800 transition-colors"
+              aria-haspopup="menu"
+              aria-expanded={modeMenuOpen}
+              onClick={() => setModeMenuOpen((v) => !v)}
             >
-              <Headphones size={18} aria-hidden />
-              <span className="mode-tab-label">Normal</span>
+              <span>{modeLabel}</span>
+              <ChevronDown size={16} className={modeMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={appMode === 'dictation'}
-              data-mode="dictation"
-              className={`mode-tab ${appMode === 'dictation' ? 'active' : ''}`}
-              title="Dictation mode (⌘2 / Ctrl+2)"
-              onClick={() => void onModeChange('dictation')}
-            >
-              <PenTool size={18} aria-hidden />
-              <span className="mode-tab-label">Dictation</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={appMode === 'shadowing'}
-              data-mode="shadowing"
-              className={`mode-tab ${appMode === 'shadowing' ? 'active' : ''}`}
-              title="Shadowing mode (⌘3 / Ctrl+3)"
-              onClick={() => void onModeChange('shadowing')}
-            >
-              <Mic size={18} aria-hidden />
-              <span className="mode-tab-label">Shadowing</span>
-            </button>
+            {modeMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 mt-2 w-40 rounded-lg border border-gray-700 bg-gray-800 py-1 shadow-xl z-30"
+              >
+                {modeChoices.map((mode) => {
+                  const label =
+                    mode === 'dictation'
+                      ? 'Dictation'
+                      : mode === 'shadowing'
+                        ? 'Shadowing'
+                        : 'Normal';
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setModeMenuOpen(false);
+                        void onModeChange(mode);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700"
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

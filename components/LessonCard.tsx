@@ -140,8 +140,8 @@ export function LessonCard({
               title={lesson.name}
             >
               {lesson.name}
-              {!lesson.hasAudio && (
-                <span title="Audio file missing" className="inline-flex align-middle ml-0.5">
+              {!lesson.hasMedia && (
+                <span title="Media file missing" className="inline-flex align-middle ml-0.5">
                   <AlertTriangle size={11} className="inline text-amber-500 shrink-0" />
                 </span>
               )}

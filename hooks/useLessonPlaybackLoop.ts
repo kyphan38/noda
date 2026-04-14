@@ -12,7 +12,7 @@ export function useLessonPlaybackLoop(
   isPlaying: boolean,
   transcript: Sentence[],
   setCurrentTime: (t: number) => void,
-  audioRef: RefObject<HTMLAudioElement | null>,
+  audioRef: RefObject<HTMLMediaElement | null>,
   loopTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
   isLoopDelayingRef: RefBool,
   loopModeRef: MutableRefObject<LoopMode>,
