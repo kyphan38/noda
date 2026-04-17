@@ -22,7 +22,18 @@ export function LoginView({ appName, subtitle }: LoginViewProps) {
       provider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(getFirebaseAuth(), provider);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed.");
+      const code =
+        err !== null && typeof err === "object" && "code" in err
+          ? String((err as { code: unknown }).code)
+          : "";
+      const host = typeof window !== "undefined" ? window.location.hostname : "";
+      if (code === "auth/unauthorized-domain" && host) {
+        setError(
+          `This host is not allowed for Firebase Auth (${host}). In Firebase Console → Authentication → Settings → Authorized domains, add your production host (e.g. ${host}) and redeploy if needed.`,
+        );
+      } else {
+        setError(err instanceof Error ? err.message : "Sign-in failed.");
+      }
     } finally {
       setLoading(false);
     }
