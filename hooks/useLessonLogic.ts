@@ -3,12 +3,15 @@ import { Sentence, AppMode, ExpandedSections } from '@/types';
 import { DEFAULT_APP_MODE, SAVE_PROGRESS_DELAY_MS } from '@/constants';
 import { parseTranscript, uniquifyName, flashcardDeckProgressPercent } from '@/lib/utils';
 import {
-  getAllLessons,
-  getLesson,
-  saveLesson,
-  deleteLesson,
-  updateLessonProgress,
-  bumpLessonUpdatedAt,
+  deleteLessonFirestore,
+  getLessonFirestore,
+  renameLessonFirestore,
+  saveLessonFirestore,
+  subscribeLessonsFirestore,
+  touchLessonAccessedFirestore,
+  updateLessonLanguageFirestore,
+  updateLessonProgressFirestore,
+  uploadLessonMediaToFirebase,
   type LessonRecord,
 } from '@/lib/db';
 
@@ -67,47 +70,69 @@ export function useLessonLogic(
 
   const transcript = useMemo(() => parseTranscript(transcriptText), [transcriptText]);
 
-  const loadLessonsList = useCallback(async (opts?: { trackLoading?: boolean }) => {
-    const trackLoading = opts?.trackLoading === true;
-    if (trackLoading) setIsListLoading(true);
-    try {
-      const dbLessons = await getAllLessons();
-      const rows = dbLessons.map((l) => {
-        const kind: 'audio' | 'flashcard' = l.type === 'flashcard' ? 'flashcard' : 'audio';
-        const audioProgress =
-          l.totalSentences > 0
-            ? Math.round(
-                (Object.values(l.completedSentences || {}).filter(Boolean).length / l.totalSentences) * 100
-              )
-            : 0;
-        return {
-          id: l.id,
-          name: l.name,
-          language: l.language,
-          progress:
-            kind === 'flashcard'
-              ? flashcardDeckProgressPercent(l.flashcardData, l.totalSentences ?? 0)
-              : audioProgress,
-          totalSentences: l.totalSentences ?? 0,
-          kind,
-          isTrashed: !!l.isTrashed,
-          hasMedia: !!l.mediaFile,
-          mediaType: kind === 'flashcard' ? 'audio' : (l.mediaType ?? 'audio'),
-          trashedAt: l.trashedAt,
-        };
-      });
-      rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-      setLessonsList(rows);
-    } catch (e) {
-      console.error('Failed to load lessons', e);
-    } finally {
-      if (trackLoading) setIsListLoading(false);
-    }
+  const mapLessonsToRows = useCallback((lessons: LessonRecord[]) => {
+    const rows = lessons.map((l) => {
+      const kind: 'audio' | 'flashcard' = l.type === 'flashcard' ? 'flashcard' : 'audio';
+      const audioProgress =
+        l.totalSentences > 0
+          ? Math.round(
+              (Object.values(l.completedSentences || {}).filter(Boolean).length / l.totalSentences) * 100
+            )
+          : 0;
+      return {
+        id: l.id,
+        name: l.name,
+        language: l.language,
+        progress:
+          kind === 'flashcard'
+            ? flashcardDeckProgressPercent(l.flashcardData, l.totalSentences ?? 0)
+            : audioProgress,
+        totalSentences: l.totalSentences ?? 0,
+        kind,
+        isTrashed: !!l.isTrashed,
+        hasMedia: !!(l.mediaUrl || l.mediaPath || l.mediaFile),
+        mediaType: kind === 'flashcard' ? 'audio' : (l.mediaType ?? 'audio'),
+        trashedAt: l.trashedAt,
+      };
+    });
+    rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    return rows;
+  }, []);
+
+  const loadLessonsList = useCallback(async () => {
+    // Realtime subscription is the source of truth in Phase 2.
+    return;
   }, []);
 
   useEffect(() => {
-    loadLessonsList({ trackLoading: true });
-  }, [loadLessonsList]);
+    setIsListLoading(true);
+    let didReceiveFirstSnapshot = false;
+    let unsubscribe: (() => void) | null = null;
+    try {
+      unsubscribe = subscribeLessonsFirestore(
+        (lessons) => {
+          setLessonsList(mapLessonsToRows(lessons));
+          if (!didReceiveFirstSnapshot) {
+            didReceiveFirstSnapshot = true;
+            setIsListLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Failed to subscribe lessons', error);
+          if (!didReceiveFirstSnapshot) {
+            didReceiveFirstSnapshot = true;
+            setIsListLoading(false);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to initialize lessons subscription', error);
+      setIsListLoading(false);
+    }
+    return () => {
+      unsubscribe?.();
+    };
+  }, [mapLessonsToRows]);
 
   const progressSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -125,8 +150,8 @@ export function useLessonLogic(
     }
     progressSaveTimeoutRef.current = setTimeout(() => {
       progressSaveTimeoutRef.current = null;
-      updateLessonProgress(currentLessonId, completedSentencesRef.current).then(() => {
-        loadLessonsList();
+      updateLessonProgressFirestore(currentLessonId, completedSentencesRef.current).catch((error) => {
+        console.error('Failed to persist lesson progress', error);
       });
     }, SAVE_PROGRESS_DELAY_MS);
     return () => {
@@ -135,7 +160,7 @@ export function useLessonLogic(
         progressSaveTimeoutRef.current = null;
       }
     };
-  }, [completedSentences, currentLessonId, isStarted, loadLessonsList]);
+  }, [completedSentences, currentLessonId, isStarted]);
 
   /** Cancel debounced progress save and persist latest progress so a later put cannot resurrect cleared audio. */
   const prepareForLessonMediaClear = useCallback(
@@ -146,17 +171,16 @@ export function useLessonLogic(
       }
       const active = currentLessonIdRef.current === lessonId || currentLessonId === lessonId;
       if (active && isStarted) {
-        await updateLessonProgress(lessonId, completedSentencesRef.current);
-        await loadLessonsList();
+        await updateLessonProgressFirestore(lessonId, completedSentencesRef.current);
       }
     },
-    [currentLessonId, isStarted, loadLessonsList]
+    [currentLessonId, isStarted]
   );
 
   const handleLoadLesson = async (id: string) => {
     const myGen = ++lessonLoadGenerationRef.current;
     try {
-      const lesson = await getLesson(id);
+      const lesson = await getLessonFirestore(id);
       if (myGen !== lessonLoadGenerationRef.current) return;
       if (lesson) {
         currentLessonIdRef.current = lesson.id;
@@ -164,9 +188,9 @@ export function useLessonLogic(
         setLessonName(lesson.name);
         setRecognitionLang(lesson.language);
 
-        if (lesson.mediaFile) {
-          setMediaFile(lesson.mediaFile);
-          setMediaURL(URL.createObjectURL(lesson.mediaFile));
+        if (lesson.mediaUrl) {
+          setMediaFile(null);
+          setMediaURL(lesson.mediaUrl);
         } else {
           setMediaFile(null);
           setMediaURL(null);
@@ -175,13 +199,11 @@ export function useLessonLogic(
         setTranscriptText(lesson.transcriptText);
         setCompletedSentences(lesson.completedSentences || {});
         const hasTranscript = !!(lesson.transcriptText && lesson.transcriptText.trim());
-        setIsStarted(!!lesson.mediaFile || hasTranscript);
+        setIsStarted(!!lesson.mediaUrl || hasTranscript);
         setAppMode('normal');
 
-        lesson.lastAccessed = Date.now();
-        await saveLesson(lesson);
+        await touchLessonAccessedFirestore(lesson.id);
         if (myGen !== lessonLoadGenerationRef.current) return;
-        loadLessonsList();
         if (window.innerWidth < 768) setIsSidebarOpen(false);
       }
     } catch (e) {
@@ -208,41 +230,30 @@ export function useLessonLogic(
   };
 
   const handleRenameLesson = async (id: string, newName: string) => {
-    const lesson = await getLesson(id);
-    if (lesson) {
-      lesson.name = newName;
-      bumpLessonUpdatedAt(lesson);
-      await saveLesson(lesson);
-      if (currentLessonId === id) {
-        setLessonName(newName);
-      }
-      loadLessonsList();
+    await renameLessonFirestore(id, newName);
+    if (currentLessonId === id) {
+      setLessonName(newName);
     }
   };
 
   const handleUpdateItemLanguage = useCallback(
     async (id: string, language: 'en' | 'de'): Promise<void> => {
-      const lesson = await getLesson(id);
-      if (!lesson) return;
-      if (lesson.language === language) return;
-      lesson.language = language;
-      bumpLessonUpdatedAt(lesson);
-      await saveLesson(lesson);
+      const lesson = await getLessonFirestore(id);
+      if (!lesson || lesson.language === language) return;
+      await updateLessonLanguageFirestore(id, language);
       if (currentLessonId === id) {
         setRecognitionLang(language);
       }
-      await loadLessonsList();
     },
-    [currentLessonId, setRecognitionLang, loadLessonsList]
+    [currentLessonId, setRecognitionLang]
   );
 
   const handleDeletePermanently = async (id: string) => {
-    await deleteLesson(id);
+    await deleteLessonFirestore(id);
     if (currentLessonId === id) {
       handleNewLesson();
     }
     setLessonToDelete(null);
-    await loadLessonsList();
   };
 
   const handleStartLearning = async () => {
@@ -258,13 +269,19 @@ export function useLessonLogic(
       lessonId = Date.now().toString();
       const name = lessonName.trim() || mediaFile.name.replace(/\.[^/.]+$/, '');
       const now = Date.now();
+      const uploadedMedia = await uploadLessonMediaToFirebase(lessonId, mediaFile);
 
       const newLesson: LessonRecord = {
         id: lessonId,
         type: 'audio',
         name,
         language: recognitionLang,
-        mediaFile,
+        mediaFile: null,
+        mediaPath: uploadedMedia.path,
+        mediaUrl: uploadedMedia.downloadURL,
+        mediaFileName: mediaFile.name ?? null,
+        mediaMimeType: uploadedMedia.contentType ?? null,
+        mediaSizeBytes: uploadedMedia.size,
         mediaType: inferredMediaType,
         transcriptText,
         completedSentences: {},
@@ -274,21 +291,25 @@ export function useLessonLogic(
         updatedAt: now,
       };
 
-      await saveLesson(newLesson);
+      await saveLessonFirestore(newLesson);
       currentLessonIdRef.current = lessonId;
       setCurrentLessonId(lessonId);
       setLessonName(name);
-      loadLessonsList();
     } else {
-      const existingLesson = await getLesson(lessonId);
+      const existingLesson = await getLessonFirestore(lessonId);
       if (existingLesson) {
-        existingLesson.mediaFile = mediaFile;
+        const uploadedMedia = await uploadLessonMediaToFirebase(lessonId, mediaFile);
+        existingLesson.mediaFile = null;
+        existingLesson.mediaPath = uploadedMedia.path;
+        existingLesson.mediaUrl = uploadedMedia.downloadURL;
+        existingLesson.mediaFileName = mediaFile.name ?? null;
+        existingLesson.mediaMimeType = uploadedMedia.contentType ?? null;
+        existingLesson.mediaSizeBytes = uploadedMedia.size;
         existingLesson.mediaType = inferredMediaType;
         existingLesson.isTrashed = false;
         existingLesson.lastAccessed = Date.now();
-        bumpLessonUpdatedAt(existingLesson);
-        await saveLesson(existingLesson);
-        loadLessonsList();
+        existingLesson.updatedAt = Date.now();
+        await saveLessonFirestore(existingLesson);
       }
     }
 
@@ -331,8 +352,9 @@ export function useLessonLogic(
   const handleFlashcardUpload = async (text: string, name: string) => {
     if (!text.trim()) return;
 
-    const all = await getAllLessons();
-    const taken = all.filter((l) => l.type === 'flashcard' && !l.isTrashed).map((l) => l.name);
+    const taken = lessonsList
+      .filter((l) => l.kind === 'flashcard' && !l.isTrashed)
+      .map((l) => l.name);
     const base = name.trim() || text.split('\n')[0].substring(0, 30) || 'Untitled deck';
     const finalName = uniquifyName(base, taken);
 
@@ -364,13 +386,12 @@ export function useLessonLogic(
       },
     };
 
-    await saveLesson(newLesson);
+    await saveLessonFirestore(newLesson);
     currentLessonIdRef.current = lessonId;
     setCurrentLessonId(lessonId);
     setLessonName(finalName);
     setAppMode('flashcard');
     setIsStarted(true);
-    loadLessonsList();
   };
 
   return {

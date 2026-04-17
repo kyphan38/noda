@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { normalizeDictationTarget } from '@/lib/utils';
-import { trashLesson, restoreLesson } from '@/lib/db';
+import { restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
 import { NewLessonModal } from '@/components/NewLessonModal';
@@ -82,7 +82,7 @@ export default function NodaApp() {
     handleLoadLesson, bumpLessonLoadGeneration, handleNewLesson, handleRenameLesson, handleDeletePermanently,
     handleModeChange: applyLessonAppMode,
     expandSidebarForItem,
-    loadLessonsList, prepareForLessonMediaClear, handleUpdateItemLanguage
+    prepareForLessonMediaClear, handleUpdateItemLanguage
   } = useLessonLogic(mediaFile, setMediaFile, setMediaURL, recognitionLang, setRecognitionLang);
 
   const selectedItemRef = useRef(selectedItem);
@@ -231,8 +231,7 @@ export default function NodaApp() {
 
   const handleTrashItem = async (id: string) => {
     try {
-      await trashLesson(id);
-      await loadLessonsList();
+      await trashLessonFirestore(id);
       if (selectedItem?.id === id) {
         handleNewLessonWrapper();
       }
@@ -243,8 +242,7 @@ export default function NodaApp() {
 
   const handleRestoreItem = async (id: string) => {
     try {
-      await restoreLesson(id);
-      await loadLessonsList();
+      await restoreLessonFirestore(id);
     } catch {
       setToast({ message: 'Could not restore item.', type: 'error' });
     }
@@ -684,7 +682,7 @@ export default function NodaApp() {
                   setCleanupModalVariant('deck');
                   setShowCleanupModal(true);
                 }}
-                onDeckUpdated={() => loadLessonsList()}
+                onDeckUpdated={() => {}}
               />
             )}
           </div>

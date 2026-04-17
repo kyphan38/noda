@@ -5,7 +5,7 @@ import { RotateCcw, Check, BadgeCheck } from 'lucide-react';
 import { useFlashcardEngine } from '@/hooks/useFlashcardEngine';
 import type { FlashcardRating } from '@/hooks/useFlashcardEngine';
 import { DeckItem } from '@/types';
-import { getLesson, saveLesson, bumpLessonUpdatedAt } from '@/lib/db';
+import { getLessonFirestore, saveLessonFirestore } from '@/lib/db';
 
 interface FlashcardViewerProps {
   deck: DeckItem;
@@ -13,7 +13,7 @@ interface FlashcardViewerProps {
   onDeckUpdated?: () => void;
 }
 
-function linesFromLesson(lesson: Awaited<ReturnType<typeof getLesson>>): string[] {
+function linesFromLesson(lesson: Awaited<ReturnType<typeof getLessonFirestore>>): string[] {
   if (!lesson) return [];
   const fromFlash = lesson.flashcardData?.lines;
   if (fromFlash && fromFlash.length > 0) return [...fromFlash];
@@ -34,7 +34,7 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
     setLoading(true);
     setLoadError(null);
     try {
-      const lesson = await getLesson(deck.id);
+      const lesson = await getLessonFirestore(deck.id);
       const next = linesFromLesson(lesson);
       setLines(next);
       setEditText(next.join('\n'));
@@ -55,14 +55,14 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
     (lineIndex: number, rating: FlashcardRating) => {
       void (async () => {
         try {
-          const lesson = await getLesson(deck.id);
+          const lesson = await getLessonFirestore(deck.id);
           if (!lesson?.flashcardData) return;
           lesson.flashcardData = {
             ...lesson.flashcardData,
             ratings: { ...lesson.flashcardData.ratings, [lineIndex]: rating },
           };
-          bumpLessonUpdatedAt(lesson);
-          await saveLesson(lesson);
+          lesson.updatedAt = Date.now();
+          await saveLessonFirestore(lesson);
           onDeckUpdated?.();
         } catch {
           /* ignore */
@@ -82,7 +82,7 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
 
   const handleResetDeck = async () => {
     try {
-      const lesson = await getLesson(deck.id);
+      const lesson = await getLessonFirestore(deck.id);
       if (!lesson) return;
       const baseLines =
         lesson.flashcardData?.lines && lesson.flashcardData.lines.length > 0
@@ -96,8 +96,8 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
         lines: baseLines,
       };
       lesson.totalSentences = baseLines.length;
-      bumpLessonUpdatedAt(lesson);
-      await saveLesson(lesson);
+      lesson.updatedAt = Date.now();
+      await saveLessonFirestore(lesson);
       setLines([...baseLines]);
       onDeckUpdated?.();
     } catch {
@@ -108,7 +108,7 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
   const handleSaveEdit = async () => {
     const nextLines = editText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
     try {
-      const lesson = await getLesson(deck.id);
+      const lesson = await getLessonFirestore(deck.id);
       if (!lesson) return;
       lesson.flashcardData = {
         ...(lesson.flashcardData ?? {
@@ -120,8 +120,8 @@ export function FlashcardViewer({ deck, onComplete, onDeckUpdated }: FlashcardVi
         lines: nextLines,
       };
       lesson.totalSentences = nextLines.length;
-      bumpLessonUpdatedAt(lesson);
-      await saveLesson(lesson);
+      lesson.updatedAt = Date.now();
+      await saveLessonFirestore(lesson);
       setLines(nextLines);
       setIsEditing(false);
       onDeckUpdated?.();

@@ -1,6 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { parseTranscript, uniquifyName } from '@/lib/utils';
-import { saveLesson, type LessonRecord } from '@/lib/db';
+import { saveLessonFirestore, type LessonRecord, uploadLessonMediaToFirebase } from '@/lib/db';
 import type { AppMode, DeckItem, LessonItem } from '@/types';
 
 type SetToast = (t: { message: string; type: 'success' | 'error' | 'info' } | null) => void;
@@ -40,13 +40,19 @@ export function useLessonCreateFlow(
         const baseName = data.name.trim() || 'Untitled lesson';
         const uniqueName = uniquifyName(baseName, getTakenAudioLessonNames());
         const now = Date.now();
+        const uploadedMedia = await uploadLessonMediaToFirebase(lessonId, data.mediaFile);
 
         const newLesson: LessonRecord = {
           id: lessonId,
           type: 'audio',
           name: uniqueName,
           language: data.language,
-          mediaFile: data.mediaFile,
+          mediaFile: null,
+          mediaPath: uploadedMedia.path,
+          mediaUrl: uploadedMedia.downloadURL,
+          mediaFileName: data.mediaFile.name ?? null,
+          mediaMimeType: uploadedMedia.contentType ?? null,
+          mediaSizeBytes: uploadedMedia.size,
           mediaType: data.mediaType,
           transcriptText: text,
           completedSentences: {},
@@ -56,7 +62,7 @@ export function useLessonCreateFlow(
           updatedAt: now,
         };
 
-        await saveLesson(newLesson);
+        await saveLessonFirestore(newLesson);
 
         const lessonItem: LessonItem = {
           id: lessonId,
@@ -128,7 +134,7 @@ export function useLessonCreateFlow(
           },
         };
 
-        await saveLesson(newLesson);
+        await saveLessonFirestore(newLesson);
 
         const deckItem: DeckItem = {
           id: lessonId,
