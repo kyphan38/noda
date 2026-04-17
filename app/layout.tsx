@@ -3,14 +3,23 @@ import './globals.css';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
-  title: 'Noda.',
-  description: 'A web app for shadowing practice with synchronized audio and transcript.'
+  title: 'noda',
+  description: 'noda dictation and shadowing app.',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/branding/noda-icon.svg',
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased" suppressHydrationWarning>
+      <body
+        className="min-h-screen font-sans antialiased"
+        style={{backgroundColor: 'var(--background)', color: 'var(--foreground)'}}
+        suppressHydrationWarning
+      >
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>

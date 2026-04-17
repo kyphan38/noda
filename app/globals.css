@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+:root {
+  --background: #030712;
+  --foreground: #f3f4f6;
+  --primary: #10b981;
+  --primary-foreground: #022c22;
+  --border: #1f2937;
+  --muted: #111827;
+  --muted-foreground: #9ca3af;
+}
+
 .app-header {
   display: flex;
   align-items: flex-start;

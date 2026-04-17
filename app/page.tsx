@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { AUTH_USERNAME_HASH, AUTH_PASSWORD_HASH, STORAGE_AUTH_KEY } from '@/constants';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { normalizeDictationTarget } from '@/lib/utils';
 import { trashLesson, restoreLesson } from '@/lib/db';
-import { pushToGist, pullFromGist, getLastSyncTime } from '@/lib/gistSync';
-import { AuthScreen } from '@/components/Auth';
-import { Sidebar, type GistSyncUiState } from '@/components/Sidebar';
+import { LoginView } from '@/components/auth/LoginView';
+import { Sidebar } from '@/components/Sidebar';
 import { NewLessonModal } from '@/components/NewLessonModal';
 import { NewDeckModal } from '@/components/NewDeckModal';
 import { CleanupModal } from '@/components/CleanupModal';
@@ -27,21 +26,8 @@ import { LessonView } from '@/components/LessonView';
 import { FlashcardViewer } from '@/components/FlashcardViewer';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { Toast } from '@/components/Toast';
-
-async function sha256HexUtf8(value: string): Promise<string> {
-  const buf = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function formatGistLastSync(d: Date | null): string | null {
-  if (!d) return null;
-  const diffS = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (diffS < 15) return 'Last synced: just now';
-  if (diffS < 3600) return `Last synced: ${Math.floor(diffS / 60)}m ago`;
-  if (diffS < 86400) return `Last synced: ${Math.floor(diffS / 3600)}h ago`;
-  return `Last synced: ${d.toLocaleString()}`;
-}
+import { getFirebaseAuth } from '@/lib/auth/firebase-client';
+import { hasAllowlistConfig, isAllowedUser } from '@/lib/auth/allowed-user';
 
 function pushItemHistoryState(id: string, type: 'lesson' | 'deck') {
   const url = new URL(window.location.href);
@@ -52,10 +38,7 @@ function pushItemHistoryState(id: string, type: 'lesson' | 'deck') {
 export default function NodaApp() {
   const [isMounted, setIsMounted] = useState(false);
   const viewport = useMobileViewport();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthorized'>('loading');
 
   const [uploadMode, setUploadMode] = useState<'idle' | 'lesson' | 'deck'>('idle');
 
@@ -65,12 +48,6 @@ export default function NodaApp() {
   const [headerItemMenuOpen, setHeaderItemMenuOpen] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
   const [hideCaptions, setHideCaptions] = useState(false);
-
-  const [gistSyncState, setGistSyncState] = useState<GistSyncUiState>('idle');
-  const [gistLastSyncLabel, setGistLastSyncLabel] = useState<string | null>(() =>
-    typeof window !== 'undefined' ? formatGistLastSync(getLastSyncTime()) : null
-  );
-  const [gistSyncErrorDetail, setGistSyncErrorDetail] = useState<string | null>(null);
 
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
@@ -273,38 +250,6 @@ export default function NodaApp() {
     }
   };
 
-  const handleGistPush = async () => {
-    setGistSyncState('loading');
-    setGistSyncErrorDetail(null);
-    try {
-      await pushToGist();
-      setGistSyncState('success');
-      setGistLastSyncLabel(formatGistLastSync(getLastSyncTime()));
-      setGistSyncErrorDetail(null);
-      await loadLessonsList();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setGistSyncErrorDetail(msg);
-      setGistSyncState('error');
-    }
-  };
-
-  const handleGistPull = async () => {
-    setGistSyncState('loading');
-    setGistSyncErrorDetail(null);
-    try {
-      await pullFromGist();
-      setGistSyncState('success');
-      setGistLastSyncLabel(formatGistLastSync(getLastSyncTime()));
-      setGistSyncErrorDetail(null);
-      await loadLessonsList();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setGistSyncErrorDetail(msg);
-      setGistSyncState('error');
-    }
-  };
-
   // Revoke blob URLs whenever mediaURL changes or the app unmounts. handleLoadLesson / handleNewLesson
   // and other paths call setMediaURL without revoking the previous URL; handleMediaUpload revokes in its
   // setter — a second revoke on the same URL is harmless (no-op per spec).
@@ -446,13 +391,25 @@ export default function NodaApp() {
   } = useDictationCompletionModal(selectedItem, isStarted, transcript, appMode, completedSentences);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMounted(true);
-      if (localStorage.getItem(STORAGE_AUTH_KEY) === 'true') {
-        setIsAuthenticated(true);
+    setIsMounted(true);
+    const auth = getFirebaseAuth();
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!hasAllowlistConfig()) {
+        setAuthState(user ? 'authenticated' : 'unauthorized');
+        return;
       }
-    }, 0);
-    return () => clearTimeout(timer);
+      if (!user) {
+        setAuthState('unauthorized');
+        return;
+      }
+      if (isAllowedUser(user)) {
+        setAuthState('authenticated');
+        return;
+      }
+      await signOut(auth);
+      setAuthState('unauthorized');
+    });
+    return () => unsub();
   }, []);
 
   useGlobalPlaybackShortcuts(
@@ -590,34 +547,9 @@ export default function NodaApp() {
     completedSentencesRef.current = {};
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const u = AUTH_USERNAME_HASH.trim();
-    const p = AUTH_PASSWORD_HASH.trim();
-    if (!u || !p) {
-      setLoginError('Auth is not configured (set NEXT_PUBLIC_AUTH_*_HASH).');
-      return;
-    }
-    try {
-      const uh = await sha256HexUtf8(loginUsername.trim());
-      const ph = await sha256HexUtf8(loginPassword);
-      if (uh.toLowerCase() === u.toLowerCase() && ph.toLowerCase() === p.toLowerCase()) {
-        setIsAuthenticated(true);
-        localStorage.setItem(STORAGE_AUTH_KEY, 'true');
-        setLoginError('');
-      } else {
-        setLoginError('Invalid username or password');
-      }
-    } catch {
-      setLoginError('Could not verify login.');
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem(STORAGE_AUTH_KEY);
-    setLoginUsername('');
-    setLoginPassword('');
+  const handleLogout = async () => {
+    await signOut(getFirebaseAuth());
+    setAuthState('unauthorized');
     window.history.replaceState({}, '', window.location.pathname);
   };
 
@@ -629,17 +561,12 @@ export default function NodaApp() {
     return null;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <AuthScreen
-        username={loginUsername}
-        password={loginPassword}
-        error={loginError}
-        onUsernameChange={setLoginUsername}
-        onPasswordChange={setLoginPassword}
-        onSubmit={handleLogin}
-      />
-    );
+  if (authState === 'loading') {
+    return null;
+  }
+
+  if (authState !== 'authenticated') {
+    return <LoginView appName="noda" subtitle="Dictation, listening, and shadowing" />;
   }
 
   return (
@@ -660,16 +587,11 @@ export default function NodaApp() {
           onDeleteForever={setLessonToDelete}
           onRenameLesson={handleRenameLesson}
           onChangeLanguage={onChangeItemLanguage}
-          onLogout={handleLogout}
+          onLogout={() => void handleLogout()}
           onToggleSection={(section, expanded) =>
             setExpandedSections((prev) => ({ ...prev, [section]: expanded }))
           }
           isMobile={viewport.isMobile}
-          gistSyncState={gistSyncState}
-          gistLastSyncLabel={gistLastSyncLabel}
-          gistSyncErrorDetail={gistSyncErrorDetail}
-          onGistPush={handleGistPush}
-          onGistPull={handleGistPull}
         />
       </div>
 

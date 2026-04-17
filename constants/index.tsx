@@ -1,9 +1,3 @@
-// Authentication — hex SHA-256 of UTF-8 credentials (see scripts/generate-auth-hashes.js)
-export const AUTH_USERNAME_HASH =
-  (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_AUTH_USERNAME_HASH?.trim()) || '';
-export const AUTH_PASSWORD_HASH =
-  (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_AUTH_PASSWORD_HASH?.trim()) || '';
-
 // Playback speeds
 export const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5] as const;
 
@@ -46,5 +40,3 @@ export const LOOP_DELAY_MS = 1500; // 1.5 seconds delay on loop one
 export const SAVE_PROGRESS_DELAY_MS = 1000; // 1 second debounce for saving
 export const PRONUNCIATION_SCORE_THRESHOLD = 80; // Min score to show "Next" button
 
-// Local storage keys
-export const STORAGE_AUTH_KEY = 'shadowing_auth';

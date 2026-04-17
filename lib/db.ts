@@ -23,7 +23,7 @@ export interface LessonRecord {
   totalSentences: number;
   createdAt: number;
   lastAccessed: number;
-  /** Bumped only on substantive edits; used for Gist merge (not lastAccessed). */
+  /** Bumped only on substantive edits (not lastAccessed). */
   updatedAt: number;
   isTrashed?: boolean;
   trashedAt?: number;
@@ -125,12 +125,6 @@ export const getAllLessons = async (): Promise<LessonRecord[]> => {
   const db = await initDB();
   if (db) return db.getAllFromIndex('lessons', 'by-accessed');
   return [];
-};
-
-/** Active, non-trashed flashcard decks only — for Gist push (audio lessons excluded). */
-export const getLessonsForGistExport = async (): Promise<LessonRecord[]> => {
-  const all = await getAllLessons();
-  return all.filter((l) => !l.isTrashed && l.type === 'flashcard');
 };
 
 export const deleteLesson = async (id: string) => {

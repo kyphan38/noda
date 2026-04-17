@@ -14,7 +14,7 @@ export function WelcomeScreen({ onNewLesson, onNewDeck, hideAudio = false }: Wel
       <div className="max-w-3xl w-full text-center space-y-12">
         <div className="space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
-            🎧 Welcome to Noda
+            Welcome to noda
           </h1>
           <p className="text-xl text-gray-400">
             Your AI-powered language learning companion

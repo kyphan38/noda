@@ -16,8 +16,6 @@ import {
 import { LessonSummary, ExpandedSections, LessonItem, DeckItem } from '@/types';
 import { SidebarSection } from './SidebarSection';
 
-export type GistSyncUiState = 'idle' | 'loading' | 'success' | 'error';
-
 function TrashedItemRow({
   item,
   onRestoreItem,
@@ -155,12 +153,6 @@ interface SidebarProps {
   onLogout: () => void;
   onToggleSection: (section: string, expanded: boolean) => void;
   isMobile?: boolean;
-  gistSyncState?: GistSyncUiState;
-  gistLastSyncLabel?: string | null;
-  /** Sanitized error text from last failed sync (no secrets). */
-  gistSyncErrorDetail?: string | null;
-  onGistPush?: () => void;
-  onGistPull?: () => void;
 }
 
 export function Sidebar({
@@ -181,11 +173,6 @@ export function Sidebar({
   onLogout,
   onToggleSection,
   isMobile = false,
-  gistSyncState = 'idle',
-  gistLastSyncLabel,
-  gistSyncErrorDetail = null,
-  onGistPush,
-  onGistPull,
 }: SidebarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
@@ -215,8 +202,6 @@ export function Sidebar({
   const trashed = lessons.filter((l) => l.isTrashed);
   const trashExpanded = expandedSections.trash ?? false;
 
-  const gistBusy = gistSyncState === 'loading';
-
   const flexColWidth = isMobile ? 'w-0' : isOpen ? 'w-72' : 'w-0';
 
   return (
@@ -238,7 +223,7 @@ export function Sidebar({
           }`}
         >
           <div className="p-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">Noda.</h2>
+            <h2 className="text-xl font-bold text-white">noda</h2>
             <div className="flex items-center gap-1">
               <button
                 onClick={onLogout}
@@ -354,50 +339,6 @@ export function Sidebar({
             )}
           </div>
 
-          {(onGistPush || onGistPull) && (
-            <div className="p-3 space-y-2 shrink-0">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Gist sync</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={gistBusy}
-                  onClick={() => onGistPush?.()}
-                  className="flex-1 py-2 text-xs font-medium rounded-lg bg-gray-800 text-gray-200 hover:bg-gray-700 disabled:opacity-50"
-                >
-                  Push
-                </button>
-                <button
-                  type="button"
-                  disabled={gistBusy}
-                  onClick={() => onGistPull?.()}
-                  className="flex-1 py-2 text-xs font-medium rounded-lg bg-gray-800 text-gray-200 hover:bg-gray-700 disabled:opacity-50"
-                >
-                  Pull
-                </button>
-              </div>
-              {gistLastSyncLabel && (
-                <p className="text-[10px] text-gray-500 truncate" title={gistLastSyncLabel}>
-                  {gistLastSyncLabel}
-                </p>
-              )}
-              {gistSyncState === 'error' && (
-                <div className="space-y-1">
-                  <p className="text-[10px] text-red-400">Sync failed — check token and network.</p>
-                  {gistSyncErrorDetail && (
-                    <p
-                      className="text-[10px] text-red-300/90 break-words max-h-24 overflow-y-auto leading-snug"
-                      title={gistSyncErrorDetail}
-                    >
-                      {gistSyncErrorDetail}
-                    </p>
-                  )}
-                </div>
-              )}
-              {gistSyncState === 'success' && (
-                <p className="text-[10px] text-emerald-500/90">Done.</p>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </>
