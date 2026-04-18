@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { Sentence, AppMode, ExpandedSections } from '@/types';
 import { DEFAULT_APP_MODE, SAVE_PROGRESS_DELAY_MS } from '@/constants';
 import { parseTranscript, uniquifyName, flashcardDeckProgressPercent } from '@/lib/utils';
@@ -105,32 +107,47 @@ export function useLessonLogic(
   }, []);
 
   useEffect(() => {
-    setIsListLoading(true);
-    let didReceiveFirstSnapshot = false;
-    let unsubscribe: (() => void) | null = null;
-    try {
-      unsubscribe = subscribeLessonsFirestore(
-        (lessons) => {
-          setLessonsList(mapLessonsToRows(lessons));
-          if (!didReceiveFirstSnapshot) {
-            didReceiveFirstSnapshot = true;
-            setIsListLoading(false);
+    const auth = getFirebaseAuth();
+    let listUnsubscribe: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      listUnsubscribe?.();
+      listUnsubscribe = null;
+
+      if (!user) {
+        setLessonsList([]);
+        setIsListLoading(false);
+        return;
+      }
+
+      setIsListLoading(true);
+      let didReceiveFirstSnapshot = false;
+      try {
+        listUnsubscribe = subscribeLessonsFirestore(
+          (lessons) => {
+            setLessonsList(mapLessonsToRows(lessons));
+            if (!didReceiveFirstSnapshot) {
+              didReceiveFirstSnapshot = true;
+              setIsListLoading(false);
+            }
+          },
+          (error) => {
+            console.error('Failed to subscribe lessons', error);
+            if (!didReceiveFirstSnapshot) {
+              didReceiveFirstSnapshot = true;
+              setIsListLoading(false);
+            }
           }
-        },
-        (error) => {
-          console.error('Failed to subscribe lessons', error);
-          if (!didReceiveFirstSnapshot) {
-            didReceiveFirstSnapshot = true;
-            setIsListLoading(false);
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Failed to initialize lessons subscription', error);
-      setIsListLoading(false);
-    }
+        );
+      } catch (error) {
+        console.error('Failed to initialize lessons subscription', error);
+        setIsListLoading(false);
+      }
+    });
+
     return () => {
-      unsubscribe?.();
+      unsubAuth();
+      listUnsubscribe?.();
     };
   }, [mapLessonsToRows]);
 
