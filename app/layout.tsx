@@ -15,6 +15,13 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{window.addEventListener("unhandledrejection",function(e){var r=e.reason;if(r&&typeof r==="object"&&r.name==="AbortError")e.preventDefault();},{capture:true});}catch(_){}})();`,
+          }}
+        />
+      </head>
       <body
         className="min-h-screen font-sans antialiased"
         style={{backgroundColor: 'var(--background)', color: 'var(--foreground)'}}
