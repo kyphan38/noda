@@ -10,6 +10,7 @@ const MEDIA_WARN_BYTES = 100 * 1024 * 1024;
 export interface LessonData {
   name: string;
   language: 'en' | 'de';
+  folderId: string | null;
   mediaFile: File;
   mediaType: 'audio' | 'video';
   transcriptFile: File | null;
@@ -19,6 +20,7 @@ interface NewLessonModalProps {
   onClose: () => void;
   onSubmit: (data: LessonData) => void | Promise<void>;
   getTakenAudioLessonNames: () => string[];
+  folders?: Array<{ id: string; name: string }>;
   onNotify?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
@@ -59,10 +61,14 @@ export function NewLessonModal({
   onClose,
   onSubmit,
   getTakenAudioLessonNames,
+  folders = [],
   onNotify,
 }: NewLessonModalProps) {
   const [lessonName, setLessonName] = useState('');
   const [language, setLanguage] = useState<'en' | 'de'>('de');
+  const [folderId, setFolderId] = useState<string | null>(null);
+
+  const visibleFolders = folders; // caller should filter by kind; we filter by language below
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
   const [mediaDrag, setMediaDrag] = useState(false);
@@ -159,6 +165,7 @@ export function NewLessonModal({
         onSubmit({
           name: lessonName,
           language,
+          folderId,
           mediaFile,
           mediaType: mediaTypeFromFile(mediaFile),
           transcriptFile,
@@ -227,6 +234,23 @@ export function NewLessonModal({
             >
               <option value="de">de</option>
               <option value="en">en</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Folder</label>
+            <select
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+              value={folderId ?? ''}
+              onChange={(e) => setFolderId(e.target.value ? e.target.value : null)}
+              disabled={isSaving}
+            >
+              <option value="">(Root)</option>
+              {visibleFolders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
             </select>
           </div>
 

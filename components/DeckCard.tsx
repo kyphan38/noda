@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Edit2, Trash2, CheckCircle2, Globe, Check } from 'lucide-react';
 import { DeckItem } from '@/types';
+import { PortalMenu } from './PortalMenu';
 
 interface DeckCardProps {
   deck: DeckItem;
@@ -28,7 +28,6 @@ export function DeckCard({
   const [editName, setEditName] = useState(deck.name);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
 
   useEffect(() => {
     if (isRenaming && inputRef.current) {
@@ -44,26 +43,6 @@ export function DeckCard({
   const mainMenuOpen = activeMenu === deck.id;
   const langMenuOpen = activeMenu === langMenuKey;
   const menuOpen = mainMenuOpen || langMenuOpen;
-
-  useLayoutEffect(() => {
-    if (!menuOpen || !menuBtnRef.current) {
-      setMenuPos(null);
-      return;
-    }
-    const update = () => {
-      const el = menuBtnRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
-    };
-    update();
-    window.addEventListener('scroll', update, true);
-    window.addEventListener('resize', update);
-    return () => {
-      window.removeEventListener('scroll', update, true);
-      window.removeEventListener('resize', update);
-    };
-  }, [menuOpen]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -156,97 +135,85 @@ export function DeckCard({
               >
                 <MoreVertical size={14} />
               </button>
-              {mainMenuOpen &&
-                menuPos &&
-                createPortal(
-                  <div
-                    id={`deck-card-menu-${deck.id}`}
-                    role="menu"
-                    className="fixed w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[210] py-1 overflow-hidden"
-                    style={{ top: menuPos.top, right: menuPos.right }}
-                    onMouseDown={(e) => e.stopPropagation()}
+              <PortalMenu
+                menuId={`deck-card-menu-${deck.id}`}
+                open={mainMenuOpen}
+                anchorRef={menuBtnRef}
+                onClose={() => setActiveMenu(null)}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsRenaming(true);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
+                >
+                  <Edit2 size={14} /> Rename
+                </button>
+                {onChangeLanguage && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMenu(langMenuKey);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
                   >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsRenaming(true);
-                        setActiveMenu(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
-                    >
-                      <Edit2 size={14} /> Rename
-                    </button>
-                    {onChangeLanguage && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveMenu(langMenuKey);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
-                      >
-                        <Globe size={14} /> Language
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenu(null);
-                        onTrashItem(deck.id);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors"
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </div>,
-                  document.body
+                    <Globe size={14} /> Language
+                  </button>
                 )}
-              {langMenuOpen &&
-                menuPos &&
-                onChangeLanguage &&
-                createPortal(
-                  <div
-                    id={`deck-lang-menu-${deck.id}`}
-                    role="menu"
-                    className="fixed w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[210] py-1 overflow-hidden"
-                    style={{ top: menuPos.top, right: menuPos.right }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      aria-label="Set language to English"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void onChangeLanguage(deck.id, 'en');
-                        setActiveMenu(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
-                    >
-                      <span className="w-4 h-4 shrink-0 flex items-center justify-center">
-                        {deck.language === 'en' ? <Check size={14} className="text-emerald-400" /> : null}
-                      </span>
-                      en
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Set language to German"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void onChangeLanguage(deck.id, 'de');
-                        setActiveMenu(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
-                    >
-                      <span className="w-4 h-4 shrink-0 flex items-center justify-center">
-                        {deck.language === 'de' ? <Check size={14} className="text-emerald-400" /> : null}
-                      </span>
-                      de
-                    </button>
-                  </div>,
-                  document.body
-                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenu(null);
+                    onTrashItem(deck.id);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors"
+                >
+                  <Trash2 size={14} /> Delete
+                </button>
+              </PortalMenu>
+
+              <PortalMenu
+                menuId={`deck-lang-menu-${deck.id}`}
+                open={langMenuOpen && !!onChangeLanguage}
+                anchorRef={menuBtnRef}
+                onClose={() => setActiveMenu(null)}
+              >
+                <button
+                  type="button"
+                  aria-label="Set language to English"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onChangeLanguage?.(deck.id, 'en');
+                    setActiveMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
+                >
+                  <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+                    {deck.language === 'en' ? <Check size={14} className="text-emerald-400" /> : null}
+                  </span>
+                  en
+                </button>
+                <button
+                  type="button"
+                  aria-label="Set language to German"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onChangeLanguage?.(deck.id, 'de');
+                    setActiveMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
+                >
+                  <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+                    {deck.language === 'de' ? <Check size={14} className="text-emerald-400" /> : null}
+                  </span>
+                  de
+                </button>
+              </PortalMenu>
             </div>
           </>
         )}

@@ -25,6 +25,7 @@ export function useLessonCreateFlow(
     async (data: {
       name: string;
       language: 'en' | 'de';
+      folderId: string | null;
       mediaFile: File;
       mediaType: 'audio' | 'video';
       transcriptFile: File | null;
@@ -47,6 +48,8 @@ export function useLessonCreateFlow(
           type: 'audio',
           name: uniqueName,
           language: data.language,
+          folderId: data.folderId,
+          sortKey: Date.now(),
           mediaFile: null,
           mediaPath: uploadedMedia.path,
           mediaUrl: uploadedMedia.downloadURL,
@@ -103,7 +106,7 @@ export function useLessonCreateFlow(
   );
 
   const handleDeckCreated = useCallback(
-    async (deckData: { name: string; language: 'en' | 'de'; content: string }) => {
+    async (deckData: { name: string; language: 'en' | 'de'; folderId: string | null; content: string }) => {
       try {
         const lines = deckData.content
           .split('\n')
@@ -120,6 +123,8 @@ export function useLessonCreateFlow(
           type: 'flashcard',
           name: uniqueName,
           language: deckData.language,
+          folderId: deckData.folderId,
+          sortKey: Date.now(),
           transcriptText: '',
           completedSentences: {},
           totalSentences: lines.length,

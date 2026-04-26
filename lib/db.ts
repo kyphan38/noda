@@ -31,6 +31,16 @@ export interface LessonRecord {
   type?: 'audio' | 'flashcard';
   name: string;
   language: string;
+  /**
+   * Sidebar folder membership (optional). Null/undefined means "root".
+   * Persisted to Firestore and used only for sidebar organization.
+   */
+  folderId?: string | null;
+  /**
+   * Sidebar sort key for manual ordering within a container (folder/root).
+   * Client-side ordering only (do not use as Firestore orderBy).
+   */
+  sortKey?: number;
   /** Lesson media blob (audio or video). */
   mediaFile?: File | null;
   /** Remote Firebase Storage path for uploaded lesson media (Phase 1+). */
@@ -85,9 +95,13 @@ const getCurrentUidOrThrow = (): string => {
 
 export const getUserLessonsCollectionPath = (uid: string): string => `users/${uid}/lessons`;
 export const getUserMediaCollectionPath = (uid: string): string => `users/${uid}/media`;
+export const getUserSidebarFoldersCollectionPath = (uid: string): string => `users/${uid}/sidebarFolders`;
 
 const getLessonDocRef = (uid: string, lessonId: string) =>
   doc(getFirebaseFirestore(), getUserLessonsCollectionPath(uid), lessonId);
+
+const getSidebarFolderDocRef = (uid: string, folderId: string) =>
+  doc(getFirebaseFirestore(), getUserSidebarFoldersCollectionPath(uid), folderId);
 
 /** Firestore rejects `undefined` anywhere in document data (e.g. `trashedAt: undefined`). */
 function stripUndefinedForFirestore<T>(input: T): T {
@@ -118,6 +132,8 @@ const fromFirestoreLessonRecord = (
     type: data.type ?? 'audio',
     name: data.name ?? '',
     language: data.language ?? '',
+    folderId: data.folderId ?? null,
+    sortKey: data.sortKey,
     mediaFile: null,
     mediaPath: data.mediaPath ?? null,
     mediaUrl: data.mediaUrl ?? null,
@@ -137,6 +153,20 @@ const fromFirestoreLessonRecord = (
     flashcardData: data.flashcardData,
   };
 };
+
+export type SidebarFolderKind = 'audio' | 'flashcard';
+export type SidebarFolderLanguage = 'en' | 'de';
+
+export interface SidebarFolderRecord {
+  id: string;
+  name: string;
+  kind: SidebarFolderKind;
+  language: SidebarFolderLanguage;
+  parentId: string | null;
+  sortKey: number;
+  createdAt: number;
+  updatedAt: number;
+}
 
 const sanitizeFileName = (name: string): string => {
   return name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
@@ -242,6 +272,70 @@ export const subscribeLessonsFirestore = (
       onError?.(error);
     }
   );
+};
+
+export const subscribeSidebarFoldersFirestore = (
+  onData: (folders: SidebarFolderRecord[]) => void,
+  onError?: (error: unknown) => void
+): Unsubscribe => {
+  const uid = getCurrentUidOrThrow();
+  const foldersQuery = query(
+    collection(getFirebaseFirestore(), getUserSidebarFoldersCollectionPath(uid)),
+    orderBy('sortKey', 'asc')
+  );
+  return onSnapshot(
+    foldersQuery,
+    (snapshots) => {
+      const next = snapshots.docs.map((d) => d.data() as SidebarFolderRecord);
+      onData(next);
+    },
+    (error) => onError?.(error)
+  );
+};
+
+export const createSidebarFolderFirestore = async (
+  folder: SidebarFolderRecord
+): Promise<void> => {
+  const uid = getCurrentUidOrThrow();
+  await setDoc(getSidebarFolderDocRef(uid, folder.id), stripUndefinedForFirestore(folder));
+};
+
+export const renameSidebarFolderFirestore = async (id: string, name: string): Promise<void> => {
+  const uid = getCurrentUidOrThrow();
+  await updateDoc(getSidebarFolderDocRef(uid, id), {
+    name,
+    updatedAt: Date.now(),
+  });
+};
+
+export const moveSidebarFolderFirestore = async (
+  id: string,
+  parentId: string | null,
+  sortKey: number
+): Promise<void> => {
+  const uid = getCurrentUidOrThrow();
+  await updateDoc(getSidebarFolderDocRef(uid, id), {
+    parentId,
+    sortKey,
+    updatedAt: Date.now(),
+  });
+};
+
+export const deleteSidebarFolderFirestore = async (id: string): Promise<void> => {
+  const uid = getCurrentUidOrThrow();
+  await deleteDoc(getSidebarFolderDocRef(uid, id));
+};
+
+export const patchLessonSidebarPlacementFirestore = async (
+  lessonId: string,
+  patch: { folderId: string | null; sortKey: number }
+): Promise<void> => {
+  const uid = getCurrentUidOrThrow();
+  await updateDoc(getLessonDocRef(uid, lessonId), {
+    folderId: patch.folderId,
+    sortKey: patch.sortKey,
+    updatedAt: Date.now(),
+  });
 };
 
 export const subscribeLessonFirestore = (

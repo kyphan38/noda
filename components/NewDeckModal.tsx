@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 export interface DeckData {
   name: string;
   language: 'en' | 'de';
+  folderId: string | null;
   content: string;
 }
 
@@ -15,11 +16,13 @@ interface NewDeckModalProps {
   onClose: () => void;
   onSubmit: (data: DeckData) => void;
   getTakenFlashcardDeckNames: () => string[];
+  folders?: Array<{ id: string; name: string }>;
 }
 
-export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames }: NewDeckModalProps) {
+export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, folders = [] }: NewDeckModalProps) {
   const [deckName, setDeckName] = useState('');
   const [language, setLanguage] = useState<'en' | 'de'>('de');
+  const [folderId, setFolderId] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [cardCount, setCardCount] = useState(0);
   const [dropActive, setDropActive] = useState(false);
@@ -81,6 +84,7 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames }: 
       onSubmit({
         name: deckName,
         language,
+        folderId,
         content
       });
     }
@@ -135,6 +139,22 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames }: 
             >
               <option value="de">de</option>
               <option value="en">en</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Folder</label>
+            <select
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+              value={folderId ?? ''}
+              onChange={(e) => setFolderId(e.target.value ? e.target.value : null)}
+            >
+              <option value="">(Root)</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
             </select>
           </div>
 

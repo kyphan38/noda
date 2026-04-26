@@ -90,6 +90,8 @@ export function useLessonLogic(
         id: l.id,
         name: l.name,
         language: l.language,
+        folderId: l.folderId ?? null,
+        sortKey: l.sortKey,
         progress:
           kind === 'flashcard'
             ? flashcardDeckProgressPercent(l.flashcardData, l.totalSentences ?? 0)

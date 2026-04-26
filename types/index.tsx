@@ -38,6 +38,10 @@ export type LessonSummary = {
   hasMedia: boolean;
   /** For kind=audio: audio vs video lesson; for flashcard unused (always 'audio'). */
   mediaType: 'audio' | 'video';
+  /** Sidebar folder membership (null/undefined = root). */
+  folderId?: string | null;
+  /** Sidebar ordering key within a container (client-side ordering). */
+  sortKey?: number;
   trashedAt?: number;
 };
 
@@ -66,6 +70,8 @@ export interface LessonItem {
   progress: number; // 0-100
   hasMedia: boolean;
   mediaType: 'audio' | 'video';
+  folderId?: string | null;
+  sortKey?: number;
   type: 'lesson'; // CRITICAL: discriminant vs deck
 }
 
@@ -76,6 +82,8 @@ export interface DeckItem {
   cardCount: number;
   /** Cards marked Done / total (persisted), same scale as lesson sidebar progress. */
   progress: number;
+  folderId?: string | null;
+  sortKey?: number;
   type: 'deck'; // CRITICAL: discriminant vs lesson
 }
 
@@ -89,3 +97,17 @@ export interface TrashItem {
 
 // Expanded sections state
 export type ExpandedSections = Record<string, boolean>;
+
+export type SidebarKind = 'audio' | 'flashcard';
+export type SidebarLanguage = 'en' | 'de';
+
+export type SidebarFolder = {
+  id: string;
+  name: string;
+  kind: SidebarKind;
+  language: SidebarLanguage;
+  parentId: string | null;
+  sortKey: number;
+  createdAt: number;
+  updatedAt: number;
+};

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Music2,
@@ -13,8 +13,9 @@ import {
   Trash2,
   MoreVertical,
 } from 'lucide-react';
-import { LessonSummary, ExpandedSections, LessonItem, DeckItem } from '@/types';
+import { LessonSummary, ExpandedSections, LessonItem, DeckItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
+import type { UseFoldersResult } from '@/hooks/useFolders';
 
 function TrashedItemRow({
   item,
@@ -139,9 +140,21 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: (open: boolean) => void;
   lessons: LessonSummary[];
+  folders: SidebarFolder[];
+  folderActions: Pick<
+    UseFoldersResult,
+    | 'createFolder'
+    | 'renameFolder'
+    | 'deleteFolder'
+    | 'moveFolder'
+    | 'reorderFolder'
+    | 'moveItem'
+    | 'reorderItem'
+  >;
   isListLoading?: boolean;
   selectedItemId?: string;
   expandedSections: ExpandedSections;
+  forcedExpandedFolderIds?: Set<string>;
   onItemSelect: (item: LessonItem | DeckItem) => void;
   onNewLesson: () => void;
   onNewDeck: () => void;
@@ -159,9 +172,12 @@ export function Sidebar({
   isOpen,
   onToggle,
   lessons,
+  folders,
+  folderActions,
   isListLoading = false,
   selectedItemId,
   expandedSections,
+  forcedExpandedFolderIds,
   onItemSelect,
   onNewLesson,
   onNewDeck,
@@ -175,6 +191,18 @@ export function Sidebar({
   isMobile = false,
 }: SidebarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  const searchTerm = search.trim().toLowerCase();
+  const searching = searchTerm.length > 0;
+
+  const folderParentById = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const f of folders) {
+      m.set(f.id, f.parentId ?? null);
+    }
+    return m;
+  }, [folders]);
 
   const activeLessons: LessonItem[] = lessons
     .filter((l) => !l.isTrashed && l.kind === 'audio')
@@ -182,6 +210,8 @@ export function Sidebar({
       id: l.id,
       name: l.name,
       language: l.language as 'en' | 'de',
+      folderId: l.folderId ?? null,
+      sortKey: l.sortKey,
       progress: l.progress,
       hasMedia: l.hasMedia,
       mediaType: l.mediaType,
@@ -194,10 +224,33 @@ export function Sidebar({
       id: l.id,
       name: l.name,
       language: l.language as 'en' | 'de' | 'mixed',
+      folderId: l.folderId ?? null,
+      sortKey: l.sortKey,
       cardCount: l.totalSentences,
       progress: l.progress,
       type: 'deck',
     }));
+
+  const filteredLessons = searching
+    ? activeLessons.filter((x) => x.name.toLowerCase().includes(searchTerm))
+    : activeLessons;
+  const filteredDecks = searching
+    ? activeDecks.filter((x) => x.name.toLowerCase().includes(searchTerm))
+    : activeDecks;
+
+  const forcedExpanded = useMemo(() => {
+    if (!searching) return undefined;
+    const out = new Set<string>();
+    const addPath = (folderId: string) => {
+      out.add(folderId);
+      const p = folderParentById.get(folderId);
+      if (p) out.add(p);
+    };
+    for (const it of [...filteredLessons, ...filteredDecks]) {
+      if (it.folderId) addPath(it.folderId);
+    }
+    return out;
+  }, [searching, filteredLessons, filteredDecks, folderParentById]);
 
   const trashed = lessons.filter((l) => l.isTrashed);
   const trashExpanded = expandedSections.trash ?? false;
@@ -276,15 +329,28 @@ export function Sidebar({
             </div>
           )}
 
+          <div className="px-4 pb-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search…"
+              className="w-full bg-gray-950/60 border border-gray-800 focus:border-emerald-500/60 text-gray-100 placeholder:text-gray-500 rounded-lg px-3 py-2 text-sm outline-none"
+            />
+          </div>
+
           <div className="flex-1 overflow-y-auto p-2 space-y-6">
             {!isMobile && (
               <SidebarSection
                 type="lessons"
                 title="AUDIO"
-                items={activeLessons}
+                items={filteredLessons}
+                folders={folders}
+                folderActions={folderActions}
                 isLoading={isListLoading}
                 selectedItemId={selectedItemId}
                 expandedSections={expandedSections}
+                forcedExpandedFolderIds={forcedExpandedFolderIds ?? forcedExpanded}
+                disableCaps={searching}
                 onToggleSection={onToggleSection}
                 onItemSelect={onItemSelect}
                 onTrashItem={onTrashItem}
@@ -292,16 +358,21 @@ export function Sidebar({
                 onChangeLanguage={onChangeLanguage}
                 activeMenu={activeMenu}
                 setActiveMenu={setActiveMenu}
+                isMobile={isMobile}
               />
             )}
 
             <SidebarSection
               type="decks"
               title="DECKS"
-              items={activeDecks}
+              items={filteredDecks}
+              folders={folders}
+              folderActions={folderActions}
               isLoading={isListLoading}
               selectedItemId={selectedItemId}
               expandedSections={expandedSections}
+              forcedExpandedFolderIds={forcedExpandedFolderIds ?? forcedExpanded}
+              disableCaps={searching}
               onToggleSection={onToggleSection}
               onItemSelect={onItemSelect}
               onTrashItem={onTrashItem}
@@ -309,6 +380,7 @@ export function Sidebar({
               onChangeLanguage={onChangeLanguage}
               activeMenu={activeMenu}
               setActiveMenu={setActiveMenu}
+              isMobile={isMobile}
             />
 
             {trashed.length > 0 && (

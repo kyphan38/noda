@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { normalizeDictationTarget } from '@/lib/utils';
 import { patchFlashcardCompletionModalShownFirestore, restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
@@ -14,6 +14,7 @@ import { DeleteLessonModal } from '@/components/DeleteLessonModal';
 import { useMediaPlayer } from '@/hooks/useMediaPlayer';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
+import { useFolders } from '@/hooks/useFolders';
 import { useLessonCreateFlow } from '@/hooks/useLessonCreateFlow';
 import { useDictationCompletionModal } from '@/hooks/useDictationCompletionModal';
 import { useLessonPlaybackLoop } from '@/hooks/useLessonPlaybackLoop';
@@ -100,6 +101,53 @@ export default function NodaApp() {
     prepareForLessonMediaClear, handleUpdateItemLanguage
   } = useLessonLogic(mediaFile, setMediaFile, setMediaURL, recognitionLang, setRecognitionLang);
 
+  const {
+    folders,
+    localOverrides,
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    moveFolder,
+    reorderFolder,
+    moveItem,
+    reorderItem,
+  } = useFolders();
+
+  const effectiveFolders = useMemo(
+    () => folders.map((f) => ({ ...f, ...(localOverrides.folders[f.id] ?? {}) })),
+    [folders, localOverrides.folders]
+  );
+
+  const folderLabelById = useMemo(() => {
+    const byId = new Map<string, { name: string; parentId: string | null; language: string }>();
+    for (const f of effectiveFolders) {
+      byId.set(f.id, { name: f.name, parentId: f.parentId ?? null, language: f.language });
+    }
+    const buildPath = (id: string): string => {
+      const parts: string[] = [];
+      let cur: string | null = id;
+      let guard = 0;
+      while (cur && guard < 4) {
+        guard += 1;
+        const node = byId.get(cur);
+        if (!node) break;
+        parts.push(node.name);
+        cur = node.parentId;
+      }
+      parts.reverse();
+      const lang = byId.get(id)?.language?.toUpperCase() ?? '??';
+      return `${lang} . ${parts.join(' . ')}`;
+    };
+    const out = new Map<string, string>();
+    for (const id of byId.keys()) out.set(id, buildPath(id));
+    return out;
+  }, [effectiveFolders]);
+
+  const lessonsListEffective = useMemo(
+    () => lessonsList.map((row) => ({ ...row, ...(localOverrides.items[row.id] ?? {}) })),
+    [lessonsList, localOverrides.items]
+  );
+
   const selectedItemRef = useRef(selectedItem);
   selectedItemRef.current = selectedItem;
 
@@ -137,7 +185,7 @@ export default function NodaApp() {
   }, [viewport.decided, viewport.isMobile, setIsSidebarOpen]);
 
   const lessonsListRef = useRef<typeof lessonsList>([]);
-  lessonsListRef.current = lessonsList;
+  lessonsListRef.current = lessonsListEffective;
 
   /** Read from ref so async callbacks (e.g. FileReader in modals) always see the latest list after delete/reload. */
   const getTakenAudioLessonNames = useCallback(
@@ -211,6 +259,7 @@ export default function NodaApp() {
         totalSentences: number;
         hasMedia: boolean;
         mediaType: 'audio' | 'video';
+        folderId?: string | null;
       },
       opts?: { pushHistory?: boolean }
     ) => {
@@ -226,6 +275,14 @@ export default function NodaApp() {
           type: 'deck',
         };
         expandSidebarForItem('flashcard', row.language);
+        if (row.folderId) {
+          setExpandedSections((prev) => {
+            const next = { ...prev, [`folder:${row.folderId}`]: true };
+            const parentId = effectiveFolders.find((f) => f.id === row.folderId)?.parentId;
+            if (parentId) next[`folder:${parentId}`] = true;
+            return next;
+          });
+        }
         setDeckOpenGeneration((g) => g + 1);
         setSelectedItem({ id: row.id, type: 'deck', data: deck });
         void handleLoadLesson(row.id);
@@ -243,17 +300,32 @@ export default function NodaApp() {
         type: 'lesson',
       };
       expandSidebarForItem('audio', row.language);
+      if (row.folderId) {
+        setExpandedSections((prev) => {
+          const next = { ...prev, [`folder:${row.folderId}`]: true };
+          const parentId = effectiveFolders.find((f) => f.id === row.folderId)?.parentId;
+          if (parentId) next[`folder:${parentId}`] = true;
+          return next;
+        });
+      }
       setSelectedItem({ id: row.id, type: 'lesson', data: lesson });
 
       void handleLoadLesson(row.id);
       void handleModeChange('normal');
       if (pushHistory) pushItemHistoryState(row);
     },
-    [expandSidebarForItem, handleLoadLesson, handleModeChange, saveTranscriptScrollForCurrentLesson]
+    [
+      expandSidebarForItem,
+      handleLoadLesson,
+      handleModeChange,
+      saveTranscriptScrollForCurrentLesson,
+      effectiveFolders,
+      setExpandedSections,
+    ]
   );
 
   const handleItemSelect = (item: LessonItem | DeckItem) => {
-    const row = lessonsList.find((l) => l.id === item.id);
+    const row = lessonsListEffective.find((l) => l.id === item.id);
     if (!row || row.isTrashed) return;
     applySelectionFromRow(row, { pushHistory: true });
   };
@@ -642,7 +714,17 @@ export default function NodaApp() {
         <Sidebar
           isOpen={isSidebarOpen}
           onToggle={setIsSidebarOpen}
-          lessons={lessonsList}
+          lessons={lessonsListEffective}
+          folders={effectiveFolders}
+          folderActions={{
+            createFolder,
+            renameFolder,
+            deleteFolder,
+            moveFolder,
+            reorderFolder,
+            moveItem,
+            reorderItem,
+          }}
           isListLoading={isListLoading}
           selectedItemId={selectedItem?.id}
           expandedSections={expandedSections}
@@ -692,6 +774,10 @@ export default function NodaApp() {
                 onClose={closeUploadModal}
                 onSubmit={handleLessonCreated}
                 getTakenAudioLessonNames={getTakenAudioLessonNames}
+                folders={effectiveFolders
+                  .filter((f) => f.kind === 'audio')
+                  .filter((f) => f.language === 'de' || f.language === 'en')
+                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? `${f.language.toUpperCase()} . ${f.name}` }))}
                 onNotify={(message, type) => setToast({ message, type })}
               />
             )}
@@ -701,6 +787,10 @@ export default function NodaApp() {
                 onClose={closeUploadModal}
                 onSubmit={handleDeckCreated}
                 getTakenFlashcardDeckNames={getTakenFlashcardDeckNames}
+                folders={effectiveFolders
+                  .filter((f) => f.kind === 'flashcard')
+                  .filter((f) => f.language === 'de' || f.language === 'en')
+                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? `${f.language.toUpperCase()} . ${f.name}` }))}
               />
             )}
 
