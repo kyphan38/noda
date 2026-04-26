@@ -141,10 +141,15 @@ export function SidebarFolderTree({
     }
     for (const [fid, arr] of m.entries()) {
       arr.sort((a, b) => {
+        const byName = a.name.localeCompare(b.name, undefined, {
+          sensitivity: 'base',
+          numeric: true,
+        });
+        if (byName !== 0) return byName;
         const ak = a.sortKey;
         const bk = b.sortKey;
         if (typeof ak === 'number' && typeof bk === 'number' && ak !== bk) return ak - bk;
-        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        return a.id.localeCompare(b.id);
       });
       m.set(fid, arr);
     }
