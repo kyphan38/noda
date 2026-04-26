@@ -73,8 +73,8 @@ export function SidebarFolderTree({
     try {
       const j = JSON.parse(raw) as DragPayload;
       if (!j || typeof j !== 'object') return null;
-      if (j.entity === 'item' && typeof (j as any).id === 'string') return j;
-      if (j.entity === 'folder' && typeof (j as any).id === 'string') return j;
+      if (j.entity === 'item' && typeof (j as { id?: unknown }).id === 'string') return j;
+      if (j.entity === 'folder' && typeof (j as { id?: unknown }).id === 'string') return j;
       return null;
     } catch {
       return null;
