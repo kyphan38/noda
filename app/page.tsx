@@ -113,10 +113,16 @@ export default function NodaApp() {
     reorderItem,
   } = useFolders();
 
-  const effectiveFolders = useMemo(
-    () => folders.map((f) => ({ ...f, ...(localOverrides.folders[f.id] ?? {}) })),
-    [folders, localOverrides.folders]
-  );
+  const effectiveFolders = useMemo(() => {
+    const existingIds = new Set(folders.map((f) => f.id));
+    const merged = folders.map((f) => ({ ...f, ...(localOverrides.folders[f.id] ?? {}) }));
+    for (const [id, ov] of Object.entries(localOverrides.folders)) {
+      if (!existingIds.has(id) && ov.id) {
+        merged.push(ov as import('@/types').SidebarFolder);
+      }
+    }
+    return merged;
+  }, [folders, localOverrides.folders]);
 
   const folderLabelById = useMemo(() => {
     const byId = new Map<string, { name: string; parentId: string | null; language: string }>();

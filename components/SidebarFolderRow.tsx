@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Folder, MoreVertical, Plus, Trash2, Edit2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  MoreVertical,
+  Plus,
+  Trash2,
+  Edit2,
+} from 'lucide-react';
 import type { SidebarFolder } from '@/types';
 import { PortalMenu } from './PortalMenu';
 
@@ -14,6 +22,7 @@ export function SidebarFolderRow({
   onRename,
   onDelete,
   onCreateSubfolder,
+  folderDrag,
   activeMenu,
   setActiveMenu,
 }: {
@@ -25,6 +34,12 @@ export function SidebarFolderRow({
   onRename: (name: string) => void | Promise<void>;
   onDelete: () => void | Promise<void>;
   onCreateSubfolder?: () => void | Promise<void>;
+  /** HTML5 drag only starts reliably from this handle (buttons/links block drag on parents). */
+  folderDrag?: {
+    enabled: boolean;
+    onDragStart: (e: React.DragEvent) => void;
+    onDragEnd?: () => void;
+  };
   activeMenu: string | null;
   setActiveMenu: (id: string | null) => void;
 }) {
@@ -47,12 +62,34 @@ export function SidebarFolderRow({
   const menuKey = useMemo(() => `folder-menu-${folder.id}`, [folder.id]);
   const menuOpen = activeMenu === menuKey;
 
-  const indent = depth === 0 ? 'ml-2' : depth === 1 ? 'ml-8' : depth === 2 ? 'ml-14' : 'ml-20';
+  // Align top-level folders with the DE/EN accordion content edge.
+  const indent = depth === 0 ? 'ml-0' : depth === 1 ? 'ml-6' : depth === 2 ? 'ml-12' : 'ml-18';
+  const rowPadding = depth === 0 ? 'pl-0 pr-2' : 'px-2';
 
   return (
     <div className={`${indent} group relative rounded-md`}>
+      {folderDrag?.enabled ? (
+        <span
+          draggable
+          role="button"
+          tabIndex={-1}
+          aria-label="Drag folder"
+          title="Drag folder"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-7 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
+          onDragStart={(e) => {
+            e.stopPropagation();
+            folderDrag.onDragStart(e);
+          }}
+          onDragEnd={(e) => {
+            e.stopPropagation();
+            folderDrag.onDragEnd?.();
+          }}
+        >
+          <span className="block w-full h-full" aria-hidden />
+        </span>
+      ) : null}
       <div
-        className="flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md hover:bg-gray-800/40 transition-colors"
+        className={`flex items-center gap-1.5 min-w-0 ${rowPadding} py-1.5 rounded-md hover:bg-gray-800/40 transition-colors`}
       >
         <button
           type="button"

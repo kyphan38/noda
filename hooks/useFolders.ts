@@ -63,7 +63,9 @@ export function useFolders(): UseFoldersResult {
         const same =
           (ov.name === undefined || ov.name === f.name) &&
           (ov.parentId === undefined || ov.parentId === f.parentId) &&
-          (ov.sortKey === undefined || ov.sortKey === f.sortKey);
+          (ov.sortKey === undefined || ov.sortKey === f.sortKey) &&
+          (ov.kind === undefined || ov.kind === f.kind) &&
+          (ov.language === undefined || ov.language === f.language);
         if (same) {
           delete next[id];
           removed += 1;
@@ -107,8 +109,35 @@ export function useFolders(): UseFoldersResult {
       try {
         unsubFolders = subscribeSidebarFoldersFirestore(
           (rows) => {
+            const byId = new Map<string, SidebarFolderRecord>();
+            for (const r of rows) byId.set(r.id, r);
+
+            const isCycleOrInvalidParent = (id: string, parentId: string | null): boolean => {
+              if (!parentId) return false;
+              if (parentId === id) return true;
+              // If parent doc doesn't exist, treat as root (dangling ref).
+              if (!byId.has(parentId)) return true;
+              // Walk up parents; if we ever reach `id`, it's a cycle.
+              let cur: string | null = parentId;
+              let guard = 0;
+              while (cur && guard < 20) {
+                guard += 1;
+                if (cur === id) return true;
+                cur = byId.get(cur)?.parentId ?? null;
+              }
+              return false;
+            };
+
+            const sanitized = rows.map((r): SidebarFolderRecord => {
+              const parentId = r.parentId ?? null;
+              if (isCycleOrInvalidParent(r.id, parentId)) {
+                return { ...r, parentId: null };
+              }
+              return r;
+            });
+
             setFolders(
-              rows.map((r: SidebarFolderRecord) => ({
+              sanitized.map((r: SidebarFolderRecord) => ({
                 id: r.id,
                 name: r.name,
                 kind: r.kind,
@@ -156,6 +185,8 @@ export function useFolders(): UseFoldersResult {
 
     try {
       await createSidebarFolderFirestore(rec);
+      // Keep the optimistic override until `folders` includes this doc (see folder override sweep).
+      // Removing immediately races the snapshot listener and makes the folder flash away.
     } catch (e) {
       setLocalFolderOverrides((prev) => {
         const next = { ...prev };

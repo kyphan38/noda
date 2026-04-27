@@ -156,17 +156,36 @@ export function SidebarFolderTree({
     return m;
   }, [items, foldersById]);
 
+  const wouldCreateCycle = (folderId: string, newParentId: string | null): boolean => {
+    if (newParentId == null) return false;
+    if (newParentId === folderId) return true;
+    // Walk up the parent chain from the proposed parent to root.
+    let cur: string | null = newParentId;
+    let guard = 0;
+    while (cur && guard < 20) {
+      guard += 1;
+      if (cur === folderId) return true;
+      cur = foldersById.get(cur)?.parentId ?? null;
+    }
+    return false;
+  };
+
   const subtreeCountByFolderId = useMemo(() => {
     const out = new Map<string, number>();
-    const countSubtree = (fid: string): number => {
+    const countSubtree = (fid: string, visiting: Set<string>): number => {
+      if (visiting.has(fid)) {
+        return 0;
+      }
+      visiting.add(fid);
       const direct = itemsByFolderId.get(fid)?.length ?? 0;
       const kids = childrenOf.get(fid) ?? [];
       let c = direct;
-      for (const k of kids) c += countSubtree(k.id);
+      for (const k of kids) c += countSubtree(k.id, visiting);
+      visiting.delete(fid);
       return c;
     };
     for (const f of folders) {
-      out.set(f.id, countSubtree(f.id));
+      out.set(f.id, countSubtree(f.id, new Set()));
     }
     return out;
   }, [folders, itemsByFolderId, childrenOf]);
@@ -331,17 +350,7 @@ export function SidebarFolderTree({
         return (
           <div key={f.id} className="space-y-1">
             <div
-              draggable={enableDnd}
               className="relative"
-              onDragStart={(e) => {
-                if (!enableDnd) return;
-                const payload: DragPayload = { entity: 'folder', id: f.id, fromParentId: null };
-                dragRef.current = payload;
-                const raw = JSON.stringify(payload);
-                e.dataTransfer.setData('application/x-noda-sidebar-dnd', raw);
-                e.dataTransfer.setData('text/plain', raw);
-                e.dataTransfer.effectAllowed = 'move';
-              }}
               onDragOver={(e) => {
                 if (!enableDnd) return;
                 const p = getPayload(e);
@@ -386,7 +395,9 @@ export function SidebarFolderTree({
                         typeof f.sortKey === 'number' ? f.sortKey : undefined,
                         typeof afterKey === 'number' ? afterKey : undefined
                       );
-                  void onMoveFolder(p.id, null, nextSortKey);
+                  if (!wouldCreateCycle(p.id, null)) {
+                    void onMoveFolder(p.id, null, nextSortKey);
+                  }
                 }
               }}
               onDragLeave={() => {
@@ -409,6 +420,21 @@ export function SidebarFolderTree({
                 onRename={(name) => onRenameFolder(f.id, name)}
                 onDelete={() => onDeleteFolder(f.id)}
                 onCreateSubfolder={() => setCreatingSubfolderFor(f.id)}
+                folderDrag={
+                  enableDnd
+                    ? {
+                        enabled: true,
+                        onDragStart: (e) => {
+                          const payload: DragPayload = { entity: 'folder', id: f.id, fromParentId: null };
+                          dragRef.current = payload;
+                          const raw = JSON.stringify(payload);
+                          e.dataTransfer.setData('application/x-noda-sidebar-dnd', raw);
+                          e.dataTransfer.setData('text/plain', raw);
+                          e.dataTransfer.effectAllowed = 'move';
+                        },
+                      }
+                    : undefined
+                }
                 activeMenu={activeMenu}
                 setActiveMenu={setActiveMenu}
               />
@@ -552,24 +578,66 @@ export function SidebarFolderTree({
                   return (
                     <div key={sf.id} className="space-y-1">
                       <div
+                        className="relative"
                         onDragOver={(e) => {
                           if (!enableDnd) return;
                           const p = getPayload(e);
-                          if (!p || p.entity !== 'item') return;
+                          if (!p) return;
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'move';
+
+                          if (p.entity !== 'folder') return;
+                          const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                          const before = e.clientY < r.top + r.height / 2;
+                          setOverTargetIfChanged({ targetId: sf.id, position: before ? 'before' : 'after' });
                         }}
                         onDrop={(e) => {
                           if (!enableDnd) return;
                           const p = getPayload(e);
-                          if (!p || p.entity !== 'item') return;
+                          if (!p) return;
                           e.preventDefault();
-                          const list = itemsByFolderId.get(sf.id) ?? [];
-                          const last = list[list.length - 1]?.sortKey;
-                          const nextSortKey = computeMidSortKey(typeof last === 'number' ? last : undefined, undefined);
-                          void onMoveItem(p.id, sf.id, nextSortKey);
+                          setOverTargetIfChanged(null);
+
+                          if (p.entity === 'item') {
+                            const list = itemsByFolderId.get(sf.id) ?? [];
+                            const last = list[list.length - 1]?.sortKey;
+                            const nextSortKey = computeMidSortKey(typeof last === 'number' ? last : undefined, undefined);
+                            void onMoveItem(p.id, sf.id, nextSortKey);
+                            return;
+                          }
+
+                          if (p.entity === 'folder' && p.id !== sf.id) {
+                            if (wouldCreateCycle(p.id, f.id)) return;
+                            const siblings = childrenOf.get(f.id) ?? [];
+                            const targetIdx = siblings.findIndex((x) => x.id === sf.id);
+                            const beforeKey = targetIdx > 0 ? siblings[targetIdx - 1]?.sortKey : undefined;
+                            const afterKey = targetIdx >= 0 ? siblings[targetIdx + 1]?.sortKey : undefined;
+
+                            const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                            const before = e.clientY < r.top + r.height / 2;
+                            const nextSortKey = before
+                              ? computeMidSortKey(
+                                  typeof beforeKey === 'number' ? beforeKey : undefined,
+                                  typeof sf.sortKey === 'number' ? sf.sortKey : undefined
+                                )
+                              : computeMidSortKey(
+                                  typeof sf.sortKey === 'number' ? sf.sortKey : undefined,
+                                  typeof afterKey === 'number' ? afterKey : undefined
+                                );
+                            void onMoveFolder(p.id, f.id, nextSortKey);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (!enableDnd) return;
+                          setOverTargetIfChanged(null);
                         }}
                       >
+                        {enableDnd && overTarget?.targetId === sf.id && dragRef.current?.entity === 'folder' && (
+                          <div
+                            className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                            style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
+                          />
+                        )}
                         <SidebarFolderRow
                           folder={sf}
                           depth={1}
@@ -578,6 +646,25 @@ export function SidebarFolderTree({
                           onToggleExpanded={(next) => onToggleSection(sfKey, next)}
                           onRename={(name) => onRenameFolder(sf.id, name)}
                           onDelete={() => onDeleteFolder(sf.id)}
+                          folderDrag={
+                            enableDnd
+                              ? {
+                                  enabled: true,
+                                  onDragStart: (e) => {
+                                    const payload: DragPayload = {
+                                      entity: 'folder',
+                                      id: sf.id,
+                                      fromParentId: f.id,
+                                    };
+                                    dragRef.current = payload;
+                                    const raw = JSON.stringify(payload);
+                                    e.dataTransfer.setData('application/x-noda-sidebar-dnd', raw);
+                                    e.dataTransfer.setData('text/plain', raw);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                  },
+                                }
+                              : undefined
+                          }
                           activeMenu={activeMenu}
                           setActiveMenu={setActiveMenu}
                         />
@@ -711,24 +798,69 @@ export function SidebarFolderTree({
                             return (
                               <div key={tf.id} className="space-y-1">
                                 <div
+                                  className="relative"
                                   onDragOver={(e) => {
                                     if (!enableDnd) return;
                                     const p = getPayload(e);
-                                    if (!p || p.entity !== 'item') return;
+                                    if (!p) return;
                                     e.preventDefault();
                                     e.dataTransfer.dropEffect = 'move';
+
+                                    if (p.entity !== 'folder') return;
+                                    const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                    const before = e.clientY < r.top + r.height / 2;
+                                    setOverTargetIfChanged({ targetId: tf.id, position: before ? 'before' : 'after' });
                                   }}
                                   onDrop={(e) => {
                                     if (!enableDnd) return;
                                     const p = getPayload(e);
-                                    if (!p || p.entity !== 'item') return;
+                                    if (!p) return;
                                     e.preventDefault();
-                                    const list = itemsByFolderId.get(tf.id) ?? [];
-                                    const last = list[list.length - 1]?.sortKey;
-                                    const nextSortKey = computeMidSortKey(typeof last === 'number' ? last : undefined, undefined);
-                                    void onMoveItem(p.id, tf.id, nextSortKey);
+                                    setOverTargetIfChanged(null);
+
+                                    if (p.entity === 'item') {
+                                      const list = itemsByFolderId.get(tf.id) ?? [];
+                                      const last = list[list.length - 1]?.sortKey;
+                                      const nextSortKey = computeMidSortKey(
+                                        typeof last === 'number' ? last : undefined,
+                                        undefined
+                                      );
+                                      void onMoveItem(p.id, tf.id, nextSortKey);
+                                      return;
+                                    }
+
+                                    if (p.entity === 'folder' && p.id !== tf.id) {
+                                      if (wouldCreateCycle(p.id, sf.id)) return;
+                                      const siblings = childrenOf.get(sf.id) ?? [];
+                                      const targetIdx = siblings.findIndex((x) => x.id === tf.id);
+                                      const beforeKey = targetIdx > 0 ? siblings[targetIdx - 1]?.sortKey : undefined;
+                                      const afterKey = targetIdx >= 0 ? siblings[targetIdx + 1]?.sortKey : undefined;
+
+                                      const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                      const before = e.clientY < r.top + r.height / 2;
+                                      const nextSortKey = before
+                                        ? computeMidSortKey(
+                                            typeof beforeKey === 'number' ? beforeKey : undefined,
+                                            typeof tf.sortKey === 'number' ? tf.sortKey : undefined
+                                          )
+                                        : computeMidSortKey(
+                                            typeof tf.sortKey === 'number' ? tf.sortKey : undefined,
+                                            typeof afterKey === 'number' ? afterKey : undefined
+                                          );
+                                      void onMoveFolder(p.id, sf.id, nextSortKey);
+                                    }
+                                  }}
+                                  onDragLeave={() => {
+                                    if (!enableDnd) return;
+                                    setOverTargetIfChanged(null);
                                   }}
                                 >
+                                  {enableDnd && overTarget?.targetId === tf.id && dragRef.current?.entity === 'folder' && (
+                                    <div
+                                      className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                                      style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
+                                    />
+                                  )}
                                   <SidebarFolderRow
                                     folder={tf}
                                     depth={2}
@@ -737,6 +869,25 @@ export function SidebarFolderTree({
                                     onToggleExpanded={(next) => onToggleSection(tfKey, next)}
                                     onRename={(name) => onRenameFolder(tf.id, name)}
                                     onDelete={() => onDeleteFolder(tf.id)}
+                                    folderDrag={
+                                      enableDnd
+                                        ? {
+                                            enabled: true,
+                                            onDragStart: (e) => {
+                                              const payload: DragPayload = {
+                                                entity: 'folder',
+                                                id: tf.id,
+                                                fromParentId: sf.id,
+                                              };
+                                              dragRef.current = payload;
+                                              const raw = JSON.stringify(payload);
+                                              e.dataTransfer.setData('application/x-noda-sidebar-dnd', raw);
+                                              e.dataTransfer.setData('text/plain', raw);
+                                              e.dataTransfer.effectAllowed = 'move';
+                                            },
+                                          }
+                                        : undefined
+                                    }
                                     activeMenu={activeMenu}
                                     setActiveMenu={setActiveMenu}
                                   />
