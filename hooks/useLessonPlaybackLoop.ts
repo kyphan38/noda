@@ -1,5 +1,6 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, LoopMode, Sentence } from '@/types';
+import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 type RefBool = MutableRefObject<boolean>;
 type RefMode = MutableRefObject<AppMode>;
@@ -47,7 +48,10 @@ export function useLessonPlaybackLoop(
                 audioRef.current.pause();
                 loopTimeoutRef.current = setTimeout(() => {
                   if (audioRef.current && loopModeRef.current === 'one' && activeSentenceRef.current) {
-                    audioRef.current.currentTime = activeSentenceRef.current.start;
+                    audioRef.current.currentTime = Math.max(
+                      0,
+                      activeSentenceRef.current.start - SENTENCE_PRE_ROLL_SECONDS
+                    );
                     audioRef.current.play().catch(() => {});
                   }
                   isLoopDelayingRef.current = false;

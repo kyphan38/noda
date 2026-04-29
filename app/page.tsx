@@ -30,6 +30,7 @@ import { Toast } from '@/components/Toast';
 import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { hasAllowlistConfig, isAllowedUser } from '@/lib/auth/allowed-user';
 import { buildItemSearchString, parseItemFromSearch } from '@/lib/item-url';
+import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 function pushItemHistoryState(
   row: {
@@ -586,8 +587,9 @@ export default function NodaApp() {
 
   const handleSentenceClick = (sentence: Sentence) => {
     if (mediaRef.current) {
-      mediaRef.current.currentTime = sentence.start;
-      setCurrentTime(sentence.start);
+      const seekTarget = Math.max(0, sentence.start - SENTENCE_PRE_ROLL_SECONDS);
+      mediaRef.current.currentTime = seekTarget;
+      setCurrentTime(seekTarget);
       lastScrolledIndexRef.current = -1;
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
       isLoopDelayingRef.current = false;

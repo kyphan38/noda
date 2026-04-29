@@ -1,5 +1,6 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, Sentence } from '@/types';
+import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 type ModeChange = (mode: AppMode) => void | Promise<void>;
 
@@ -83,7 +84,8 @@ export function useGlobalPlaybackShortcuts(
           if (appMode === 'dictation') {
             replayOnceRef.current = { sentenceId: activeSentenceRef.current.id, end: activeSentenceRef.current.end };
           }
-          audioRef.current.currentTime = activeSentenceRef.current.start;
+          const seekTarget = Math.max(0, activeSentenceRef.current.start - SENTENCE_PRE_ROLL_SECONDS);
+          audioRef.current.currentTime = seekTarget;
           audioRef.current.play().catch(() => {});
         }
       }
