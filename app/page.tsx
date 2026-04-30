@@ -580,7 +580,7 @@ export default function NodaApp() {
       return next;
     });
     if (mediaRef.current) {
-      mediaRef.current.currentTime = sentence.end + 0.05;
+      mediaRef.current.currentTime = sentence.end + 0.01;
       mediaRef.current.play().catch(() => {});
     }
   };
@@ -640,7 +640,7 @@ export default function NodaApp() {
           mediaRef.current.play().catch(() => {});
         } else {
           // last sentence: park at end
-          mediaRef.current.currentTime = sentence.end + 0.05;
+          mediaRef.current.currentTime = sentence.end + 0.01;
           setCurrentTime(sentence.end + 0.05);
           mediaRef.current.pause();
           setIsPlaying(false);
