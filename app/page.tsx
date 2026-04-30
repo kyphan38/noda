@@ -11,6 +11,7 @@ import { NewDeckModal } from '@/components/NewDeckModal';
 import { CleanupModal } from '@/components/CleanupModal';
 import { AppHeader } from '@/components/AppHeader';
 import { DeleteLessonModal } from '@/components/DeleteLessonModal';
+import { DeleteManyModal } from '@/components/DeleteManyModal';
 import { useMediaPlayer } from '@/hooks/useMediaPlayer';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
@@ -56,6 +57,8 @@ export default function NodaApp() {
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
+
+  const [trashDeleteIds, setTrashDeleteIds] = useState<string[] | null>(null);
 
   const [headerItemMenuOpen, setHeaderItemMenuOpen] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
@@ -742,6 +745,7 @@ export default function NodaApp() {
           onTrashItem={handleTrashItem}
           onRestoreItem={handleRestoreItem}
           onDeleteForever={setLessonToDelete}
+          onDeleteForeverMany={(ids) => setTrashDeleteIds(ids)}
           onRenameLesson={handleRenameLesson}
           onChangeLanguage={onChangeItemLanguage}
           onLogout={() => void handleLogout()}
@@ -872,6 +876,26 @@ export default function NodaApp() {
                 type: 'error',
               });
               setLessonToDelete(null);
+            }
+          }}
+        />
+      )}
+
+      {trashDeleteIds && trashDeleteIds.length > 0 && (
+        <DeleteManyModal
+          count={trashDeleteIds.length}
+          onCancel={() => setTrashDeleteIds(null)}
+          onConfirm={async () => {
+            const ids = trashDeleteIds;
+            const results = await Promise.allSettled(ids.map((id) => handleDeletePermanently(id)));
+            const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+            const failed = results.length - succeeded;
+            if (selectedItem && ids.includes(selectedItem.id)) handleNewLessonWrapper();
+            setTrashDeleteIds(null);
+            if (failed === 0) {
+              setToast({ message: `Deleted ${succeeded} ${succeeded === 1 ? 'item' : 'items'}.`, type: 'success' });
+            } else {
+              setToast({ message: `Deleted ${succeeded} items; ${failed} failed.`, type: 'error' });
             }
           }}
         />

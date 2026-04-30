@@ -161,6 +161,7 @@ interface SidebarProps {
   onTrashItem: (id: string) => void;
   onRestoreItem: (id: string) => void;
   onDeleteForever: (id: string) => void;
+  onDeleteForeverMany: (ids: string[]) => void;
   onRenameLesson?: (id: string, newName: string) => void;
   onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   onLogout: () => void;
@@ -184,6 +185,7 @@ export function Sidebar({
   onTrashItem,
   onRestoreItem,
   onDeleteForever,
+  onDeleteForeverMany,
   onRenameLesson,
   onChangeLanguage,
   onLogout,
@@ -385,16 +387,26 @@ export function Sidebar({
 
             {trashed.length > 0 && (
               <div className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => onToggleSection('trash', !trashExpanded)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors duration-200"
-                >
-                  <span className="flex items-center gap-2">
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => onToggleSection('trash', !trashExpanded)}
+                    className="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors duration-200"
+                  >
                     {trashExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     Trash ({trashed.length})
-                  </span>
-                </button>
+                  </button>
+                  {trashExpanded && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteForeverMany(trashed.map((t) => t.id))}
+                      className="shrink-0 px-2 py-1 mr-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                      title="Permanently delete all trashed items"
+                    >
+                      Remove all
+                    </button>
+                  )}
+                </div>
                 {trashExpanded && (
                   <ul className="space-y-1 pl-1">
                     {trashed.map((l) => (
