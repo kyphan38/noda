@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget } from '@/lib/utils';
+
+type DictationKeyTarget = HTMLInputElement | HTMLTextAreaElement;
 
 interface DictationControlsProps {
   sentence: Sentence;
@@ -9,12 +11,9 @@ interface DictationControlsProps {
   dictationInput: string;
   isCompleted: boolean;
   onDictationChange: (sentence: Sentence, value: string) => void;
-  onDictationKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, sentence: Sentence) => void;
+  onDictationKeyDown: (e: React.KeyboardEvent<DictationKeyTarget>, sentence: Sentence) => void;
   onDictationRetry?: (sentence: Sentence) => void;
 }
-
-const spaceSlotClass =
-  'inline-block min-w-[0.63em] w-[0.63em] max-w-[0.63em] shrink-0 text-center align-baseline';
 
 export function DictationControls({
   sentence,
@@ -25,10 +24,12 @@ export function DictationControls({
   onDictationKeyDown,
   onDictationRetry,
 }: DictationControlsProps) {
-  const targetNorm = normalizeDictationTarget(sentence.text);
+  const targetNorm = useMemo(() => normalizeDictationTarget(sentence.text), [sentence.text]);
   const inputNorm = normalizeDictationTarget(dictationInput, { preserveTrailingSpace: true });
 
-  const mainInputRef = useRef<HTMLInputElement>(null);
+  // hiddenRef: off-screen textarea that captures all keystrokes.
+  // srOnlyRef: off-screen input used in completed state for Enter-to-advance.
+  const hiddenRef = useRef<HTMLTextAreaElement>(null);
   const srOnlyRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -36,23 +37,17 @@ export function DictationControls({
     if (isCompleted) {
       srOnlyRef.current?.focus({ preventScroll: true });
     } else {
-      mainInputRef.current?.focus({ preventScroll: true });
+      hiddenRef.current?.focus({ preventScroll: true });
     }
   }, [isCompleted, isActive, sentence.id]);
 
+  // ── Completed ─────────────────────────────────────────────────────────────
   if (isCompleted) {
     return (
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start gap-2">
-          <div className="font-mono text-lg tracking-wide min-w-0 flex-1 leading-relaxed text-green-400">
-            {targetNorm.split('').map((ch, i) => {
-              const spaceSlot = ch === ' ' ? spaceSlotClass : 'inline-block whitespace-pre align-baseline';
-              return (
-                <span key={i} className={spaceSlot}>
-                  {ch === ' ' ? '\u00a0' : ch}
-                </span>
-              );
-            })}
+      <div className="flex flex-col">
+        <div className="flex items-start gap-2 px-4 py-3 border border-transparent rounded-lg">
+          <div className="font-mono text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-all text-green-400">
+            {targetNorm}
           </div>
           {onDictationRetry && (
             <button
@@ -84,62 +79,79 @@ export function DictationControls({
     );
   }
 
+  // ── Active / incomplete ────────────────────────────────────────────────────
+  // Single-div approach: the feedback div IS the entire visual output.
+  // No overlay, no z-index tricks — the textarea lives off-screen (position:fixed)
+  // so it can never cover the feedback.
+  //
+  // Character rendering:
+  //   Correct (typed === target char)  → green,  show the real character
+  //   Wrong   (typed !== target char)  → red,    show what was typed
+  //   Untyped (no input yet)           → gray,   show * (or &nbsp; for spaces)
+  //
+  // A 1 px blinking bar marks the current typing position.
   return (
-    <div className="flex flex-col gap-3">
+    <>
+      {/* ── Feedback div ─────────────────────────────────────────────────── */}
       <div
-        className="min-w-0 pl-4 font-mono text-lg leading-normal tracking-wide"
         aria-hidden
+        className={`font-mono text-lg leading-normal tracking-normal px-4 py-3 rounded-lg border bg-gray-950 cursor-text whitespace-pre-wrap break-all ${
+          isActive ? 'border-emerald-500' : 'border-gray-700'
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isActive) hiddenRef.current?.focus();
+        }}
       >
         {targetNorm.split('').map((ch, i) => {
           const typed = i < inputNorm.length ? inputNorm[i] : undefined;
-          const slotClass = ch === ' ' ? spaceSlotClass : 'inline-block align-baseline';
-
-          if (ch === ' ') {
-            return (
-              <span key={i} className={`${slotClass} text-gray-500`}>
-                {'\u00a0'}
-              </span>
-            );
-          }
-
-          if (typed === undefined) {
-            return (
-              <span key={i} className={`${slotClass} text-gray-500`}>
-                {'*'}
-              </span>
-            );
-          }
-
-          if (typed === ch) {
-            return (
-              <span key={i} className={`${slotClass} whitespace-pre text-emerald-500`}>
-                {'*'}
-              </span>
-            );
-          }
+          const isSpace = ch === ' ';
 
           return (
-            <span key={i} className={`${slotClass} text-red-500`}>
-              {'*'}
-            </span>
+            <React.Fragment key={i}>
+              {/* Blinking cursor at current typing position */}
+              {isActive && i === inputNorm.length && (
+                <span
+                  aria-hidden
+                  className="inline-block w-px h-[1.1em] bg-emerald-400 animate-pulse align-text-bottom"
+                />
+              )}
+              {typed === undefined ? (
+                <span className="text-gray-500">{isSpace ? ' ' : '*'}</span>
+              ) : typed === ch ? (
+                <span className="text-emerald-500">{isSpace ? ' ' : ch}</span>
+              ) : (
+                <span className="text-red-500">{isSpace ? ' ' : typed}</span>
+              )}
+            </React.Fragment>
           );
         })}
+        {/* Cursor after the last char when the sentence is fully typed */}
+        {isActive && inputNorm.length >= targetNorm.length && targetNorm.length > 0 && (
+          <span
+            aria-hidden
+            className="inline-block w-px h-[1.1em] bg-emerald-400 animate-pulse align-text-bottom"
+          />
+        )}
       </div>
+
+      {/* ── Hidden textarea ───────────────────────────────────────────────── */}
+      {/* position:fixed keeps it completely out of layout flow so it can never
+          obscure the feedback div. opacity:0 hides the focus ring. */}
       {isActive && (
-        <input
-          ref={mainInputRef}
-          type="text"
+        <textarea
+          ref={hiddenRef}
           data-dictation-input
           value={dictationInput}
           onChange={(e) => onDictationChange(sentence, e.target.value)}
           onKeyDown={(e) => onDictationKeyDown(e, sentence)}
           onClick={(e) => e.stopPropagation()}
-          className="w-full rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 font-mono text-lg leading-normal tracking-wide text-gray-200 placeholder:text-gray-600 focus:border-emerald-500 focus:outline-none"
-          placeholder="Type what you hear... (Tab for hint, Ctrl to replay)"
+          className="fixed top-0 left-0 w-px h-px opacity-0 overflow-hidden pointer-events-none border-0"
+          aria-label="Type what you hear"
           autoComplete="off"
-          spellCheck="false"
+          spellCheck={false}
         />
       )}
-    </div>
+    </>
   );
 }

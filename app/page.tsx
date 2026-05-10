@@ -453,6 +453,10 @@ export default function NodaApp() {
 
   const activeSentenceRef = useRef<Sentence | null>(null);
   const lastScrolledIndexRef = useRef<number>(-1);
+  const transcriptRef = useRef(transcript);
+  transcriptRef.current = transcript;
+  const dictationInputsRef = useRef(dictationInputs);
+  dictationInputsRef.current = dictationInputs;
 
   const togglePlayPauseLesson = useCallback(() => {
     const media = mediaRef.current;
@@ -587,7 +591,7 @@ export default function NodaApp() {
     }
   };
 
-  const handleDictationChange = (sentence: Sentence, val: string) => {
+  const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
     const normalized = normalizeDictationTarget(val, { preserveTrailingSpace: true });
     setDictationInputs((prev) => ({ ...prev, [sentence.id]: normalized }));
 
@@ -609,16 +613,17 @@ export default function NodaApp() {
       }
       // After completion, stay on the current sentence. Advancing happens only on Enter.
     }
-  };
+  }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef]);
 
-  const handleDictationKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, sentence: Sentence) => {
+  const handleDictationKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => {
     if (e.key === 'Enter') {
       const isCompleted = !!completedSentencesRef.current[sentence.id];
       if (!isCompleted) return;
       e.preventDefault();
 
-      const idx = transcript.findIndex((s) => s.id === sentence.id);
-      const nextSentence = idx >= 0 && idx < transcript.length - 1 ? transcript[idx + 1] : null;
+      const tr = transcriptRef.current;
+      const idx = tr.findIndex((s) => s.id === sentence.id);
+      const nextSentence = idx >= 0 && idx < tr.length - 1 ? tr[idx + 1] : null;
 
       if (mediaRef.current) {
         if (nextSentence) {
@@ -643,7 +648,7 @@ export default function NodaApp() {
     if (e.key === 'Tab') {
       e.preventDefault();
       const t = normalizeDictationTarget(sentence.text);
-      const cur = normalizeDictationTarget(dictationInputs[sentence.id] || '', {
+      const cur = normalizeDictationTarget(dictationInputsRef.current[sentence.id] || '', {
         preserveTrailingSpace: true,
       });
       let i = 0;
@@ -664,7 +669,7 @@ export default function NodaApp() {
         mediaRef.current.play().catch(() => {});
       }
     }
-  };
+  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange]);
 
   const handleDictationRetry = (sentence: Sentence) => {
     setCompletedSentences((prev) => {
