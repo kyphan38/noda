@@ -163,7 +163,6 @@ interface SidebarProps {
   onDeleteForever: (id: string) => void;
   onDeleteForeverMany: (ids: string[]) => void;
   onRenameLesson?: (id: string, newName: string) => void;
-  onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   onLogout: () => void;
   onToggleSection: (section: string, expanded: boolean) => void;
   isMobile?: boolean;
@@ -187,7 +186,6 @@ export function Sidebar({
   onDeleteForever,
   onDeleteForeverMany,
   onRenameLesson,
-  onChangeLanguage,
   onLogout,
   onToggleSection,
   isMobile = false,
@@ -211,7 +209,7 @@ export function Sidebar({
     .map((l) => ({
       id: l.id,
       name: l.name,
-      language: l.language as 'en' | 'de',
+      language: 'en',
       folderId: l.folderId ?? null,
       sortKey: l.sortKey,
       progress: l.progress,
@@ -225,7 +223,7 @@ export function Sidebar({
     .map((l) => ({
       id: l.id,
       name: l.name,
-      language: l.language as 'en' | 'de' | 'mixed',
+      language: 'en',
       folderId: l.folderId ?? null,
       sortKey: l.sortKey,
       cardCount: l.totalSentences,
@@ -357,7 +355,6 @@ export function Sidebar({
                 onItemSelect={onItemSelect}
                 onTrashItem={onTrashItem}
                 onRenameLesson={onRenameLesson}
-                onChangeLanguage={onChangeLanguage}
                 activeMenu={activeMenu}
                 setActiveMenu={setActiveMenu}
                 isMobile={isMobile}
@@ -379,7 +376,6 @@ export function Sidebar({
               onItemSelect={onItemSelect}
               onTrashItem={onTrashItem}
               onRenameLesson={onRenameLesson}
-              onChangeLanguage={onChangeLanguage}
               activeMenu={activeMenu}
               setActiveMenu={setActiveMenu}
               isMobile={isMobile}

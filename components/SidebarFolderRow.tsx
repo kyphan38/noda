@@ -62,7 +62,7 @@ export function SidebarFolderRow({
   const menuKey = useMemo(() => `folder-menu-${folder.id}`, [folder.id]);
   const menuOpen = activeMenu === menuKey;
 
-  // Align top-level folders with the DE/EN accordion content edge.
+        // Align top-level folders with the AUDIO/DECKS section content edge.
   const indent = depth === 0 ? 'ml-0' : depth === 1 ? 'ml-6' : depth === 2 ? 'ml-12' : 'ml-18';
   const rowPadding = depth === 0 ? 'pl-0 pr-2' : 'px-2';
 

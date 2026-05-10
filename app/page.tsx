@@ -102,7 +102,7 @@ export default function NodaApp() {
     handleLoadLesson, bumpLessonLoadGeneration, handleNewLesson, handleRenameLesson, handleDeletePermanently,
     handleModeChange: applyLessonAppMode,
     expandSidebarForItem,
-    prepareForLessonMediaClear, handleUpdateItemLanguage
+    prepareForLessonMediaClear,
   } = useLessonLogic(mediaFile, setMediaFile, setMediaURL, recognitionLang, setRecognitionLang);
 
   const {
@@ -129,9 +129,9 @@ export default function NodaApp() {
   }, [folders, localOverrides.folders]);
 
   const folderLabelById = useMemo(() => {
-    const byId = new Map<string, { name: string; parentId: string | null; language: string }>();
+    const byId = new Map<string, { name: string; parentId: string | null }>();
     for (const f of effectiveFolders) {
-      byId.set(f.id, { name: f.name, parentId: f.parentId ?? null, language: f.language });
+      byId.set(f.id, { name: f.name, parentId: f.parentId ?? null });
     }
     const buildPath = (id: string): string => {
       const parts: string[] = [];
@@ -145,8 +145,7 @@ export default function NodaApp() {
         cur = node.parentId;
       }
       parts.reverse();
-      const lang = byId.get(id)?.language?.toUpperCase() ?? '??';
-      return `${lang} . ${parts.join(' . ')}`;
+      return parts.join(' . ');
     };
     const out = new Map<string, string>();
     for (const id of byId.keys()) out.set(id, buildPath(id));
@@ -213,20 +212,6 @@ export default function NodaApp() {
     []
   );
 
-  const onChangeItemLanguage = useCallback(
-    async (id: string, lang: 'en' | 'de') => {
-      await handleUpdateItemLanguage(id, lang);
-      setSelectedItem((prev) => {
-        if (!prev || prev.id !== id) return prev;
-        if (prev.type === 'lesson') {
-          return { ...prev, data: { ...(prev.data as LessonItem), language: lang } };
-        }
-        return { ...prev, data: { ...(prev.data as DeckItem), language: lang } };
-      });
-    },
-    [handleUpdateItemLanguage]
-  );
-
   const { handleLessonCreated, handleDeckCreated } = useLessonCreateFlow(
     setSelectedItem,
     handleLoadLesson,
@@ -279,12 +264,12 @@ export default function NodaApp() {
         const deck: DeckItem = {
           id: row.id,
           name: row.name,
-          language: row.language as 'en' | 'de' | 'mixed',
+          language: 'en',
           cardCount: row.totalSentences,
           progress: row.progress,
           type: 'deck',
         };
-        expandSidebarForItem('flashcard', row.language);
+        expandSidebarForItem('flashcard');
         if (row.folderId) {
           setExpandedSections((prev) => {
             const next = { ...prev, [`folder:${row.folderId}`]: true };
@@ -303,13 +288,13 @@ export default function NodaApp() {
       const lesson: LessonItem = {
         id: row.id,
         name: row.name,
-        language: row.language as 'en' | 'de',
+        language: 'en',
         progress: row.progress,
         hasMedia: row.hasMedia,
         mediaType: row.mediaType ?? 'audio',
         type: 'lesson',
       };
-      expandSidebarForItem('audio', row.language);
+      expandSidebarForItem('audio');
       if (row.folderId) {
         setExpandedSections((prev) => {
           const next = { ...prev, [`folder:${row.folderId}`]: true };
@@ -750,7 +735,6 @@ export default function NodaApp() {
           onDeleteForever={setLessonToDelete}
           onDeleteForeverMany={(ids) => setTrashDeleteIds(ids)}
           onRenameLesson={handleRenameLesson}
-          onChangeLanguage={onChangeItemLanguage}
           onLogout={() => void handleLogout()}
           onToggleSection={(section, expanded) =>
             setExpandedSections((prev) => ({ ...prev, [section]: expanded }))
@@ -791,8 +775,7 @@ export default function NodaApp() {
                 getTakenAudioLessonNames={getTakenAudioLessonNames}
                 folders={effectiveFolders
                   .filter((f) => f.kind === 'audio')
-                  .filter((f) => f.language === 'de' || f.language === 'en')
-                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? `${f.language.toUpperCase()} . ${f.name}` }))}
+                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? f.name }))}
                 onNotify={(message, type) => setToast({ message, type })}
               />
             )}
@@ -804,8 +787,7 @@ export default function NodaApp() {
                 getTakenFlashcardDeckNames={getTakenFlashcardDeckNames}
                 folders={effectiveFolders
                   .filter((f) => f.kind === 'flashcard')
-                  .filter((f) => f.language === 'de' || f.language === 'en')
-                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? `${f.language.toUpperCase()} . ${f.name}` }))}
+                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? f.name }))}
               />
             )}
 

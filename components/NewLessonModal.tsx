@@ -9,7 +9,6 @@ const MEDIA_WARN_BYTES = 100 * 1024 * 1024;
 
 export interface LessonData {
   name: string;
-  language: 'en' | 'de';
   folderId: string | null;
   mediaFile: File;
   mediaType: 'audio' | 'video';
@@ -65,7 +64,6 @@ export function NewLessonModal({
   onNotify,
 }: NewLessonModalProps) {
   const [lessonName, setLessonName] = useState('');
-  const [language, setLanguage] = useState<'en' | 'de'>('de');
   const [folderId, setFolderId] = useState<string | null>(null);
 
   const visibleFolders = folders; // caller should filter by kind; we filter by language below
@@ -164,7 +162,6 @@ export function NewLessonModal({
       await Promise.resolve(
         onSubmit({
           name: lessonName,
-          language,
           folderId,
           mediaFile,
           mediaType: mediaTypeFromFile(mediaFile),
@@ -222,19 +219,6 @@ export function NewLessonModal({
               autoCapitalize="off"
               disabled={isSaving}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Language</label>
-            <select
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as 'en' | 'de')}
-              disabled={isSaving}
-            >
-              <option value="de">de</option>
-              <option value="en">en</option>
-            </select>
           </div>
 
           <div>

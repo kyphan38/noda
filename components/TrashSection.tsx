@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trash2, ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { LessonSummary } from '@/types';
-import { SECTION_LABELS } from '@/constants';
 
 interface TrashSectionProps {
   lessons: LessonSummary[];
@@ -26,7 +25,7 @@ export function TrashSection({
       >
         <span className="flex items-center gap-2">
           <Trash2 size={14} />
-          {SECTION_LABELS['trash']}
+          Trash
         </span>
         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </button>

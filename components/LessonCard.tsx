@@ -5,8 +5,6 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
-  Globe,
-  Check,
   Video,
   Music2,
 } from 'lucide-react';
@@ -19,7 +17,6 @@ interface LessonCardProps {
   onItemSelect: (item: LessonItem) => void;
   onTrashItem: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
-  onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   activeMenu: string | null;
   setActiveMenu: (id: string | null) => void;
 }
@@ -30,7 +27,6 @@ export function LessonCard({
   onItemSelect,
   onTrashItem,
   onRenameLesson,
-  onChangeLanguage,
   activeMenu,
   setActiveMenu,
 }: LessonCardProps) {
@@ -49,24 +45,20 @@ export function LessonCard({
     setEditName(lesson.name);
   }, [lesson.name]);
 
-  const langMenuKey = `language-${lesson.id}`;
   const mainMenuOpen = activeMenu === lesson.id;
-  const langMenuOpen = activeMenu === langMenuKey;
-  const menuOpen = mainMenuOpen || langMenuOpen;
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!mainMenuOpen) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (menuBtnRef.current?.contains(t)) return;
       const panel = document.getElementById(`lesson-card-menu-${lesson.id}`);
-      const langPanel = document.getElementById(`lesson-lang-menu-${lesson.id}`);
-      if (panel?.contains(t) || langPanel?.contains(t)) return;
+      if (panel?.contains(t)) return;
       setActiveMenu(null);
     };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
-  }, [menuOpen, lesson.id, setActiveMenu]);
+  }, [mainMenuOpen, lesson.id, setActiveMenu]);
 
   const handleRenameSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -152,7 +144,7 @@ export function LessonCard({
                   setActiveMenu(activeMenu === lesson.id ? null : lesson.id);
                 }}
                 className={`rounded p-0.5 transition-colors ${
-                  menuOpen
+                  mainMenuOpen
                     ? 'bg-gray-700 text-white opacity-100'
                     : 'text-gray-400 opacity-100 hover:text-white max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100'
                 }`}
@@ -178,18 +170,6 @@ export function LessonCard({
                 >
                   <Edit2 size={14} /> Rename
                 </button>
-                {onChangeLanguage && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenu(langMenuKey);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
-                  >
-                    <Globe size={14} /> Language
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -200,44 +180,6 @@ export function LessonCard({
                   className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors"
                 >
                   <Trash2 size={14} /> Delete
-                </button>
-              </PortalMenu>
-
-              <PortalMenu
-                menuId={`lesson-lang-menu-${lesson.id}`}
-                open={langMenuOpen && !!onChangeLanguage}
-                anchorRef={menuBtnRef}
-                onClose={() => setActiveMenu(null)}
-              >
-                <button
-                  type="button"
-                  aria-label="Set language to English"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void onChangeLanguage?.(lesson.id, 'en');
-                    setActiveMenu(null);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
-                >
-                  <span className="w-4 h-4 shrink-0 flex items-center justify-center">
-                    {lesson.language === 'en' ? <Check size={14} className="text-emerald-400" /> : null}
-                  </span>
-                  en
-                </button>
-                <button
-                  type="button"
-                  aria-label="Set language to German"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void onChangeLanguage?.(lesson.id, 'de');
-                    setActiveMenu(null);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
-                >
-                  <span className="w-4 h-4 shrink-0 flex items-center justify-center">
-                    {lesson.language === 'de' ? <Check size={14} className="text-emerald-400" /> : null}
-                  </span>
-                  de
                 </button>
               </PortalMenu>
             </div>

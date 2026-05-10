@@ -11,7 +11,6 @@ import {
   saveLessonFirestore,
   subscribeLessonsFirestore,
   touchLessonAccessedFirestore,
-  updateLessonLanguageFirestore,
   updateLessonProgressFirestore,
   uploadLessonMediaToFirebase,
   type LessonRecord,
@@ -52,10 +51,8 @@ export function useLessonLogic(
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
-    'audio-en': true,
-    'audio-de': false,
-    'flashcard-en': true,
-    'flashcard-de': false,
+    lessons: true,
+    decks: true,
     trash: false,
   });
 
@@ -89,7 +86,7 @@ export function useLessonLogic(
       return {
         id: l.id,
         name: l.name,
-        language: l.language,
+        language: 'en',
         folderId: l.folderId ?? null,
         sortKey: l.sortKey,
         progress:
@@ -245,7 +242,7 @@ export function useLessonLogic(
         currentLessonIdRef.current = lesson.id;
         setCurrentLessonId(lesson.id);
         setLessonName(lesson.name);
-        setRecognitionLang(lesson.language);
+        setRecognitionLang('en-US');
 
         if (lesson.mediaUrl) {
           setMediaFile(null);
@@ -302,18 +299,6 @@ export function useLessonLogic(
     }
   };
 
-  const handleUpdateItemLanguage = useCallback(
-    async (id: string, language: 'en' | 'de'): Promise<void> => {
-      const lesson = await getLessonFirestore(id);
-      if (!lesson || lesson.language === language) return;
-      await updateLessonLanguageFirestore(id, language);
-      if (currentLessonId === id) {
-        setRecognitionLang(language);
-      }
-    },
-    [currentLessonId, setRecognitionLang]
-  );
-
   const handleDeletePermanently = async (id: string) => {
     await deleteLessonFirestore(id);
     if (currentLessonId === id) {
@@ -341,7 +326,7 @@ export function useLessonLogic(
         id: lessonId,
         type: 'audio',
         name,
-        language: recognitionLang,
+        language: 'en',
         mediaFile: null,
         mediaPath: uploadedMedia.path,
         mediaUrl: uploadedMedia.downloadURL,
@@ -383,24 +368,10 @@ export function useLessonLogic(
     setIsStarted(true);
   };
 
-  const expandSidebarForItem = useCallback((kind: 'audio' | 'flashcard', language: string) => {
-    const isDe = language === 'de';
-    setExpandedSections((prev) => {
-      if (kind === 'audio') {
-        return {
-          ...prev,
-          lessons: true,
-          'audio-en': !isDe,
-          'audio-de': isDe,
-        };
-      }
-      return {
-        ...prev,
-        decks: true,
-        'flashcard-en': !isDe,
-        'flashcard-de': isDe,
-      };
-    });
+  const expandSidebarForItem = useCallback((kind: 'audio' | 'flashcard') => {
+    setExpandedSections((prev) =>
+      kind === 'audio' ? { ...prev, lessons: true } : { ...prev, decks: true }
+    );
   }, []);
 
   const applyAppMode = async (mode: AppMode) => {
@@ -437,7 +408,7 @@ export function useLessonLogic(
       id: lessonId,
       type: 'flashcard',
       name: finalName,
-      language: recognitionLang,
+      language: 'en',
       transcriptText: '',
       completedSentences: {},
       totalSentences: lines.length,
@@ -498,6 +469,5 @@ export function useLessonLogic(
     handleFlashcardUpload,
     loadLessonsList,
     prepareForLessonMediaClear,
-    handleUpdateItemLanguage,
   };
 }

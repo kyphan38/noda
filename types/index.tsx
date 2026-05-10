@@ -66,7 +66,7 @@ export type ContentType = 'lesson' | 'deck';
 export interface LessonItem {
   id: string;
   name: string;
-  language: 'en' | 'de';
+  language: 'en';
   progress: number; // 0-100
   hasMedia: boolean;
   mediaType: 'audio' | 'video';
@@ -78,7 +78,7 @@ export interface LessonItem {
 export interface DeckItem {
   id: string;
   name: string;
-  language: 'en' | 'de' | 'mixed';
+  language: 'en';
   cardCount: number;
   /** Cards marked Done / total (persisted), same scale as lesson sidebar progress. */
   progress: number;
@@ -99,6 +99,7 @@ export interface TrashItem {
 export type ExpandedSections = Record<string, boolean>;
 
 export type SidebarKind = 'audio' | 'flashcard';
+/** Stored on folder docs; new folders use `en`. Legacy `de` may still exist in Firestore. */
 export type SidebarLanguage = 'en' | 'de';
 
 export type SidebarFolder = {

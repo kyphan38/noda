@@ -11,8 +11,6 @@ interface UploadPanelProps {
   handleAudioUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   transcriptText: string;
   handleTranscriptUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  recognitionLang: string;
-  setRecognitionLang: (lang: string) => void;
   appMode: AppMode;
   setAppMode: (mode: AppMode) => void;
   handleStartLearning: () => void;
@@ -27,8 +25,6 @@ export function UploadPanel({
   handleAudioUpload,
   transcriptText,
   handleTranscriptUpload,
-  recognitionLang,
-  setRecognitionLang,
   appMode,
   setAppMode,
   handleStartLearning,
@@ -111,21 +107,9 @@ export function UploadPanel({
             </div>
           </div>
 
-          {/* Language Selection & Start Button */}
+          {/* Mode & Start */}
           <div className="flex flex-col items-center gap-6 bg-gray-800/30 p-6 rounded-xl border border-gray-700/50">
              <div className="flex flex-col md:flex-row gap-4 w-full justify-center">
-               <div className="flex items-center justify-between gap-4 bg-gray-800 p-3 rounded-lg border border-gray-700 flex-1 max-w-[240px]">
-                 <span className="text-gray-300 font-medium text-sm">Language:</span>
-                 <select 
-                   value={recognitionLang} 
-                   onChange={(e) => setRecognitionLang(e.target.value)}
-                   className="bg-gray-900 border border-gray-700 text-gray-200 text-sm rounded-md focus:ring-emerald-500 focus:border-emerald-500 block p-1.5 outline-none"
-                 >
-                   <option value="de-DE">German (de-DE)</option>
-                   <option value="en-US">English (en-US)</option>
-                 </select>
-               </div>
-
                <div className="flex items-center justify-between gap-4 bg-gray-800 p-3 rounded-lg border border-gray-700 flex-1 max-w-[240px]">
                  <span className="text-gray-300 font-medium text-sm">Mode:</span>
                  <select 

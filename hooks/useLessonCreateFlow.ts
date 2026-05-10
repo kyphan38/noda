@@ -19,12 +19,11 @@ export function useLessonCreateFlow(
   setToast: SetToast,
   getTakenAudioLessonNames: () => string[],
   getTakenFlashcardDeckNames: () => string[],
-  expandSidebarForItem: (kind: 'audio' | 'flashcard', language: string) => void
+  expandSidebarForItem: (kind: 'audio' | 'flashcard') => void
 ) {
   const handleLessonCreated = useCallback(
     async (data: {
       name: string;
-      language: 'en' | 'de';
       folderId: string | null;
       mediaFile: File;
       mediaType: 'audio' | 'video';
@@ -47,7 +46,7 @@ export function useLessonCreateFlow(
           id: lessonId,
           type: 'audio',
           name: uniqueName,
-          language: data.language,
+          language: 'en',
           folderId: data.folderId,
           sortKey: Date.now(),
           mediaFile: null,
@@ -71,7 +70,7 @@ export function useLessonCreateFlow(
         const lessonItem: LessonItem = {
           id: lessonId,
           name: uniqueName,
-          language: data.language,
+          language: 'en',
           progress: 0,
           hasMedia: true,
           mediaType: data.mediaType,
@@ -83,7 +82,7 @@ export function useLessonCreateFlow(
           type: 'lesson',
           data: lessonItem,
         });
-        expandSidebarForItem('audio', data.language);
+        expandSidebarForItem('audio');
 
         await handleLoadLesson(lessonId);
         await handleModeChange('normal');
@@ -106,7 +105,7 @@ export function useLessonCreateFlow(
   );
 
   const handleDeckCreated = useCallback(
-    async (deckData: { name: string; language: 'en' | 'de'; folderId: string | null; content: string }) => {
+    async (deckData: { name: string; folderId: string | null; content: string }) => {
       try {
         const lines = deckData.content
           .split('\n')
@@ -122,7 +121,7 @@ export function useLessonCreateFlow(
           id: lessonId,
           type: 'flashcard',
           name: uniqueName,
-          language: deckData.language,
+          language: 'en',
           folderId: deckData.folderId,
           sortKey: Date.now(),
           transcriptText: '',
@@ -145,7 +144,7 @@ export function useLessonCreateFlow(
         const deckItem: DeckItem = {
           id: lessonId,
           name: uniqueName,
-          language: deckData.language,
+          language: 'en',
           cardCount: lines.length,
           progress: 0,
           type: 'deck',
@@ -156,7 +155,7 @@ export function useLessonCreateFlow(
           type: 'deck',
           data: deckItem,
         });
-        expandSidebarForItem('flashcard', deckData.language);
+        expandSidebarForItem('flashcard');
 
         await handleLoadLesson(lessonId);
         setToast({ message: 'Deck created.', type: 'success' });

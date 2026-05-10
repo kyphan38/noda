@@ -17,7 +17,6 @@ const MAX_VISIBLE_PER_CONTAINER = 10;
 
 export function SidebarFolderTree({
   kind,
-  language,
   items,
   folders,
   selectedItemId,
@@ -28,7 +27,6 @@ export function SidebarFolderTree({
   onItemSelect,
   onTrashItem,
   onRenameLesson,
-  onChangeLanguage,
   activeMenu,
   setActiveMenu,
   enableDnd = false,
@@ -38,8 +36,8 @@ export function SidebarFolderTree({
   onMoveItem,
   onMoveFolder,
 }: {
+  /** Section discriminant (audio vs flashcard); items/folders are pre-filtered by parent. */
   kind: 'audio' | 'flashcard';
-  language: 'en' | 'de';
   items: AnyItem[];
   folders: SidebarFolder[];
   selectedItemId?: string;
@@ -50,7 +48,6 @@ export function SidebarFolderTree({
   onItemSelect: (item: AnyItem) => void;
   onTrashItem: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
-  onChangeLanguage?: (id: string, language: 'en' | 'de') => void | Promise<void>;
   activeMenu: string | null;
   setActiveMenu: (id: string | null) => void;
   enableDnd?: boolean;
@@ -60,6 +57,8 @@ export function SidebarFolderTree({
   onMoveItem: (itemId: string, folderId: string | null, sortKey: number) => void | Promise<void>;
   onMoveFolder: (folderId: string, parentId: string | null, sortKey: number) => void | Promise<void>;
 }) {
+  void kind;
+
   type DragPayload =
     | { entity: 'item'; id: string; fromFolderId: string | null }
     | { entity: 'folder'; id: string; fromParentId: string | null };
@@ -291,7 +290,6 @@ export function SidebarFolderTree({
                   onItemSelect={onItemSelect as (x: LessonItem) => void}
                   onTrashItem={onTrashItem}
                   onRenameLesson={onRenameLesson}
-                  onChangeLanguage={onChangeLanguage}
                   activeMenu={activeMenu}
                   setActiveMenu={setActiveMenu}
                 />
@@ -302,7 +300,6 @@ export function SidebarFolderTree({
                   onItemSelect={onItemSelect as (x: DeckItem) => void}
                   onTrashItem={onTrashItem}
                   onRenameLesson={onRenameLesson}
-                  onChangeLanguage={onChangeLanguage}
                   activeMenu={activeMenu}
                   setActiveMenu={setActiveMenu}
                 />
@@ -520,7 +517,6 @@ export function SidebarFolderTree({
                             onItemSelect={onItemSelect as (x: LessonItem) => void}
                             onTrashItem={onTrashItem}
                             onRenameLesson={onRenameLesson}
-                            onChangeLanguage={onChangeLanguage}
                             activeMenu={activeMenu}
                             setActiveMenu={setActiveMenu}
                           />
@@ -533,7 +529,6 @@ export function SidebarFolderTree({
                             onItemSelect={onItemSelect as (x: DeckItem) => void}
                             onTrashItem={onTrashItem}
                             onRenameLesson={onRenameLesson}
-                            onChangeLanguage={onChangeLanguage}
                             activeMenu={activeMenu}
                             setActiveMenu={setActiveMenu}
                           />
@@ -740,7 +735,6 @@ export function SidebarFolderTree({
                                       onItemSelect={onItemSelect as (x: LessonItem) => void}
                                       onTrashItem={onTrashItem}
                                       onRenameLesson={onRenameLesson}
-                                      onChangeLanguage={onChangeLanguage}
                                       activeMenu={activeMenu}
                                       setActiveMenu={setActiveMenu}
                                     />
@@ -753,7 +747,6 @@ export function SidebarFolderTree({
                                       onItemSelect={onItemSelect as (x: DeckItem) => void}
                                       onTrashItem={onTrashItem}
                                       onRenameLesson={onRenameLesson}
-                                      onChangeLanguage={onChangeLanguage}
                                       activeMenu={activeMenu}
                                       setActiveMenu={setActiveMenu}
                                     />
@@ -904,7 +897,6 @@ export function SidebarFolderTree({
                                             onItemSelect={onItemSelect as (x: LessonItem) => void}
                                             onTrashItem={onTrashItem}
                                             onRenameLesson={onRenameLesson}
-                                            onChangeLanguage={onChangeLanguage}
                                             activeMenu={activeMenu}
                                             setActiveMenu={setActiveMenu}
                                           />
@@ -915,7 +907,6 @@ export function SidebarFolderTree({
                                             onItemSelect={onItemSelect as (x: DeckItem) => void}
                                             onTrashItem={onTrashItem}
                                             onRenameLesson={onRenameLesson}
-                                            onChangeLanguage={onChangeLanguage}
                                             activeMenu={activeMenu}
                                             setActiveMenu={setActiveMenu}
                                           />
