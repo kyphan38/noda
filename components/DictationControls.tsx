@@ -99,8 +99,10 @@ export function DictationControls({
           isActive ? 'border-emerald-500' : 'border-gray-700'
         }`}
         onClick={(e) => {
-          e.stopPropagation();
-          if (isActive) hiddenRef.current?.focus();
+          if (isActive) {
+            e.stopPropagation();
+            hiddenRef.current?.focus();
+          }
         }}
       >
         {targetNorm.split('').map((ch, i) => {
