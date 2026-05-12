@@ -37,7 +37,13 @@ export function DictationControls({
     if (isCompleted) {
       srOnlyRef.current?.focus({ preventScroll: true });
     } else {
-      hiddenRef.current?.focus({ preventScroll: true });
+      const el = hiddenRef.current;
+      if (el) {
+        el.focus({ preventScroll: true });
+        const len = el.value.length;
+        el.selectionStart = len;
+        el.selectionEnd = len;
+      }
     }
   }, [isCompleted, isActive, sentence.id]);
 
@@ -45,7 +51,7 @@ export function DictationControls({
   if (isCompleted) {
     return (
       <div className="flex flex-col">
-        <div className="flex items-start gap-2 px-4 py-3 border border-transparent rounded-lg">
+        <div className="flex items-start gap-2">
           <div className="font-mono text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-all text-green-400">
             {targetNorm}
           </div>
@@ -95,9 +101,7 @@ export function DictationControls({
       {/* ── Feedback div ─────────────────────────────────────────────────── */}
       <div
         aria-hidden
-        className={`font-mono text-lg leading-normal tracking-normal px-4 py-3 rounded-lg border bg-gray-950 cursor-text whitespace-pre-wrap break-all ${
-          isActive ? 'border-emerald-500' : 'border-gray-700'
-        }`}
+        className="font-mono text-lg leading-normal tracking-normal min-w-0 cursor-text whitespace-pre-wrap break-all"
         onClick={(e) => {
           if (isActive) {
             e.stopPropagation();

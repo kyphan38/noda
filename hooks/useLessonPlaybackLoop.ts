@@ -28,30 +28,23 @@ export function useLessonPlaybackLoop(
 
     const updateProgress = () => {
       if (audioRef.current) {
-        const time = audioRef.current.currentTime;
-        setCurrentTime(time);
+        let time = audioRef.current.currentTime;
 
         const currentSentence = transcript.find((s) => time >= s.start && time < s.end);
-        if (currentSentence) {
-          activeSentenceRef.current = currentSentence;
-        } else {
-          activeSentenceRef.current = null;
-        }
+        activeSentenceRef.current = currentSentence ?? null;
 
-        // ReplayOnce check is intentionally outside activeSentenceRef so it catches
-        // the "overshoot" case where rAF timing caused the audio to skip past sentence.end
-        // and activeSentenceRef has already moved to the next sentence.
+        // All correction branches update `time` so setCurrentTime (called last)
+        // never exposes an overshoot to React state — prevents isActive flicker.
         if (
           appModeRef.current === 'dictation' &&
           replayOnceRef.current &&
           time >= replayOnceRef.current.end - 0.03
         ) {
           audioRef.current.pause();
-          audioRef.current.currentTime = replayOnceRef.current.end - 0.05;
+          time = replayOnceRef.current.end - 0.05;
+          audioRef.current.currentTime = time;
           replayOnceRef.current = null;
         } else if (activeSentenceRef.current) {
-          const isCompleted = completedSentencesRef.current[activeSentenceRef.current.id];
-
           if (time >= activeSentenceRef.current.end - 0.03) {
             if (loopModeRef.current === 'one') {
               if (!isLoopDelayingRef.current) {
@@ -68,15 +61,34 @@ export function useLessonPlaybackLoop(
                   isLoopDelayingRef.current = false;
                 }, 500);
               }
-            } else if (appModeRef.current === 'dictation' && !isCompleted) {
-              audioRef.current.pause();
-              audioRef.current.currentTime = activeSentenceRef.current.end - 0.03;
+            } else if (appModeRef.current === 'dictation') {
+              // Don't stop if replayOnceRef targets a different sentence — we're in
+              // transit (e.g. float imprecision placed us at the previous sentence's end).
+              if (replayOnceRef.current && replayOnceRef.current.sentenceId !== activeSentenceRef.current.id) {
+                // skip — let the replayOnce check handle it on a future frame
+              } else {
+                audioRef.current.pause();
+                time = activeSentenceRef.current.end - 0.03;
+                audioRef.current.currentTime = time;
+              }
             } else if (appModeRef.current === 'shadowing') {
               audioRef.current.pause();
-              audioRef.current.currentTime = activeSentenceRef.current.end - 0.03;
+              time = activeSentenceRef.current.end - 0.03;
+              audioRef.current.currentTime = time;
             }
           }
+        } else if (appModeRef.current === 'dictation' && !audioRef.current.paused) {
+          // Fallback: audio overshot into a gap between sentences and replayOnceRef
+          // was already consumed. Find the sentence we just passed and park there.
+          const passed = transcript.findLast((s) => time >= s.end);
+          if (passed) {
+            audioRef.current.pause();
+            time = passed.end - 0.05;
+            audioRef.current.currentTime = time;
+          }
         }
+
+        setCurrentTime(time);
       }
       animationFrameId = requestAnimationFrame(updateProgress);
     };

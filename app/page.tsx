@@ -579,12 +579,18 @@ export default function NodaApp() {
 
   const handleSentenceClick = (sentence: Sentence) => {
     if (mediaRef.current) {
-      const seekTarget = Math.max(0, sentence.start - SENTENCE_PRE_ROLL_SECONDS);
+      const inDictation = appModeRef.current === 'dictation';
+      const seekTarget = inDictation
+        ? sentence.start
+        : Math.max(0, sentence.start - SENTENCE_PRE_ROLL_SECONDS);
       mediaRef.current.currentTime = seekTarget;
-      setCurrentTime(seekTarget);
+      setCurrentTime(sentence.start);
       lastScrolledIndexRef.current = -1;
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
       isLoopDelayingRef.current = false;
+      if (inDictation) {
+        dictationReplayOnceRef.current = { sentenceId: sentence.id, end: sentence.end };
+      }
       if (mediaRef.current.paused) {
         mediaRef.current.play().catch(() => {});
       }
@@ -627,9 +633,7 @@ export default function NodaApp() {
 
       if (mediaRef.current) {
         if (nextSentence) {
-          if (!completedSentencesRef.current[nextSentence.id]) {
-            dictationReplayOnceRef.current = { sentenceId: nextSentence.id, end: nextSentence.end };
-          }
+          dictationReplayOnceRef.current = { sentenceId: nextSentence.id, end: nextSentence.end };
           mediaRef.current.currentTime = nextSentence.start;
           setCurrentTime(nextSentence.start);
           lastScrolledIndexRef.current = -1;
