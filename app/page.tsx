@@ -572,8 +572,19 @@ export default function NodaApp() {
       return next;
     });
     if (mediaRef.current) {
-      mediaRef.current.currentTime = sentence.end + 0.03;
-      mediaRef.current.play().catch(() => {});
+      const tr = transcriptRef.current;
+      const idx = tr.findIndex((s) => s.id === sentence.id);
+      const nextSentence = idx >= 0 && idx < tr.length - 1 ? tr[idx + 1] : null;
+      if (nextSentence) {
+        dictationReplayOnceRef.current = { sentenceId: nextSentence.id, end: nextSentence.end };
+        mediaRef.current.currentTime = nextSentence.start;
+        setCurrentTime(nextSentence.start);
+        lastScrolledIndexRef.current = -1;
+        mediaRef.current.play().catch(() => {});
+      } else {
+        mediaRef.current.pause();
+        setIsPlaying(false);
+      }
     }
   };
 

@@ -84,7 +84,8 @@ export function useGlobalPlaybackShortcuts(
           if (appMode === 'dictation') {
             replayOnceRef.current = { sentenceId: activeSentenceRef.current.id, end: activeSentenceRef.current.end };
           }
-          const seekTarget = Math.max(0, activeSentenceRef.current.start - SENTENCE_PRE_ROLL_SECONDS);
+          const preRoll = appMode === 'dictation' ? 0 : SENTENCE_PRE_ROLL_SECONDS;
+          const seekTarget = Math.max(0, activeSentenceRef.current.start - preRoll);
           audioRef.current.currentTime = seekTarget;
           audioRef.current.play().catch(() => {});
         }
