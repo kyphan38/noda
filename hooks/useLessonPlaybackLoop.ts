@@ -49,7 +49,7 @@ export function useLessonPlaybackLoop(
           appModeRef.current === 'dictation' &&
           !replayOnceRef.current &&
           prevActiveSentenceId !== null &&
-          currentSentence !== null &&
+          currentSentence !== undefined &&
           currentSentence.id !== prevActiveSentenceId
         ) {
           const prevSent = transcript.find((s) => s.id === prevActiveSentenceId);
