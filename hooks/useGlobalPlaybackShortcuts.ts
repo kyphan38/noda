@@ -5,7 +5,7 @@ import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 type ModeChange = (mode: AppMode) => void | Promise<void>;
 
 /**
- * Space / L / R / Ctrl replay-at-sentence-start, H toggles captions in normal mode, and ⌘1–3 mode switching for audio lessons.
+ * Space / L / R / Ctrl replay-at-sentence-start, H toggles captions in normal mode, and ⌘1–2 mode switching for audio lessons.
  */
 export function useGlobalPlaybackShortcuts(
   selectedItemType: 'lesson' | 'deck' | undefined,
@@ -59,11 +59,6 @@ export function useGlobalPlaybackShortcuts(
         if (e.key === '2') {
           e.preventDefault();
           void handleModeChange('dictation');
-          return;
-        }
-        if (e.key === '3') {
-          e.preventDefault();
-          void handleModeChange('shadowing');
           return;
         }
       }

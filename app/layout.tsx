@@ -4,7 +4,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'noda',
-  description: 'noda dictation and shadowing app.',
+  description: 'noda — audio dictation and listening app.',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',

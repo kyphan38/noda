@@ -29,7 +29,6 @@ export interface AppHeaderProps {
 const MODE_TABS: { mode: AppMode; label: string }[] = [
   { mode: 'normal', label: 'Normal' },
   { mode: 'dictation', label: 'Dictation' },
-  { mode: 'shadowing', label: 'Shadowing' },
 ];
 
 export function AppHeader({

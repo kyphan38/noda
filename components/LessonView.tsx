@@ -9,7 +9,6 @@ import {
   AppMode,
   LoopMode,
   Sentence,
-  SpokenResult,
   DictationInputs,
   CompletedSentences,
 } from '@/types';
@@ -35,17 +34,11 @@ interface LessonViewProps {
   transcript: Sentence[];
   dictationInputs: DictationInputs;
   completedSentences: CompletedSentences;
-  isRecording: number | null;
-  spokenResults: Record<number, SpokenResult>;
-  recognitionErrors: Record<number, string>;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   onSentenceClick: (sentence: Sentence) => void;
   onDictationChange: (sentence: Sentence, value: string) => void;
   onDictationKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => void;
   onDictationRetry: (sentence: Sentence) => void;
-  onToggleRecording: (sentence: Sentence) => void;
-  onSkip: (sentence: Sentence) => void;
-  onSimulateSuccess: (sentence: Sentence) => void;
   mediaRef: React.RefObject<HTMLMediaElement | null>;
   mediaURL: string | null;
   isMobile: boolean;
@@ -68,17 +61,11 @@ export function LessonView({
   transcript,
   dictationInputs,
   completedSentences,
-  isRecording,
-  spokenResults,
-  recognitionErrors,
   scrollContainerRef,
   onSentenceClick,
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
-  onToggleRecording,
-  onSkip,
-  onSimulateSuccess,
   onResetDictation,
   hideCaptions,
   onToggleHideCaptions,
@@ -192,7 +179,7 @@ export function LessonView({
               : restore.time;
           media.currentTime = seekTarget;
         } catch {
-          // metadata can report duration before seekability; ignore and rely on current playback loop
+          // metadata can report duration before seekability; ignore
         }
       }
 
@@ -296,21 +283,13 @@ export function LessonView({
             isPlaying={isPlaying}
             appMode={mode}
             hideCaptions={hideCaptions}
-            onToggleHideCaptions={onToggleHideCaptions}
-            onResetDictation={onResetDictation}
             dictationInputs={dictationInputs}
             completedSentences={completedSentences}
-            isRecording={isRecording}
-            spokenResults={spokenResults}
-            recognitionErrors={recognitionErrors}
             scrollContainerRef={scrollContainerRef}
             onSentenceClick={onSentenceClick}
             onDictationChange={onDictationChange}
             onDictationKeyDown={onDictationKeyDown}
             onDictationRetry={onDictationRetry}
-            onToggleRecording={onToggleRecording}
-            onSkip={onSkip}
-            onSimulateSuccess={onSimulateSuccess}
           />
         </div>
       </div>

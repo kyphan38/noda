@@ -19,9 +19,7 @@ import {
 export function useLessonLogic(
   mediaFile: File | null,
   setMediaFile: (file: File | null) => void,
-  setMediaURL: (url: string | null) => void,
-  recognitionLang: string,
-  setRecognitionLang: (lang: string) => void
+  setMediaURL: (url: string | null) => void
 ) {
   const [transcriptText, setTranscriptText] = useState<string>('');
   const [appMode, setAppMode] = useState<AppMode>(DEFAULT_APP_MODE);
@@ -242,8 +240,6 @@ export function useLessonLogic(
         currentLessonIdRef.current = lesson.id;
         setCurrentLessonId(lesson.id);
         setLessonName(lesson.name);
-        setRecognitionLang('en-US');
-
         if (lesson.mediaUrl) {
           setMediaFile(null);
           setMediaURL(lesson.mediaUrl);

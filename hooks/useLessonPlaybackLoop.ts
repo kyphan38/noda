@@ -8,7 +8,7 @@ type RefCompleted = MutableRefObject<Record<number, boolean>>;
 type RefReplayOnce = MutableRefObject<{ sentenceId: number; end: number } | null>;
 
 /**
- * While audio is playing, updates current time, active sentence ref, dictation/shadowing pause-at-end, and loop-one behavior.
+ * While audio is playing, updates current time, active sentence ref, dictation pause-at-end, and loop-one behavior.
  */
 export function useLessonPlaybackLoop(
   isPlaying: boolean,
@@ -94,10 +94,6 @@ export function useLessonPlaybackLoop(
                 time = activeSentenceRef.current.end - 0.03;
                 audioRef.current.currentTime = time;
               }
-            } else if (appModeRef.current === 'shadowing') {
-              audioRef.current.pause();
-              time = activeSentenceRef.current.end - 0.03;
-              audioRef.current.currentTime = time;
             }
           }
         } else if (appModeRef.current === 'dictation' && !audioRef.current.paused) {

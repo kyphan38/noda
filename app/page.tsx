@@ -13,7 +13,6 @@ import { AppHeader } from '@/components/AppHeader';
 import { DeleteLessonModal } from '@/components/DeleteLessonModal';
 import { DeleteManyModal } from '@/components/DeleteManyModal';
 import { useMediaPlayer } from '@/hooks/useMediaPlayer';
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
 import { useFolders } from '@/hooks/useFolders';
 import { useLessonCreateFlow } from '@/hooks/useLessonCreateFlow';
@@ -87,11 +86,6 @@ export default function NodaApp() {
   } = useMediaPlayer();
 
   const {
-    isRecording, recognitionLang, setRecognitionLang,
-    spokenResults, recognitionErrors, toggleRecording, handleSimulateSuccess
-  } = useSpeechRecognition();
-
-  const {
     appMode,
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
     isStarted,
@@ -99,11 +93,11 @@ export default function NodaApp() {
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
     expandedSections, setExpandedSections,
     appModeRef, completedSentencesRef, transcript,
-    handleLoadLesson, bumpLessonLoadGeneration, handleNewLesson, handleRenameLesson, handleDeletePermanently,
+    handleLoadLesson, handleNewLesson, handleRenameLesson, handleDeletePermanently,
     handleModeChange: applyLessonAppMode,
     expandSidebarForItem,
     prepareForLessonMediaClear,
-  } = useLessonLogic(mediaFile, setMediaFile, setMediaURL, recognitionLang, setRecognitionLang);
+  } = useLessonLogic(mediaFile, setMediaFile, setMediaURL);
 
   const {
     folders,
@@ -464,7 +458,7 @@ export default function NodaApp() {
     const mode = appModeRef.current;
     if (
       media.paused &&
-      (mode === 'shadowing' || mode === 'dictation') &&
+      mode === 'dictation' &&
       activeSentenceRef.current
     ) {
       const s = activeSentenceRef.current;
@@ -564,29 +558,6 @@ export default function NodaApp() {
       el.scrollTop = saved;
     }
   }, [selectedItem?.id, selectedItem?.type, transcript.length]);
-
-  const handleSkip = (sentence: Sentence) => {
-    setCompletedSentences((prev) => {
-      const next = { ...prev, [sentence.id]: true };
-      completedSentencesRef.current = next;
-      return next;
-    });
-    if (mediaRef.current) {
-      const tr = transcriptRef.current;
-      const idx = tr.findIndex((s) => s.id === sentence.id);
-      const nextSentence = idx >= 0 && idx < tr.length - 1 ? tr[idx + 1] : null;
-      if (nextSentence) {
-        dictationReplayOnceRef.current = { sentenceId: nextSentence.id, end: nextSentence.end };
-        mediaRef.current.currentTime = nextSentence.start;
-        setCurrentTime(nextSentence.start);
-        lastScrolledIndexRef.current = -1;
-        mediaRef.current.play().catch(() => {});
-      } else {
-        mediaRef.current.pause();
-        setIsPlaying(false);
-      }
-    }
-  };
 
   const handleSentenceClick = (sentence: Sentence) => {
     if (mediaRef.current) {
@@ -724,7 +695,7 @@ export default function NodaApp() {
   }
 
   if (authState !== 'authenticated') {
-    return <LoginView appName="noda" subtitle="Dictation, listening, and shadowing" />;
+    return <LoginView appName="noda" subtitle="Dictation and listening" />;
   }
 
   return (
@@ -828,17 +799,11 @@ export default function NodaApp() {
                   transcript={transcript}
                   dictationInputs={dictationInputs}
                   completedSentences={completedSentences}
-                  isRecording={isRecording}
-                  spokenResults={spokenResults}
-                  recognitionErrors={recognitionErrors}
                   scrollContainerRef={scrollContainerRef}
                   onSentenceClick={handleSentenceClick}
                   onDictationChange={handleDictationChange}
                   onDictationKeyDown={handleDictationKeyDown}
                   onDictationRetry={handleDictationRetry}
-                  onToggleRecording={toggleRecording}
-                  onSkip={handleSkip}
-                  onSimulateSuccess={handleSimulateSuccess}
                   onResetDictation={handleResetDictationProgress}
                   hideCaptions={hideCaptions}
                   onToggleHideCaptions={() => setHideCaptions((v) => !v)}

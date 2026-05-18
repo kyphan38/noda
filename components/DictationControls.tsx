@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget } from '@/lib/utils';
@@ -32,7 +32,7 @@ export function DictationControls({
   const hiddenRef = useRef<HTMLTextAreaElement>(null);
   const srOnlyRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isActive) return;
     if (isCompleted) {
       srOnlyRef.current?.focus({ preventScroll: true });

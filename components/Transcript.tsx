@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sentence, AppMode, SpokenResult, DictationInputs, CompletedSentences, RecognitionState } from '@/types';
+import { Sentence, AppMode, DictationInputs, CompletedSentences } from '@/types';
 import { MemoTranscriptSentence } from './TranscriptSentence';
 
 interface TranscriptProps {
@@ -10,21 +10,13 @@ interface TranscriptProps {
   isPlaying: boolean;
   appMode: AppMode;
   hideCaptions?: boolean;
-  onToggleHideCaptions?: () => void;
-  onResetDictation?: () => void;
   dictationInputs: DictationInputs;
   completedSentences: CompletedSentences;
-  isRecording: number | null;
-  spokenResults: Record<number, SpokenResult>;
-  recognitionErrors: RecognitionState;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   onSentenceClick: (sentence: Sentence) => void;
   onDictationChange: (sentence: Sentence, value: string) => void;
   onDictationKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => void;
   onDictationRetry: (sentence: Sentence) => void;
-  onToggleRecording: (sentence: Sentence) => void;
-  onSkip: (sentence: Sentence) => void;
-  onSimulateSuccess: (sentence: Sentence) => void;
 }
 
 export function Transcript({
@@ -35,17 +27,11 @@ export function Transcript({
   hideCaptions,
   dictationInputs,
   completedSentences,
-  isRecording,
-  spokenResults,
-  recognitionErrors,
   scrollContainerRef,
   onSentenceClick,
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
-  onToggleRecording,
-  onSkip,
-  onSimulateSuccess,
 }: TranscriptProps) {
   return (
     <div className="flex-1 min-h-0 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden flex flex-col">
@@ -69,16 +55,10 @@ export function Transcript({
               hideCaptions={!!hideCaptions && appMode === 'normal'}
               dictationInput={dictationInputs[sentence.id] || ''}
               isCompleted={!!completedSentences[sentence.id]}
-              isRecording={isRecording}
-              spokenResult={spokenResults[sentence.id]}
-              recognitionError={recognitionErrors[sentence.id]}
               onSentenceClick={onSentenceClick}
               onDictationChange={onDictationChange}
               onDictationKeyDown={onDictationKeyDown}
               onDictationRetry={onDictationRetry}
-              onToggleRecording={onToggleRecording}
-              onSkip={onSkip}
-              onSimulateSuccess={onSimulateSuccess}
             />
           );
         })}
