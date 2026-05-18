@@ -101,11 +101,16 @@ export function useLessonPlaybackLoop(
             }
           }
         } else if (appModeRef.current === 'dictation' && !audioRef.current.paused) {
-          // Audio overshot into a gap. Park at the next sentence's speech start so that
-          // resuming never plays background audio — if no next sentence, hold at end.
+          // Audio overshot into a gap. Park at the next sentence's speech start and set
+          // replayOnce so resuming plays exactly that sentence and stops at its end.
           const next = transcript.find((s) => s.start > time);
           audioRef.current.pause();
-          time = next ? next.start : (transcript.findLast((s) => time >= s.end)?.end ?? time) - 0.05;
+          if (next) {
+            time = next.start;
+            replayOnceRef.current = { sentenceId: next.id, end: next.end };
+          } else {
+            time = (transcript.findLast((s) => time >= s.end)?.end ?? time) - 0.05;
+          }
           audioRef.current.currentTime = time;
         }
 
