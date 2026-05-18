@@ -87,9 +87,11 @@ export default function NodaApp() {
 
   const {
     appMode,
+    transcriptText: _transcriptText, setTranscriptText,
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
-    isStarted,
+    isStarted, setIsStarted,
     lessonsList, isListLoading,
+    setLessonName,
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
     expandedSections, setExpandedSections,
     appModeRef, completedSentencesRef, transcript,
@@ -495,8 +497,19 @@ export default function NodaApp() {
     setShowCleanupModal(false);
   }, [cleanupModalVariant, selectedItem, setShowCleanupModal, setToast]);
 
+  // Dev-only E2E bypass: set NEXT_PUBLIC_E2E_MODE=true to skip Firebase auth.
+  const isE2EMode =
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NEXT_PUBLIC_E2E_MODE === 'true';
+
   useEffect(() => {
     setIsMounted(true);
+
+    if (isE2EMode) {
+      setAuthState('authenticated');
+      return;
+    }
+
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!hasAllowlistConfig()) {
@@ -515,7 +528,37 @@ export default function NodaApp() {
       setAuthState('unauthorized');
     });
     return () => unsub();
-  }, []);
+  }, [isE2EMode]);
+
+  // Load a synthetic lesson from localStorage when running under E2E mode.
+  // The test script seeds `__e2e_lesson__` before navigation.
+  useEffect(() => {
+    if (!isE2EMode) return;
+    try {
+      const raw = localStorage.getItem('__e2e_lesson__');
+      if (!raw) return;
+      const lesson = JSON.parse(raw) as {
+        id: string; name: string; transcriptText: string; mediaDataUrl?: string;
+      };
+      setTranscriptText(lesson.transcriptText ?? '');
+      setIsStarted(true);
+      setLessonName(lesson.name ?? 'E2E Lesson');
+      setMediaURL(lesson.mediaDataUrl ?? null);
+      setSelectedItem({
+        id: lesson.id,
+        type: 'lesson',
+        data: {
+          id: lesson.id,
+          name: lesson.name,
+          language: 'en',
+          progress: 0,
+          hasMedia: !!lesson.mediaDataUrl,
+          mediaType: 'audio',
+          type: 'lesson',
+        },
+      });
+    } catch { /* ignore parse errors */ }
+  }, [isE2EMode, setTranscriptText, setIsStarted, setLessonName, setMediaURL]);
 
   useGlobalPlaybackShortcuts(
     selectedItem?.type,

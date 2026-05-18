@@ -8,7 +8,9 @@
     "build": "next build",
     "preview": "npx serve@latest out",
     "lint": "eslint .",
-    "clean": "next clean"
+    "clean": "next clean",
+    "test:setup-auth": "npx tsx scripts/setup-auth.ts",
+    "test:dictation": "npx tsx scripts/test-dictation.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.1",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "4.1.11",
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^20",

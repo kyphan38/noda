@@ -1,0 +1,39 @@
+1
+00:00:00,000 --> 00:00:01,200
+The cat sat on the mat.
+
+2
+00:00:01,800 --> 00:00:03,000
+A dog ran in the park.
+
+3
+00:00:03,600 --> 00:00:04,800
+She likes to read books.
+
+4
+00:00:05,400 --> 00:00:06,600
+The sun shines every day.
+
+5
+00:00:07,200 --> 00:00:08,400
+He drinks cold water.
+
+6
+00:00:09,000 --> 00:00:10,200
+Birds sing in the morning.
+
+7
+00:00:10,800 --> 00:00:12,000
+The sky is very blue.
+
+8
+00:00:12,600 --> 00:00:13,800
+We eat lunch at noon.
+
+9
+00:00:14,400 --> 00:00:15,600
+They walk to the store.
+
+10
+00:00:16,200 --> 00:00:17,400
+Rain falls from the clouds.
