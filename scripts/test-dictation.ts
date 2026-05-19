@@ -386,12 +386,55 @@ async function main() {
     await waitForAllGreen(page, typoIdx, 3_000);
   }, 10_000);
 
-  // 4f. Dictation mode: audio in a gap must not play background audio
+  // 4f. Typing with punctuation must still trigger completion
+  //
+  // Reproduces: user types "he drink's cold water" (with apostrophe) when
+  // target is "he drinks cold water" (20 chars).  Normalization strips the
+  // apostrophe, so the clamped value should match the target.
+  //
+  // With the old maxLength approach, the apostrophe consumes a DOM slot,
+  // blocking the final 'r' → completion never fires.  Without maxLength
+  // (relying on clamping + DOM sync), the apostrophe is stripped and all
+  // 20 meaningful chars make it through.
+  console.log('\n  4f. Punctuation mid-word → completion still triggers');
+  const punctIdx = 4; // "he drinks cold water" (20 chars normalised)
+  // Sentence 5 should already be completed from step 3 — use sentence 9
+  // which hasn't been completed yet.
+  const completionIdx = 8; // "they walk to the store" (22 chars normalised)
+
+  await check('Activate sentence 9 for completion test', async () => {
+    await seekToSentence(page, completionIdx);
+    await waitForActive(page, completionIdx, 4_000);
+    await page.evaluate(() => {
+      const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
+      if (m) m.pause();
+    });
+  }, 6_000);
+
+  await check('Type answer with punctuation mixed in', async () => {
+    const ta = page.locator('[data-dictation-input]');
+    await ta.waitFor({ state: 'attached', timeout: 3_000 });
+    await ta.focus();
+    // "they walk to the store" but with apostrophe: "they wal'k to the store"
+    // The apostrophe is stripped by normalization; all meaningful chars still match.
+    await ta.pressSequentially("they wal'k to the store", { delay: CHAR_DELAY_MS });
+  }, 20_000);
+
+  await check('Sentence marked completed despite punctuation', async () =>
+    isCompleted(page, completionIdx));
+
+  await check('Enter advances after punctuation-laced completion', async () => {
+    await pressEnter(page);
+    // Sentence 10 (index 9) should become active
+    await waitForActive(page, completionIdx + 1, 4_000);
+  }, 6_000);
+
+  // 4g. Dictation mode: audio in a gap must not play background audio
   //
   // Regression test for the playback-loop fix that parks audio at the next
   // sentence's speech start when currentTime falls in a gap, and stops at
   // the sentence's end after resuming (no background audio leak).
-  console.log('\n  4f. Dictation pauses at gaps and sentence boundaries');
+  console.log('\n  4g. Dictation pauses at gaps and sentence boundaries');
 
   // Seek into the gap between sentence 1 (end 1.2 s) and sentence 2 (start 1.8 s)
   await page.evaluate((t: number) => {

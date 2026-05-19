@@ -149,8 +149,19 @@ export function DictationControls({
           ref={hiddenRef}
           data-dictation-input
           value={dictationInput}
-          maxLength={targetNorm.length}
-          onChange={(e) => onDictationChange(sentence, e.target.value)}
+          onChange={(e) => {
+            onDictationChange(sentence, e.target.value);
+            // Sync DOM immediately to prevent invisible chars (punctuation stripped
+            // by normalization) from accumulating.  Without this, those ghost chars
+            // eat Backspace presses and can block further input.
+            const norm = normalizeDictationTarget(e.target.value, { preserveTrailingSpace: true });
+            const synced = targetNorm.length > 0 ? norm.slice(0, targetNorm.length) : norm;
+            if (e.target.value !== synced) {
+              e.target.value = synced;
+              e.target.selectionStart = synced.length;
+              e.target.selectionEnd = synced.length;
+            }
+          }}
           onKeyDown={(e) => onDictationKeyDown(e, sentence)}
           onClick={(e) => e.stopPropagation()}
           className="fixed top-0 left-0 w-px h-px opacity-0 overflow-hidden pointer-events-none border-0"
