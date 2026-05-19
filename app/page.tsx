@@ -648,9 +648,9 @@ export default function NodaApp() {
 
   const handleDictationKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       const isCompleted = !!completedSentencesRef.current[sentence.id];
       if (!isCompleted) return;
-      e.preventDefault();
 
       const tr = transcriptRef.current;
       const idx = tr.findIndex((s) => s.id === sentence.id);

@@ -328,6 +328,57 @@ async function main() {
     return true;
   });
 
+  // 4e. Mid-word typo + Enter → backspace should still erase the wrong char
+  //
+  // Reproduces: user types most of a sentence correctly, makes a typo, presses
+  // Enter (natural "submit" instinct), then Backspace.  If Enter's default
+  // textarea behaviour (insert \n) is not prevented, the invisible newline is
+  // what Backspace removes — not the visible wrong char.
+  console.log('\n  4e. Mid-word typo + Enter → backspace removes wrong char');
+  const typoIdx = 6; // "the sky is very blue"
+
+  await check('Activate sentence 7 for typo test', async () => {
+    await seekToSentence(page, typoIdx);
+    await waitForActive(page, typoIdx, 4_000);
+    // Pause audio so the sentence stays active during slow char-by-char typing
+    await page.evaluate(() => {
+      const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
+      if (m) m.pause();
+    });
+  }, 6_000);
+
+  // Type once (outside check-loop to avoid retrying the typing)
+  await check('Type correct prefix + wrong char', async () => {
+    const ta = page.locator('[data-dictation-input]');
+    await ta.waitFor({ state: 'attached', timeout: 3_000 });
+    await ta.focus();
+    // "the sky is very bl" is correct; 'n' is wrong (should be 'u')
+    await ta.pressSequentially('the sky is very bln', { delay: CHAR_DELAY_MS });
+  }, 15_000);
+
+  await check('Wrong char is visible as red', async () =>
+    page.evaluate((i: number) =>
+      (document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('span.text-red-500').length ?? 0) > 0, typoIdx));
+
+  await check('Enter on incomplete sentence + Backspace removes wrong char', async () => {
+    const ta = page.locator('[data-dictation-input]');
+    // User presses Enter on the incomplete sentence (common instinct).
+    // This must NOT leave an invisible newline that "eats" the next Backspace.
+    await ta.press('Enter');
+    await sleep(80);
+    await ta.press('Backspace');
+    await sleep(100);
+    return page.evaluate((i: number) =>
+      (document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('span.text-red-500').length ?? 0) === 0, typoIdx);
+  });
+
+  await check('Retype correct ending → all green', async () => {
+    await seekToSentence(page, typoIdx);
+    await waitForActive(page, typoIdx, 3_000);
+    await typeAnswer(page, 'ue'); // completes "blue"
+    await waitForAllGreen(page, typoIdx, 3_000);
+  }, 10_000);
+
   await browser.close();
   printReport();
 }
