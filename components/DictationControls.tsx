@@ -149,6 +149,7 @@ export function DictationControls({
           ref={hiddenRef}
           data-dictation-input
           value={dictationInput}
+          maxLength={targetNorm.length}
           onChange={(e) => onDictationChange(sentence, e.target.value)}
           onKeyDown={(e) => onDictationKeyDown(e, sentence)}
           onClick={(e) => e.stopPropagation()}

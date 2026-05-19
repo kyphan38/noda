@@ -623,14 +623,15 @@ export default function NodaApp() {
   };
 
   const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
-    const normalized = normalizeDictationTarget(val, { preserveTrailingSpace: true });
-    setDictationInputs((prev) => ({ ...prev, [sentence.id]: normalized }));
-
     const targetNorm = normalizeDictationTarget(sentence.text);
+    const normalized = normalizeDictationTarget(val, { preserveTrailingSpace: true });
+    const clamped = targetNorm.length > 0 ? normalized.slice(0, targetNorm.length) : normalized;
+    setDictationInputs((prev) => ({ ...prev, [sentence.id]: clamped }));
+
     if (
       targetNorm.length > 0 &&
-      normalized.length === targetNorm.length &&
-      normalized === targetNorm
+      clamped.length === targetNorm.length &&
+      clamped === targetNorm
     ) {
       setCompletedSentences((prev) => {
         const next = { ...prev, [sentence.id]: true };

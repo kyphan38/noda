@@ -328,56 +328,99 @@ async function main() {
     return true;
   });
 
-  // 4e. Mid-word typo + Enter → backspace should still erase the wrong char
+  // 4e. Typing past target length → backspace must remove *visible* wrong chars
   //
-  // Reproduces: user types most of a sentence correctly, makes a typo, presses
-  // Enter (natural "submit" instinct), then Backspace.  If Enter's default
-  // textarea behaviour (insert \n) is not prevented, the invisible newline is
-  // what Backspace removes — not the visible wrong char.
-  console.log('\n  4e. Mid-word typo + Enter → backspace removes wrong char');
-  const typoIdx = 6; // "the sky is very blue"
+  // Reproduces: user types "a few months ansssss" when the target is
+  // "a few months ago" (16 chars).  The display only renders targetNorm.length
+  // characters, so the extra "sss" are invisible.  Each Backspace should
+  // remove a *visible* wrong character — not an invisible overflow char that
+  // the user can't see.
+  console.log('\n  4e. Overflow typing → backspace removes visible wrong char');
+  const typoIdx = 6; // "the sky is very blue" (20 chars normalised)
 
-  await check('Activate sentence 7 for typo test', async () => {
+  await check('Activate sentence 7 for overflow test', async () => {
     await seekToSentence(page, typoIdx);
     await waitForActive(page, typoIdx, 4_000);
-    // Pause audio so the sentence stays active during slow char-by-char typing
     await page.evaluate(() => {
       const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
       if (m) m.pause();
     });
   }, 6_000);
 
-  // Type once (outside check-loop to avoid retrying the typing)
-  await check('Type correct prefix + wrong char', async () => {
+  await check('Type past target length with wrong chars', async () => {
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
-    // "the sky is very bl" is correct; 'n' is wrong (should be 'u')
-    await ta.pressSequentially('the sky is very bln', { delay: CHAR_DELAY_MS });
+    // Target is 20 chars.  We type 21 (1 overflow).
+    // Positions 18,19 wrong ('n','n' instead of 'u','e').
+    await ta.pressSequentially('the sky is very blnnn', { delay: CHAR_DELAY_MS });
   }, 15_000);
 
-  await check('Wrong char is visible as red', async () =>
+  await check('At least 2 red chars visible', async () =>
     page.evaluate((i: number) =>
-      (document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('span.text-red-500').length ?? 0) > 0, typoIdx));
+      (document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('span.text-red-500').length ?? 0) >= 2, typoIdx));
 
-  await check('Enter on incomplete sentence + Backspace removes wrong char', async () => {
+  // Press Backspace ONCE — outside the check-loop so it runs exactly once.
+  {
     const ta = page.locator('[data-dictation-input]');
-    // User presses Enter on the incomplete sentence (common instinct).
-    // This must NOT leave an invisible newline that "eats" the next Backspace.
-    await ta.press('Enter');
-    await sleep(80);
     await ta.press('Backspace');
-    await sleep(100);
-    return page.evaluate((i: number) =>
-      (document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('span.text-red-500').length ?? 0) === 0, typoIdx);
+    await sleep(150);
+  }
+
+  await check('One Backspace reduces visible red count (not hidden overflow)', async () => {
+    const reds = await page.evaluate((i: number) =>
+      document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('span.text-red-500').length ?? 0, typoIdx);
+    // Before: 2 visible red chars.  After one Backspace the count must drop.
+    // With the bug (no clamp / no maxLength) the invisible overflow char is
+    // removed instead, so reds stays at 2 → this assertion fails.
+    return reds < 2;
   });
 
-  await check('Retype correct ending → all green', async () => {
+  await check('Backspace + retype → all green', async () => {
+    const ta = page.locator('[data-dictation-input]');
+    await ta.press('Backspace');  // remove remaining wrong 'n'
+    await sleep(80);
     await seekToSentence(page, typoIdx);
     await waitForActive(page, typoIdx, 3_000);
     await typeAnswer(page, 'ue'); // completes "blue"
     await waitForAllGreen(page, typoIdx, 3_000);
   }, 10_000);
+
+  // 4f. Dictation mode: audio in a gap must not play background audio
+  //
+  // Regression test for the playback-loop fix that parks audio at the next
+  // sentence's speech start when currentTime falls in a gap, and stops at
+  // the sentence's end after resuming (no background audio leak).
+  console.log('\n  4f. Dictation pauses at gaps and sentence boundaries');
+
+  // Seek into the gap between sentence 1 (end 1.2 s) and sentence 2 (start 1.8 s)
+  await page.evaluate((t: number) => {
+    const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
+    if (m) { m.currentTime = t; void m.play().catch(() => {}); }
+  }, 1.5);
+
+  await check('Audio in gap pauses at next sentence start', async () =>
+    page.evaluate(([start]: [number]) => {
+      const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
+      if (!m) return false;
+      return m.paused && Math.abs(m.currentTime - start) < 0.5;
+    }, [SENTENCE_STARTS[1]] as [number]),
+  4_000);
+
+  // Resume — the loop should play sentence 2 (1.8 → 3.0) then pause.
+  await page.evaluate(() => {
+    const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
+    if (m) void m.play().catch(() => {});
+  });
+
+  await check('Playback stops at sentence end (no background audio leak)', async () =>
+    page.evaluate(() => {
+      const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
+      if (!m) return false;
+      // Sentence 2 ends at 3.0 s — the loop parks ~0.03 s before.
+      return m.paused && m.currentTime >= 2.5 && m.currentTime < 3.5;
+    }),
+  5_000);
 
   await browser.close();
   printReport();
