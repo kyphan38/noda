@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { RotateCcw, Lightbulb, CornerDownLeft } from 'lucide-react';
 import { Sentence } from '@/types';
-import { normalizeDictationTarget } from '@/lib/utils';
+import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
 
 type DictationKeyTarget = HTMLInputElement | HTMLTextAreaElement;
 
@@ -27,7 +27,7 @@ export function DictationControls({
   isMobile = false,
 }: DictationControlsProps) {
   const targetNorm = useMemo(() => normalizeDictationTarget(sentence.text), [sentence.text]);
-  const inputNorm = normalizeDictationTarget(dictationInput, { preserveTrailingSpace: true });
+  const inputNorm = alignDictationInput(dictationInput, targetNorm);
 
   const hiddenRef = useRef<HTMLTextAreaElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
@@ -77,12 +77,11 @@ export function DictationControls({
   };
 
   const syncDom = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
-    const norm = normalizeDictationTarget(value, { preserveTrailingSpace: true });
-    const synced = targetNorm.length > 0 ? norm.slice(0, targetNorm.length) : norm;
-    if (value !== synced) {
-      el.value = synced;
-      el.selectionStart = synced.length;
-      el.selectionEnd = synced.length;
+    const aligned = alignDictationInput(value, targetNorm);
+    if (value !== aligned) {
+      el.value = aligned;
+      el.selectionStart = aligned.length;
+      el.selectionEnd = aligned.length;
     }
   };
 
@@ -170,7 +169,7 @@ export function DictationControls({
               ) : typed === ch ? (
                 <span className="text-emerald-500">{isSpace ? ' ' : ch}</span>
               ) : (
-                <span className="text-red-500">{isSpace ? ' ' : typed}</span>
+                <span className="text-red-500">{typed === ' ' ? '\u00a0' : typed}</span>
               )}
             </React.Fragment>
           );

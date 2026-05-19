@@ -71,7 +71,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     const target = LESSON_SENTENCES[3];
-    for (let j = 0; j < target.length; j++) {
+    const letterCount = target.replace(/ /g, '').length;
+    for (let j = 0; j < letterCount; j++) {
       await ta.press('Tab');
       await sleep(50);
     }
@@ -88,6 +89,20 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.pressSequentially("he drink's cold water", { delay: CHAR_DELAY_MS });
     return isRowCompleted(page, 4);
   }, 20_000);
+
+  await pressEnter(page).catch(() => {});
+
+  await check(report, '3j. Completion without explicit spaces', async () => {
+    await activateClean(page, 8);
+    const ta = page.locator('[data-dictation-input]');
+    await ta.waitFor({ state: 'attached', timeout: 3_000 });
+    await ta.focus();
+    // Type correct letters WITHOUT spaces — auto-spacing should complete it
+    const target = LESSON_SENTENCES[8]; // "they walk to the store"
+    const lettersOnly = target.replace(/ /g, '');
+    await ta.pressSequentially(lettersOnly, { delay: CHAR_DELAY_MS });
+    return isRowCompleted(page, 8);
+  }, 25_000);
 
   await pressEnter(page).catch(() => {});
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { normalizeDictationTarget } from '@/lib/utils';
+import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
 import { patchFlashcardCompletionModalShownFirestore, restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
@@ -632,14 +632,16 @@ export default function NodaApp() {
 
   const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
     const targetNorm = normalizeDictationTarget(sentence.text);
-    const normalized = normalizeDictationTarget(val, { preserveTrailingSpace: true });
-    const clamped = targetNorm.length > 0 ? normalized.slice(0, targetNorm.length) : normalized;
-    setDictationInputs((prev) => ({ ...prev, [sentence.id]: clamped }));
+    const aligned = alignDictationInput(val, targetNorm);
+    setDictationInputs((prev) => ({ ...prev, [sentence.id]: aligned }));
+
+    const targetLetters = targetNorm.replace(/ /g, '');
+    const inputLetters = aligned.replace(/ /g, '');
 
     if (
-      targetNorm.length > 0 &&
-      clamped.length === targetNorm.length &&
-      clamped === targetNorm
+      targetLetters.length > 0 &&
+      inputLetters.length === targetLetters.length &&
+      inputLetters === targetLetters
     ) {
       setCompletedSentences((prev) => {
         const next = { ...prev, [sentence.id]: true };
@@ -651,7 +653,6 @@ export default function NodaApp() {
         clearTimeout(loopTimeoutRef.current);
         isLoopDelayingRef.current = false;
       }
-      // After completion, stay on the current sentence. Advancing happens only on Enter.
     }
   }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef]);
 
@@ -686,14 +687,13 @@ export default function NodaApp() {
     if (e.key === 'Tab') {
       e.preventDefault();
       const t = normalizeDictationTarget(sentence.text);
-      const cur = normalizeDictationTarget(dictationInputsRef.current[sentence.id] || '', {
-        preserveTrailingSpace: true,
-      });
-      let i = 0;
-      while (i < cur.length && i < t.length && cur[i] === t[i]) i++;
-      if (i >= t.length) return;
-      const newVal = t.slice(0, i + 1);
-      handleDictationChange(sentence, newVal);
+      const tLetters = t.replace(/ /g, '');
+      const cur = dictationInputsRef.current[sentence.id] || '';
+      const curLetters = cur.replace(/ /g, '');
+      let li = 0;
+      while (li < curLetters.length && li < tLetters.length && curLetters[li] === tLetters[li]) li++;
+      if (li >= tLetters.length) return;
+      handleDictationChange(sentence, tLetters.slice(0, li + 1));
     } else if (e.key === 'Control') {
       e.preventDefault();
       if (loopTimeoutRef.current) {

@@ -59,17 +59,21 @@ export async function run(page: Page, report: ReportEntry[]) {
 
   { const ta = page.locator('[data-dictation-input]'); await ta.press('Backspace'); await ta.press('Backspace'); await sleep(100); }
 
-  await check(report, '2e. Spaces render correctly', async () => {
+  await check(report, '2e. Spaces auto-inserted from target layout', async () => {
     const ta = page.locator('[data-dictation-input]');
-    await ta.pressSequentially('the ', { delay: CHAR_DELAY_MS });
+    // Type "thec" — letters map to "the c" (auto-space at position 3)
+    await ta.pressSequentially('thec', { delay: CHAR_DELAY_MS });
     const green = await countSpans(page, idx, 'text-emerald-500');
-    return green === 4;
+    return green === 5; // t,h,e,(space),c
   });
 
-  { const ta = page.locator('[data-dictation-input]'); for (let j = 0; j < 4; j++) await ta.press('Backspace'); await sleep(100); }
+  { const ta = page.locator('[data-dictation-input]'); for (let j = 0; j < 5; j++) await ta.press('Backspace'); await sleep(100); }
 
   await check(report, '2f. Punctuation is stripped silently', async () => {
+    await activateClean(page, idx);
     const ta = page.locator('[data-dictation-input]');
+    await ta.waitFor({ state: 'attached', timeout: 3_000 });
+    await ta.focus();
     await ta.pressSequentially('the.', { delay: CHAR_DELAY_MS });
     const green = await countSpans(page, idx, 'text-emerald-500');
     const red = await countSpans(page, idx, 'text-red-500');
@@ -79,21 +83,27 @@ export async function run(page: Page, report: ReportEntry[]) {
   { const ta = page.locator('[data-dictation-input]'); for (let j = 0; j < 3; j++) await ta.press('Backspace'); await sleep(100); }
 
   await check(report, '2g. Case is ignored', async () => {
+    await activateClean(page, idx);
     const ta = page.locator('[data-dictation-input]');
-    await ta.pressSequentially('THE CAT', { delay: CHAR_DELAY_MS });
+    await ta.waitFor({ state: 'attached', timeout: 3_000 });
+    await ta.focus();
+    await ta.pressSequentially('THECAT', { delay: CHAR_DELAY_MS });
     const green = await countSpans(page, idx, 'text-emerald-500');
     const red = await countSpans(page, idx, 'text-red-500');
-    return green === 7 && red === 0;
+    return green === 7 && red === 0; // "the cat" with auto-space
   });
 
   { const ta = page.locator('[data-dictation-input]'); for (let j = 0; j < 7; j++) await ta.press('Backspace'); await sleep(100); }
 
   await check(report, '2h. Double spaces collapse', async () => {
+    await activateClean(page, idx);
     const ta = page.locator('[data-dictation-input]');
+    await ta.waitFor({ state: 'attached', timeout: 3_000 });
+    await ta.focus();
     await ta.pressSequentially('the  cat', { delay: CHAR_DELAY_MS });
     const green = await countSpans(page, idx, 'text-emerald-500');
     const red = await countSpans(page, idx, 'text-red-500');
-    return green === 7 && red === 0;
+    return green === 7 && red === 0; // spaces stripped, letters aligned
   });
 
   { const ta = page.locator('[data-dictation-input]'); for (let j = 0; j < 7; j++) await ta.press('Backspace'); await sleep(100); }

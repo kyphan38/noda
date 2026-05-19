@@ -72,4 +72,24 @@ export async function run(page: Page, report: ReportEntry[]) {
   }, 10_000);
 
   await dismissModal(page);
+
+  // Regression: typing letters without spaces should still complete (auto-space)
+  await check(report, '11g. Apostrophe sentence completes without explicit spaces', async () => {
+    await activateClean(page, idx);
+    const retry = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
+    if (await retry.count() > 0) {
+      await retry.click();
+      await sleep(300);
+      await activateClean(page, idx);
+    }
+    const ta = page.locator('[data-dictation-input]');
+    await ta.waitFor({ state: 'attached', timeout: 3_000 });
+    await ta.focus();
+    // Type correct letters WITHOUT any spaces — auto-spacing should complete it
+    await ta.pressSequentially('whorunswitzerlandstrains', { delay: CHAR_DELAY_MS });
+    return isRowCompleted(page, idx);
+  }, 25_000);
+
+  await pressEnter(page).catch(() => {});
+  await dismissModal(page);
 }

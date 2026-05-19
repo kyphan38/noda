@@ -68,6 +68,34 @@ export function normalizeDictationTarget(
   return out;
 }
 
+/**
+ * Align user input with the target sentence layout.
+ * Extracts only letters/numbers from the input (ignoring spaces and
+ * punctuation), clamps to the target's letter count, then maps those
+ * letters onto the target's character positions — auto-inserting spaces
+ * wherever the target has them.  This means users never need to manually
+ * type spaces; they just type the letters they hear.
+ */
+export function alignDictationInput(rawInput: string, targetNorm: string): string {
+  const norm = normalizeDictationTarget(rawInput);
+  const inputLetters = norm.replace(/ /g, '');
+  const targetLetters = targetNorm.replace(/ /g, '');
+  const clamped = inputLetters.slice(0, targetLetters.length);
+
+  let aligned = '';
+  let li = 0;
+  for (let i = 0; i < targetNorm.length; i++) {
+    if (li >= clamped.length) break;
+    if (targetNorm[i] === ' ') {
+      if (li < clamped.length) aligned += ' ';
+    } else {
+      aligned += clamped[li];
+      li++;
+    }
+  }
+  return aligned;
+}
+
 /** Sidebar % for flashcard decks: matches session queue - permanently done cards / total lines. */
 export function flashcardDeckProgressPercent(
   flashcardData: { lines?: string[]; ratings?: Record<number, string> } | undefined,

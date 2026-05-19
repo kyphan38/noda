@@ -36,10 +36,11 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.press('Tab');
     await sleep(150);
     const green = await countSpans(page, kbIdx, 'text-emerald-500');
-    return green === 4;
+    // Tab gives next letter 's', auto-space appears → "the s" = 5 greens
+    return green === 5;
   });
 
-  { const ta = page.locator('[data-dictation-input]'); for (let j = 0; j < 4; j++) await ta.press('Backspace'); await sleep(100); }
+  { const ta = page.locator('[data-dictation-input]'); for (let j = 0; j < 5; j++) await ta.press('Backspace'); await sleep(100); }
 
   await check(report, '5c. Tab after wrong prefix', async () => {
     const ta = page.locator('[data-dictation-input]');
