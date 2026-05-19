@@ -16,6 +16,7 @@ interface TranscriptProps {
   onDictationChange: (sentence: Sentence, value: string) => void;
   onDictationKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => void;
   onDictationRetry: (sentence: Sentence) => void;
+  isMobile?: boolean;
 }
 
 export function Transcript({
@@ -30,6 +31,7 @@ export function Transcript({
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
+  isMobile = false,
 }: TranscriptProps) {
   return (
     <div className="flex-1 min-h-0 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden flex flex-col">
@@ -56,6 +58,7 @@ export function Transcript({
               onDictationChange={onDictationChange}
               onDictationKeyDown={onDictationKeyDown}
               onDictationRetry={onDictationRetry}
+              isMobile={isMobile}
             />
           );
         })}

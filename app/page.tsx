@@ -458,25 +458,33 @@ export default function NodaApp() {
     const media = mediaRef.current;
     if (!media) return;
     const mode = appModeRef.current;
-    if (
-      media.paused &&
-      mode === 'dictation' &&
-      activeSentenceRef.current
-    ) {
+    if (media.paused && mode === 'dictation') {
       const s = activeSentenceRef.current;
-      if (media.currentTime >= s.end - 0.08) {
-        media.currentTime = s.start;
-        setCurrentTime(s.start);
-        lastScrolledIndexRef.current = -1;
-        if (loopTimeoutRef.current) {
-          clearTimeout(loopTimeoutRef.current);
-          loopTimeoutRef.current = null;
+      if (s) {
+        if (media.currentTime >= s.end - 0.08) {
+          media.currentTime = s.start;
+          setCurrentTime(s.start);
+          lastScrolledIndexRef.current = -1;
+          if (loopTimeoutRef.current) {
+            clearTimeout(loopTimeoutRef.current);
+            loopTimeoutRef.current = null;
+          }
+          isLoopDelayingRef.current = false;
         }
-        isLoopDelayingRef.current = false;
+        dictationReplayOnceRef.current = { sentenceId: s.id, end: s.end };
+      } else {
+        // Audio is parked in a gap — seek to the next sentence's start
+        const tr = transcriptRef.current;
+        const next = tr.find((sent) => sent.start > media.currentTime);
+        if (next) {
+          media.currentTime = next.start;
+          setCurrentTime(next.start);
+          dictationReplayOnceRef.current = { sentenceId: next.id, end: next.end };
+        }
       }
     }
     togglePlayPause();
-  }, [togglePlayPause, setCurrentTime, mediaRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef]);
+  }, [togglePlayPause, setCurrentTime, mediaRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef]);
 
   const {
     showCleanupModal,

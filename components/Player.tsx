@@ -39,7 +39,7 @@ interface PlayerProps {
 }
 
 const toolBtn =
-  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white';
+  'flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white active:bg-gray-700';
 
 export function Player({
   isPlaying,
@@ -67,14 +67,14 @@ export function Player({
 
   return (
     <div
-      className="flex h-12 shrink-0 items-center gap-2 rounded-2xl border border-gray-800 bg-gray-900 px-2.5 font-sans sm:gap-3 sm:px-3"
+      className="flex h-14 sm:h-12 shrink-0 items-center gap-2 rounded-2xl border border-gray-800 bg-gray-900 px-2.5 font-sans sm:gap-3 sm:px-3"
       role="group"
       aria-label="Playback controls"
     >
       <button
         type="button"
         onClick={onPlayPause}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white transition-colors hover:bg-emerald-500 active:scale-95"
+        className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white transition-colors hover:bg-emerald-500 active:scale-95 active:bg-emerald-400"
         aria-label={isPlaying ? 'Pause' : 'Play'}
         title={isPlaying ? 'Pause' : 'Play'}
       >

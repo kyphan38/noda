@@ -103,6 +103,20 @@
   flex-shrink: 0;
 }
 
+/* Mobile */
+@media (max-width: 767px) {
+  .app-header {
+    gap: 0.5rem;
+  }
+  .mode-tabs-container {
+    padding: 0 0.25rem;
+  }
+  .mode-tab {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+}
+
 /* Tablet */
 @media (min-width: 768px) and (max-width: 1024px) {
   .mode-tab {

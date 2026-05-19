@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "clean": "next clean",
     "test:setup-auth": "npx tsx scripts/setup-auth.ts",
-    "test:dictation": "npx tsx scripts/test-dictation.ts"
+    "test:dictation": "npx tsx scripts/test-dictation/run-all.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

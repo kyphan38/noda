@@ -34,7 +34,6 @@ const MODE_TABS: { mode: AppMode; label: string }[] = [
 export function AppHeader({
   isSidebarOpen,
   onOpenSidebar,
-  isMobile = false,
   selectedItem,
   appMode,
   onModeChange,
@@ -59,7 +58,7 @@ export function AppHeader({
         )}
       </div>
 
-      {selectedItem?.type === 'lesson' && !isMobile && (
+      {selectedItem?.type === 'lesson' && (
         <div className="mode-tabs-container">
           <nav className="mode-tabs" aria-label="Lesson mode">
             {MODE_TABS.map(({ mode, label }) => (

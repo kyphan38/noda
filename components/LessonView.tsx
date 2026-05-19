@@ -197,8 +197,8 @@ export function LessonView({
   return (
     <div className={`flex flex-col flex-1 min-h-0 ${videoLayout ? 'gap-4' : 'gap-3'}`}>
       {isVideoLesson && isMobile && mediaURL && (
-        <p className="text-xs text-gray-400 text-center px-2 shrink-0">
-          Video is hidden on small screens; audio and transcript still work.
+        <p className="text-xs text-gray-500 text-center px-2 shrink-0">
+          Video hidden on mobile — audio + transcript still work.
         </p>
       )}
 
@@ -289,6 +289,7 @@ export function LessonView({
             onDictationChange={onDictationChange}
             onDictationKeyDown={onDictationKeyDown}
             onDictationRetry={onDictationRetry}
+            isMobile={isMobile}
           />
         </div>
       </div>

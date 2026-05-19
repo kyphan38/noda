@@ -295,39 +295,24 @@ export function Sidebar({
             </div>
           </div>
 
-          {!isMobile && (
-            <div className="actions-container flex flex-row gap-2 p-4">
-              <button
-                onClick={onNewLesson}
-                className="btn-new-lesson flex-1 py-2.5 px-2 text-sm bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
-                title="New audio lesson"
-              >
-                <Music2 size={16} aria-hidden />
-                <span>+ Audio</span>
-              </button>
-              <button
-                onClick={onNewDeck}
-                className="btn-new-deck flex-1 py-2.5 px-2 text-sm bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
-                title="New flashcard deck"
-              >
-                <Layers size={16} aria-hidden />
-                <span>+ Deck</span>
-              </button>
-            </div>
-          )}
-
-          {isMobile && (
-            <div className="actions-container flex flex-row gap-2 p-4">
-              <button
-                onClick={onNewDeck}
-                className="btn-new-deck flex-1 py-2.5 px-2 text-sm bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
-                title="New flashcard deck"
-              >
-                <Layers size={16} aria-hidden />
-                <span>+ Deck</span>
-              </button>
-            </div>
-          )}
+          <div className="actions-container flex flex-row gap-2 p-4">
+            <button
+              onClick={onNewLesson}
+              className="btn-new-lesson flex-1 py-2.5 px-2 text-sm bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
+              title="New audio lesson"
+            >
+              <Music2 size={16} aria-hidden />
+              <span>+ Audio</span>
+            </button>
+            <button
+              onClick={onNewDeck}
+              className="btn-new-deck flex-1 py-2.5 px-2 text-sm bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
+              title="New flashcard deck"
+            >
+              <Layers size={16} aria-hidden />
+              <span>+ Deck</span>
+            </button>
+          </div>
 
           <div className="px-4 pb-2">
             <input
@@ -339,27 +324,25 @@ export function Sidebar({
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-6">
-            {!isMobile && (
-              <SidebarSection
-                type="lessons"
-                title="AUDIO"
-                items={filteredLessons}
-                folders={folders}
-                folderActions={folderActions}
-                isLoading={isListLoading}
-                selectedItemId={selectedItemId}
-                expandedSections={expandedSections}
-                forcedExpandedFolderIds={forcedExpandedFolderIds ?? forcedExpanded}
-                disableCaps={searching}
-                onToggleSection={onToggleSection}
-                onItemSelect={onItemSelect}
-                onTrashItem={onTrashItem}
-                onRenameLesson={onRenameLesson}
-                activeMenu={activeMenu}
-                setActiveMenu={setActiveMenu}
-                isMobile={isMobile}
-              />
-            )}
+            <SidebarSection
+              type="lessons"
+              title="AUDIO"
+              items={filteredLessons}
+              folders={folders}
+              folderActions={folderActions}
+              isLoading={isListLoading}
+              selectedItemId={selectedItemId}
+              expandedSections={expandedSections}
+              forcedExpandedFolderIds={forcedExpandedFolderIds ?? forcedExpanded}
+              disableCaps={searching}
+              onToggleSection={onToggleSection}
+              onItemSelect={onItemSelect}
+              onTrashItem={onTrashItem}
+              onRenameLesson={onRenameLesson}
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
+              isMobile={isMobile}
+            />
 
             <SidebarSection
               type="decks"

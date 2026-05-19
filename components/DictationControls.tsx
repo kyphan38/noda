@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Lightbulb, CornerDownLeft } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget } from '@/lib/utils';
 
@@ -13,6 +13,7 @@ interface DictationControlsProps {
   onDictationChange: (sentence: Sentence, value: string) => void;
   onDictationKeyDown: (e: React.KeyboardEvent<DictationKeyTarget>, sentence: Sentence) => void;
   onDictationRetry?: (sentence: Sentence) => void;
+  isMobile?: boolean;
 }
 
 export function DictationControls({
@@ -23,19 +24,27 @@ export function DictationControls({
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
+  isMobile = false,
 }: DictationControlsProps) {
   const targetNorm = useMemo(() => normalizeDictationTarget(sentence.text), [sentence.text]);
   const inputNorm = normalizeDictationTarget(dictationInput, { preserveTrailingSpace: true });
 
-  // hiddenRef: off-screen textarea that captures all keystrokes.
-  // srOnlyRef: off-screen input used in completed state for Enter-to-advance.
   const hiddenRef = useRef<HTMLTextAreaElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
   const srOnlyRef = useRef<HTMLInputElement>(null);
 
   useLayoutEffect(() => {
     if (!isActive) return;
     if (isCompleted) {
       srOnlyRef.current?.focus({ preventScroll: true });
+    } else if (isMobile) {
+      const el = mobileInputRef.current;
+      if (el) {
+        el.focus({ preventScroll: true });
+        const len = el.value.length;
+        el.selectionStart = len;
+        el.selectionEnd = len;
+      }
     } else {
       const el = hiddenRef.current;
       if (el) {
@@ -45,29 +54,71 @@ export function DictationControls({
         el.selectionEnd = len;
       }
     }
-  }, [isCompleted, isActive, sentence.id]);
+  }, [isCompleted, isActive, sentence.id, isMobile]);
 
-  // ── Completed ─────────────────────────────────────────────────────────────
+  const handleHint = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const syntheticEvent = {
+      key: 'Tab',
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as React.KeyboardEvent<DictationKeyTarget>;
+    onDictationKeyDown(syntheticEvent, sentence);
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const syntheticEvent = {
+      key: 'Enter',
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as React.KeyboardEvent<DictationKeyTarget>;
+    onDictationKeyDown(syntheticEvent, sentence);
+  };
+
+  const syncDom = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+    const norm = normalizeDictationTarget(value, { preserveTrailingSpace: true });
+    const synced = targetNorm.length > 0 ? norm.slice(0, targetNorm.length) : norm;
+    if (value !== synced) {
+      el.value = synced;
+      el.selectionStart = synced.length;
+      el.selectionEnd = synced.length;
+    }
+  };
+
   if (isCompleted) {
     return (
       <div className="flex flex-col">
         <div className="flex items-start gap-2">
-          <div className="font-mono text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-all text-green-400">
+          <div className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-all text-green-400">
             {targetNorm}
           </div>
-          {onDictationRetry && (
-            <button
-              type="button"
-              title="Practice this sentence again"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDictationRetry(sentence);
-              }}
-              className="shrink-0 rounded-lg border border-transparent p-1.5 text-emerald-500/90 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </button>
-          )}
+          <div className="shrink-0 flex items-center gap-1">
+            {isMobile && isActive && (
+              <button
+                type="button"
+                data-dictation-next
+                title="Next sentence"
+                onClick={handleNext}
+                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-400 active:bg-emerald-500/20"
+              >
+                <CornerDownLeft className="h-4 w-4" />
+              </button>
+            )}
+            {onDictationRetry && (
+              <button
+                type="button"
+                title="Practice this sentence again"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDictationRetry(sentence);
+                }}
+                className="shrink-0 rounded-lg border border-transparent p-1.5 text-emerald-500/90 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 active:bg-emerald-500/20"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
         {isActive && (
           <input
@@ -85,27 +136,20 @@ export function DictationControls({
     );
   }
 
-  // ── Active / incomplete ────────────────────────────────────────────────────
-  // Single-div approach: the feedback div IS the entire visual output.
-  // No overlay, no z-index tricks — the textarea lives off-screen (position:fixed)
-  // so it can never cover the feedback.
-  //
-  // Character rendering:
-  //   Correct (typed === target char)  → green,  show the real character
-  //   Wrong   (typed !== target char)  → red,    show what was typed
-  //   Untyped (no input yet)           → gray,   show * (or &nbsp; for spaces)
-  //
-  // A 1 px blinking bar marks the current typing position.
   return (
     <>
-      {/* ── Feedback div ─────────────────────────────────────────────────── */}
+      {/* Feedback div */}
       <div
         aria-hidden
-        className="font-mono text-lg leading-normal tracking-normal min-w-0 cursor-text whitespace-pre-wrap break-all"
+        className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 cursor-text whitespace-pre-wrap break-all"
         onClick={(e) => {
           if (isActive) {
             e.stopPropagation();
-            hiddenRef.current?.focus();
+            if (isMobile) {
+              mobileInputRef.current?.focus();
+            } else {
+              hiddenRef.current?.focus();
+            }
           }
         }}
       >
@@ -115,7 +159,6 @@ export function DictationControls({
 
           return (
             <React.Fragment key={i}>
-              {/* Blinking cursor at current typing position */}
               {isActive && i === inputNorm.length && (
                 <span
                   aria-hidden
@@ -123,16 +166,15 @@ export function DictationControls({
                 />
               )}
               {typed === undefined ? (
-                <span className="text-gray-500">{isSpace ? ' ' : '*'}</span>
+                <span className="text-gray-500">{isSpace ? ' ' : '*'}</span>
               ) : typed === ch ? (
-                <span className="text-emerald-500">{isSpace ? ' ' : ch}</span>
+                <span className="text-emerald-500">{isSpace ? ' ' : ch}</span>
               ) : (
-                <span className="text-red-500">{isSpace ? ' ' : typed}</span>
+                <span className="text-red-500">{isSpace ? ' ' : typed}</span>
               )}
             </React.Fragment>
           );
         })}
-        {/* Cursor after the last char when the sentence is fully typed */}
         {isActive && inputNorm.length >= targetNorm.length && targetNorm.length > 0 && (
           <span
             aria-hidden
@@ -141,26 +183,49 @@ export function DictationControls({
         )}
       </div>
 
-      {/* ── Hidden textarea ───────────────────────────────────────────────── */}
-      {/* position:fixed keeps it completely out of layout flow so it can never
-          obscure the feedback div. opacity:0 hides the focus ring. */}
-      {isActive && (
+      {/* Mobile: visible inline input + touch actions */}
+      {isActive && isMobile && (
+        <div className="flex items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
+          <input
+            ref={mobileInputRef}
+            data-dictation-input
+            type="text"
+            inputMode="text"
+            value={dictationInput}
+            onChange={(e) => {
+              onDictationChange(sentence, e.target.value);
+              syncDom(e.target, e.target.value);
+            }}
+            onKeyDown={(e) => onDictationKeyDown(e, sentence)}
+            className="flex-1 min-w-0 bg-gray-800/60 border border-gray-700 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono outline-none"
+            placeholder="Type what you hear…"
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
+          />
+          <button
+            type="button"
+            data-dictation-hint
+            title="Hint — fill next character"
+            onClick={handleHint}
+            className="shrink-0 h-10 w-10 flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800/60 text-amber-400 active:bg-gray-700"
+          >
+            <Lightbulb className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Desktop: hidden off-screen textarea */}
+      {isActive && !isMobile && (
         <textarea
           ref={hiddenRef}
           data-dictation-input
           value={dictationInput}
           onChange={(e) => {
             onDictationChange(sentence, e.target.value);
-            // Sync DOM immediately to prevent invisible chars (punctuation stripped
-            // by normalization) from accumulating.  Without this, those ghost chars
-            // eat Backspace presses and can block further input.
-            const norm = normalizeDictationTarget(e.target.value, { preserveTrailingSpace: true });
-            const synced = targetNorm.length > 0 ? norm.slice(0, targetNorm.length) : norm;
-            if (e.target.value !== synced) {
-              e.target.value = synced;
-              e.target.selectionStart = synced.length;
-              e.target.selectionEnd = synced.length;
-            }
+            syncDom(e.target, e.target.value);
           }}
           onKeyDown={(e) => onDictationKeyDown(e, sentence)}
           onClick={(e) => e.stopPropagation()}
