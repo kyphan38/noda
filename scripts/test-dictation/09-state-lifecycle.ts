@@ -3,7 +3,7 @@
  */
 import { Page } from '@playwright/test';
 import {
-  ReportEntry, check, sleep,
+  ReportEntry, check, sleep, LESSON_SENTENCES,
   activateClean, completeTyping, pressEnter, isRowCompleted,
   seekToSentence, waitForActive, pauseAudio, getAudioTime, isAudioPaused,
   dismissModal,
@@ -14,21 +14,22 @@ export async function run(page: Page, report: ReportEntry[]) {
   await dismissModal(page);
 
   await check(report, '9a. Retry clears completion', async () => {
-    await seekToSentence(page, 9);
-    await waitForActive(page, 9, 4_000);
+    // Use sentence 1 (completed in group 3a)
+    await seekToSentence(page, 1);
+    await waitForActive(page, 1, 4_000);
     await sleep(200);
-    const retryBtn = page.locator(`[data-index="9"] button[title="Practice this sentence again"]`);
+    const retryBtn = page.locator(`[data-index="1"] button[title="Practice this sentence again"]`);
     if (await retryBtn.count() === 0) return false;
     await retryBtn.click();
     await sleep(300);
-    const completed = await isRowCompleted(page, 9);
+    const completed = await isRowCompleted(page, 1);
     return !completed;
   }, 6_000);
 
   await check(report, '9b. Retry allows re-typing', async () => {
-    await activateClean(page, 9);
-    await completeTyping(page, 9);
-    return isRowCompleted(page, 9);
+    await activateClean(page, 1);
+    await completeTyping(page, 1);
+    return isRowCompleted(page, 1);
   }, 25_000);
 
   await dismissModal(page);
@@ -77,7 +78,8 @@ export async function run(page: Page, report: ReportEntry[]) {
 
   await dismissModal(page);
   await check(report, '9f. All sentences completed count', async () => {
-    for (let i = 1; i <= 9; i++) {
+    const total = LESSON_SENTENCES.length;
+    for (let i = 1; i < total; i++) {
       const done = await isRowCompleted(page, i);
       if (!done) {
         await activateClean(page, i);
@@ -86,7 +88,7 @@ export async function run(page: Page, report: ReportEntry[]) {
       }
     }
     let allDone = true;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < total; i++) {
       if (!(await isRowCompleted(page, i))) { allDone = false; break; }
     }
     return allDone;

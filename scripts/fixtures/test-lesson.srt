@@ -37,3 +37,7 @@ They walk to the store.
 10
 00:00:16,200 --> 00:00:17,400
 Rain falls from the clouds.
+
+11
+00:00:18,000 --> 00:00:19,200
+Who run Switzerlandʼs trains?

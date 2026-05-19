@@ -92,11 +92,12 @@ export async function run(page: Page, report: ReportEntry[]) {
   await pressEnter(page).catch(() => {});
 
   await check(report, '3e. Last sentence Enter parks at end', async () => {
-    await activateClean(page, 9);
-    await completeTyping(page, 9);
+    const lastIdx = LESSON_SENTENCES.length - 1;
+    await activateClean(page, lastIdx);
+    await completeTyping(page, lastIdx);
     await pressEnter(page);
     await sleep(300);
     const time = await getAudioTime(page);
-    return time > SENTENCE_ENDS[9];
+    return time > SENTENCE_ENDS[lastIdx];
   }, 25_000);
 }

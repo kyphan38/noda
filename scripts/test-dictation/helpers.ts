@@ -24,11 +24,12 @@ export const LESSON_SENTENCES = [
   'we eat lunch at noon',         // 7  (20 chars)
   'they walk to the store',       // 8  (22 chars)
   'rain falls from the clouds',   // 9  (26 chars)
+  'who run switzerlands trains',  // 10 (27 chars) — SRT has U+02BC modifier apostrophe
 ];
 
 // Start / end timestamps in seconds, from test-lesson.srt
-export const SENTENCE_STARTS = [0.0, 1.8, 3.6, 5.4, 7.2, 9.0, 10.8, 12.6, 14.4, 16.2];
-export const SENTENCE_ENDS   = [1.2, 3.0, 4.8, 6.6, 8.4, 10.2, 12.0, 13.8, 15.6, 17.4];
+export const SENTENCE_STARTS = [0.0, 1.8, 3.6, 5.4, 7.2, 9.0, 10.8, 12.6, 14.4, 16.2, 18.0];
+export const SENTENCE_ENDS   = [1.2, 3.0, 4.8, 6.6, 8.4, 10.2, 12.0, 13.8, 15.6, 17.4, 19.2];
 
 // ── Report ────────────────────────────────────────────────────────────────────
 export interface ReportEntry {
@@ -97,7 +98,7 @@ export async function check(
 export function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Silent WAV ────────────────────────────────────────────────────────────────
-function silentWavDataUrl(durationSeconds = 18, sampleRate = 16000): string {
+function silentWavDataUrl(durationSeconds = 20, sampleRate = 16000): string {
   const n = Math.floor(durationSeconds * sampleRate);
   const buf = Buffer.alloc(44 + n * 2);
   buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 2, 4); buf.write('WAVE', 8);

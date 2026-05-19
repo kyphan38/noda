@@ -51,6 +51,9 @@ export function normalizeDictationTarget(
   for (const c of lower) {
     if (/\s/u.test(c)) {
       if (out.length > 0) lastWasSpace = true;
+    } else if (/[\p{Lm}]/u.test(c)) {
+      // Strip modifier letters (e.g. U+02BC ʼ) — they look like apostrophes
+      // but are classified as Unicode letters; users can't type them.
     } else if (/[\p{L}\p{N}]/u.test(c)) {
       if (lastWasSpace) {
         out += ' ';

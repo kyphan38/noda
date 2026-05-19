@@ -24,6 +24,7 @@ import { run as runAudioAccuracy }   from './07-audio-accuracy.js';
 import { run as runNavigation }      from './08-navigation.js';
 import { run as runStateLifecycle }  from './09-state-lifecycle.js';
 import { run as runMobile }          from './10-mobile.js';
+import { run as runUnicode }         from './11-unicode-normalization.js';
 
 const groups = [
   runSetup,
@@ -35,6 +36,7 @@ const groups = [
   runAudioAccuracy,
   runNavigation,
   runStateLifecycle,
+  runUnicode,
   runMobile,
 ];
 
