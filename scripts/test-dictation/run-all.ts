@@ -14,6 +14,7 @@
 import { chromium } from '@playwright/test';
 import { createReport, printReport, seedLesson, ReportEntry } from './helpers.js';
 
+import { run as runUnitUtils }       from './00-unit-utils.js';
 import { run as runSetup }           from './01-setup.js';
 import { run as runInput }           from './02-input.js';
 import { run as runCompletion }      from './03-completion.js';
@@ -25,8 +26,10 @@ import { run as runNavigation }      from './08-navigation.js';
 import { run as runStateLifecycle }  from './09-state-lifecycle.js';
 import { run as runMobile }          from './10-mobile.js';
 import { run as runUnicode }         from './11-unicode-normalization.js';
+import { run as runSpaceHandling }   from './12-space-handling.js';
 
 const groups = [
+  runUnitUtils,
   runSetup,
   runInput,
   runCompletion,
@@ -38,6 +41,7 @@ const groups = [
   runStateLifecycle,
   runUnicode,
   runMobile,
+  runSpaceHandling,
 ];
 
 async function main() {
