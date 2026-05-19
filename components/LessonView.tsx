@@ -280,7 +280,6 @@ export function LessonView({
           <MemoTranscript
             transcript={transcript}
             currentTime={currentTime}
-            isPlaying={isPlaying}
             appMode={mode}
             hideCaptions={hideCaptions}
             dictationInputs={dictationInputs}

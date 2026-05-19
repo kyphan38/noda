@@ -119,6 +119,7 @@ function stripUndefinedForFirestore<T>(input: T): T {
 }
 
 const toFirestoreLessonRecord = (lesson: LessonRecord): FirestoreLessonRecord => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { mediaFile: _mediaFile, ...lessonWithoutBlob } = lesson;
   return stripUndefinedForFirestore(lessonWithoutBlob) as FirestoreLessonRecord;
 };

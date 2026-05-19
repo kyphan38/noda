@@ -80,14 +80,14 @@ export default function NodaApp() {
   const {
     mediaFile, setMediaFile, mediaURL, setMediaURL,
     duration, setDuration, currentTime, setCurrentTime,
-    isPlaying, setIsPlaying, playbackRate, loopMode, setLoopMode,
+    isPlaying, setIsPlaying, playbackRate, loopMode,
     mediaRef, loopTimeoutRef, isLoopDelayingRef, loopModeRef,
     togglePlayPause, handleSeek, changeSpeed, toggleLoopMode
   } = useMediaPlayer();
 
   const {
     appMode,
-    transcriptText: _transcriptText, setTranscriptText,
+    setTranscriptText,
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
     isStarted, setIsStarted,
     lessonsList, isListLoading,

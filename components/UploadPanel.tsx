@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Music, Play, AlertTriangle, CheckCircle2, Layers } from 'lucide-react';
+import { FileText, Music, Play, AlertTriangle, CheckCircle2, Layers } from 'lucide-react';
 import { AppMode } from '@/types';
 import { LEARNING_MODES } from '@/constants';
 

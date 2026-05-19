@@ -8,7 +8,6 @@ interface TranscriptSentenceProps {
   index: number;
   isActive: boolean;
   isPast: boolean;
-  isPlaying: boolean;
   appMode: AppMode;
   /** When true (normal mode only), caption text is visually hidden but layout stays. */
   hideCaptions?: boolean;
@@ -25,7 +24,6 @@ export function TranscriptSentence({
   index,
   isActive,
   isPast,
-  isPlaying,
   appMode,
   hideCaptions,
   dictationInput,

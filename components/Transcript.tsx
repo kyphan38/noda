@@ -7,7 +7,6 @@ import { MemoTranscriptSentence } from './TranscriptSentence';
 interface TranscriptProps {
   transcript: Sentence[];
   currentTime: number;
-  isPlaying: boolean;
   appMode: AppMode;
   hideCaptions?: boolean;
   dictationInputs: DictationInputs;
@@ -22,7 +21,6 @@ interface TranscriptProps {
 export function Transcript({
   transcript,
   currentTime,
-  isPlaying,
   appMode,
   hideCaptions,
   dictationInputs,
@@ -50,7 +48,6 @@ export function Transcript({
               index={index}
               isActive={isActive}
               isPast={isPast}
-              isPlaying={isPlaying}
               appMode={appMode}
               hideCaptions={!!hideCaptions && appMode === 'normal'}
               dictationInput={dictationInputs[sentence.id] || ''}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -48,10 +49,12 @@ export function LoginView({ appName, subtitle }: LoginViewProps) {
     >
       <section className="w-full max-w-sm space-y-8 text-center">
         <div className="space-y-2">
-          <img
+          <Image
             src="/branding/noda-icon.svg"
             alt={`${appName} icon`}
-            className="mx-auto h-10 w-10 rounded-xl p-1"
+            width={40}
+            height={40}
+            className="mx-auto rounded-xl p-1"
             style={{
               border: "1px solid color-mix(in srgb, var(--border), transparent 20%)",
               backgroundColor: "color-mix(in srgb, var(--muted), transparent 40%)",
