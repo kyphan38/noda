@@ -77,7 +77,7 @@ export function normalizeDictationTarget(
  * type spaces; they just type the letters they hear.
  */
 export function alignDictationInput(rawInput: string, targetNorm: string): string {
-  const norm = normalizeDictationTarget(rawInput);
+  const norm = normalizeDictationTarget(rawInput, { preserveTrailingSpace: true });
   const inputLetters = norm.replace(/ /g, '');
   const targetLetters = targetNorm.replace(/ /g, '');
   const clamped = inputLetters.slice(0, targetLetters.length);
@@ -93,6 +93,11 @@ export function alignDictationInput(rawInput: string, targetNorm: string): strin
       li++;
     }
   }
+
+  if (norm.endsWith(' ') && aligned.length < targetNorm.length && targetNorm[aligned.length] === ' ') {
+    aligned += ' ';
+  }
+
   return aligned;
 }
 
