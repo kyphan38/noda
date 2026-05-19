@@ -81,8 +81,9 @@ export default function NodaApp() {
     mediaFile, setMediaFile, mediaURL, setMediaURL,
     duration, setDuration, currentTime, setCurrentTime,
     isPlaying, setIsPlaying, playbackRate, loopMode,
+    repeatCount, repeatCountRef, sentencePlayCountRef,
     mediaRef, loopTimeoutRef, isLoopDelayingRef, loopModeRef,
-    togglePlayPause, handleSeek, changeSpeed, toggleLoopMode
+    togglePlayPause, handleSeek, changeSpeed, toggleLoopMode, changeRepeatCount,
   } = useMediaPlayer();
 
   const {
@@ -568,13 +569,18 @@ export default function NodaApp() {
     } catch { /* ignore parse errors */ }
   }, [isE2EMode, setTranscriptText, setIsStarted, setLessonName, setMediaURL]);
 
+  const cycleRepeatCount = useCallback(() => {
+    const next = repeatCount === 3 ? 1 : (repeatCount + 1) as 1 | 2 | 3;
+    changeRepeatCount(next);
+  }, [repeatCount, changeRepeatCount]);
+
   useGlobalPlaybackShortcuts(
     selectedItem?.type,
     appMode,
     selectedItem?.type === 'lesson' ? () => setHideCaptions((v) => !v) : undefined,
     handleModeChange,
     togglePlayPauseLesson,
-    toggleLoopMode,
+    cycleRepeatCount,
     loopTimeoutRef,
     isLoopDelayingRef,
     mediaRef,
@@ -593,7 +599,9 @@ export default function NodaApp() {
     appModeRef,
     completedSentencesRef,
     activeSentenceRef,
-    dictationReplayOnceRef
+    dictationReplayOnceRef,
+    repeatCountRef,
+    sentencePlayCountRef
   );
 
   useAutoScrollActiveSentence(currentTime, transcript, scrollContainerRef, lastScrolledIndexRef);
@@ -843,11 +851,11 @@ export default function NodaApp() {
                   duration={duration}
                   currentTime={currentTime}
                   playbackRate={playbackRate}
-                  loopMode={loopMode}
+                  repeatCount={repeatCount}
                   onPlayPause={togglePlayPauseLesson}
                   onSeek={handleSeek}
                   onSpeedChange={changeSpeed}
-                  onLoopModeChange={toggleLoopMode}
+                  onRepeatCountChange={changeRepeatCount}
                   transcript={transcript}
                   dictationInputs={dictationInputs}
                   completedSentences={completedSentences}

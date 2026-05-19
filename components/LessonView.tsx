@@ -7,7 +7,7 @@ import { VideoPane } from './VideoPane';
 import {
   LessonItem,
   AppMode,
-  LoopMode,
+  RepeatCount,
   Sentence,
   DictationInputs,
   CompletedSentences,
@@ -23,11 +23,11 @@ interface LessonViewProps {
   duration: number;
   currentTime: number;
   playbackRate: number;
-  loopMode: LoopMode;
+  repeatCount: RepeatCount;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
-  onSpeedChange: () => void;
-  onLoopModeChange: () => void;
+  onSpeedChange: (speed: number) => void;
+  onRepeatCountChange: (count: RepeatCount) => void;
   onResetDictation?: () => void;
   hideCaptions?: boolean;
   onToggleHideCaptions?: () => void;
@@ -53,11 +53,11 @@ export function LessonView({
   duration,
   currentTime,
   playbackRate,
-  loopMode,
+  repeatCount,
   onPlayPause,
   onSeek,
   onSpeedChange,
-  onLoopModeChange,
+  onRepeatCountChange,
   transcript,
   dictationInputs,
   completedSentences,
@@ -258,11 +258,11 @@ export function LessonView({
               duration={duration}
               currentTime={currentTime}
               playbackRate={playbackRate}
-              loopMode={loopMode}
+              repeatCount={repeatCount}
               onPlayPause={onPlayPause}
               onSeek={onSeek}
               onSpeedChange={onSpeedChange}
-              onLoopModeChange={onLoopModeChange}
+              onRepeatCountChange={onRepeatCountChange}
               seekDisabled={seekDisabled}
               showVideoToggle={isVideoLesson}
               videoHidden={videoHidden}

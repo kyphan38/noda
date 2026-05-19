@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { LoopMode } from '@/types';
-import { DEFAULT_LOOP_MODE } from '@/constants';
-import { getNextPlaybackSpeed } from '@/lib/utils';
+import { LoopMode, RepeatCount } from '@/types';
+import { DEFAULT_LOOP_MODE, DEFAULT_REPEAT_COUNT } from '@/constants';
 
 export function useMediaPlayer() {
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -11,15 +10,22 @@ export function useMediaPlayer() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   const [loopMode, setLoopMode] = useState<LoopMode>(DEFAULT_LOOP_MODE);
+  const [repeatCount, setRepeatCount] = useState<RepeatCount>(DEFAULT_REPEAT_COUNT);
 
   const mediaRef = useRef<HTMLMediaElement | null>(null);
   const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoopDelayingRef = useRef<boolean>(false);
   const loopModeRef = useRef<LoopMode>(loopMode);
+  const repeatCountRef = useRef<RepeatCount>(repeatCount);
+  const sentencePlayCountRef = useRef<number>(0);
 
   useEffect(() => {
     loopModeRef.current = loopMode;
   }, [loopMode]);
+
+  useEffect(() => {
+    repeatCountRef.current = repeatCount;
+  }, [repeatCount]);
 
   useEffect(() => {
     setIsPlaying(false);
@@ -58,16 +64,21 @@ export function useMediaPlayer() {
     }
   };
 
-  const changeSpeed = () => {
-    const nextSpeed = getNextPlaybackSpeed(playbackRate);
-    setPlaybackRate(nextSpeed);
+  const changeSpeed = (speed: number) => {
+    const clamped = Math.round(Math.max(0, Math.min(2, speed)) * 100) / 100;
+    setPlaybackRate(clamped);
     if (mediaRef.current) {
-      mediaRef.current.playbackRate = nextSpeed;
+      mediaRef.current.playbackRate = clamped;
     }
   };
 
   const toggleLoopMode = () => {
     setLoopMode((prev) => (prev === 'none' ? 'one' : 'none'));
+  };
+
+  const changeRepeatCount = (count: RepeatCount) => {
+    setRepeatCount(count);
+    sentencePlayCountRef.current = 0;
   };
 
   return {
@@ -84,6 +95,9 @@ export function useMediaPlayer() {
     playbackRate,
     loopMode,
     setLoopMode,
+    repeatCount,
+    repeatCountRef,
+    sentencePlayCountRef,
     mediaRef,
     loopTimeoutRef,
     isLoopDelayingRef,
@@ -93,5 +107,6 @@ export function useMediaPlayer() {
     handleSeek,
     changeSpeed,
     toggleLoopMode,
+    changeRepeatCount,
   };
 }

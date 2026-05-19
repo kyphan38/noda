@@ -1,5 +1,5 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
-import type { AppMode, LoopMode, Sentence } from '@/types';
+import type { AppMode, LoopMode, RepeatCount, Sentence } from '@/types';
 import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 type RefBool = MutableRefObject<boolean>;
@@ -7,9 +7,6 @@ type RefMode = MutableRefObject<AppMode>;
 type RefCompleted = MutableRefObject<Record<number, boolean>>;
 type RefReplayOnce = MutableRefObject<{ sentenceId: number; end: number } | null>;
 
-/**
- * While audio is playing, updates current time, active sentence ref, dictation pause-at-end, and loop-one behavior.
- */
 export function useLessonPlaybackLoop(
   isPlaying: boolean,
   transcript: Sentence[],
@@ -21,19 +18,16 @@ export function useLessonPlaybackLoop(
   appModeRef: RefMode,
   completedSentencesRef: RefCompleted,
   activeSentenceRef: MutableRefObject<Sentence | null>,
-  replayOnceRef: RefReplayOnce
+  replayOnceRef: RefReplayOnce,
+  repeatCountRef: MutableRefObject<RepeatCount>,
+  sentencePlayCountRef: MutableRefObject<number>
 ) {
   useEffect(() => {
     let animationFrameId: number;
-    // Tracks the sentence id from the previous frame to detect adjacent-sentence
-    // boundary crossings that a single slow frame could skip over.
     let lastActiveSentenceId: number | null = null;
 
     const updateProgress = () => {
       if (audioRef.current) {
-        // Mobile browsers can take multiple RAF frames to resolve a seek.
-        // Running gap/boundary checks on stale currentTime would trigger
-        // conflicting seeks, causing timeline ↔ active-sentence mismatch.
         if (audioRef.current.seeking) {
           animationFrameId = requestAnimationFrame(updateProgress);
           return;
@@ -46,13 +40,11 @@ export function useLessonPlaybackLoop(
         activeSentenceRef.current = currentSentence ?? null;
         lastActiveSentenceId = currentSentence?.id ?? null;
 
-        // All correction branches update `time` so setCurrentTime (called last)
-        // never exposes an overshoot to React state — prevents isActive flicker.
-        //
-        // Adjacent-sentence boundary guard: in dictation mode without replayOnce,
-        // a slow RAF frame can jump directly from sentence X into sentence Y (when
-        // X.end === Y.start with no gap), skipping the end-of-sentence pause entirely.
-        // Detect that transition and park at the previous sentence's end.
+        // Reset play count when active sentence changes
+        if (currentSentence && prevActiveSentenceId !== null && currentSentence.id !== prevActiveSentenceId) {
+          sentencePlayCountRef.current = 0;
+        }
+
         if (
           appModeRef.current === 'dictation' &&
           !replayOnceRef.current &&
@@ -79,6 +71,9 @@ export function useLessonPlaybackLoop(
           replayOnceRef.current = null;
         } else if (activeSentenceRef.current) {
           if (time >= activeSentenceRef.current.end - 0.03) {
+            const currentRepeatCount = repeatCountRef.current;
+            const shouldRepeat = currentRepeatCount > 1 && sentencePlayCountRef.current < currentRepeatCount - 1;
+
             if (loopModeRef.current === 'one') {
               if (!isLoopDelayingRef.current) {
                 isLoopDelayingRef.current = true;
@@ -92,21 +87,34 @@ export function useLessonPlaybackLoop(
                   isLoopDelayingRef.current = false;
                 }, 500);
               }
+            } else if (shouldRepeat) {
+              if (!isLoopDelayingRef.current) {
+                isLoopDelayingRef.current = true;
+                audioRef.current.pause();
+                loopTimeoutRef.current = setTimeout(() => {
+                  sentencePlayCountRef.current += 1;
+                  if (audioRef.current && activeSentenceRef.current) {
+                    const preRoll = appModeRef.current === 'dictation' ? 0 : SENTENCE_PRE_ROLL_SECONDS;
+                    audioRef.current.currentTime = Math.max(0, activeSentenceRef.current.start - preRoll);
+                    audioRef.current.play().catch(() => {});
+                  }
+                  isLoopDelayingRef.current = false;
+                }, 500);
+              }
             } else if (appModeRef.current === 'dictation') {
-              // Don't stop if replayOnceRef targets a different sentence — we're in
-              // transit (e.g. float imprecision placed us at the previous sentence's end).
               if (replayOnceRef.current && replayOnceRef.current.sentenceId !== activeSentenceRef.current.id) {
-                // skip — let the replayOnce check handle it on a future frame
+                // skip
               } else {
                 audioRef.current.pause();
                 time = activeSentenceRef.current.end - 0.03;
                 audioRef.current.currentTime = time;
+                sentencePlayCountRef.current = 0;
               }
+            } else {
+              sentencePlayCountRef.current = 0;
             }
           }
         } else if (appModeRef.current === 'dictation' && !audioRef.current.paused) {
-          // Audio overshot into a gap. Park at the next sentence's speech start and set
-          // replayOnce so resuming plays exactly that sentence and stops at its end.
           const next = transcript.find((s) => s.start > time);
           audioRef.current.pause();
           if (next) {
@@ -142,5 +150,7 @@ export function useLessonPlaybackLoop(
     audioRef,
     activeSentenceRef,
     replayOnceRef,
+    repeatCountRef,
+    sentencePlayCountRef,
   ]);
 }

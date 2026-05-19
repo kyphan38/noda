@@ -8,6 +8,7 @@ export type Sentence = {
 
 // Learning modes
 export type LoopMode = 'none' | 'one';
+export type RepeatCount = 1 | 2 | 3;
 export type AppMode = 'normal' | 'dictation' | 'flashcard';
 // Pronunciation result
 export type SpokenResult = {

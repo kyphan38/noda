@@ -1,20 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
   Gauge,
   Repeat,
-  Repeat1,
   Video,
   VideoOff,
   Eye,
   EyeOff,
   RotateCcw,
 } from 'lucide-react';
-import { LoopMode } from '@/types';
-import { LOOP_MODE_LABELS } from '@/constants';
+import { RepeatCount } from '@/types';
 import { formatTime } from '@/lib/utils';
 
 interface PlayerProps {
@@ -22,11 +20,11 @@ interface PlayerProps {
   duration: number;
   currentTime: number;
   playbackRate: number;
-  loopMode: LoopMode;
+  repeatCount: RepeatCount;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
-  onSpeedChange: () => void;
-  onLoopModeChange: () => void;
+  onSpeedChange: (speed: number) => void;
+  onRepeatCountChange: (count: RepeatCount) => void;
   seekDisabled?: boolean;
   showVideoToggle?: boolean;
   videoHidden?: boolean;
@@ -41,16 +39,107 @@ interface PlayerProps {
 const toolBtn =
   'flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white active:bg-gray-700';
 
+function SpeedPopover({
+  speed,
+  onChange,
+  onClose,
+}: {
+  speed: number;
+  onChange: (s: number) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 flex flex-col items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-lg min-w-[140px] sm:min-w-[120px]"
+    >
+      <span className="text-xs font-medium text-white tabular-nums">{speed.toFixed(1)}×</span>
+      <input
+        type="range"
+        min={0}
+        max={2}
+        step={0.1}
+        value={speed}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-24 sm:w-20 h-1.5 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-blue-400"
+        aria-label="Playback speed"
+      />
+      <div className="flex justify-between w-24 sm:w-20">
+        <span className="text-[10px] text-gray-500">0.0</span>
+        <span className="text-[10px] text-gray-500">2.0</span>
+      </div>
+    </div>
+  );
+}
+
+function RepeatPopover({
+  count,
+  onChange,
+  onClose,
+}: {
+  count: RepeatCount;
+  onChange: (c: RepeatCount) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  const options: RepeatCount[] = [1, 2, 3];
+
+  return (
+    <div
+      ref={ref}
+      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 flex items-center gap-1 rounded-xl border border-gray-700 bg-gray-900 px-2 py-2 shadow-lg"
+    >
+      {options.map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => {
+            onChange(n);
+            onClose();
+          }}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+            count === n
+              ? 'bg-green-600 text-white'
+              : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+          }`}
+          aria-label={`Repeat ${n} time${n > 1 ? 's' : ''}`}
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Player({
   isPlaying,
   duration,
   currentTime,
   playbackRate,
-  loopMode,
+  repeatCount,
   onPlayPause,
   onSeek,
   onSpeedChange,
-  onLoopModeChange,
+  onRepeatCountChange,
   seekDisabled = false,
   showVideoToggle = false,
   videoHidden = false,
@@ -61,9 +150,11 @@ export function Player({
   showReset = false,
   onReset,
 }: PlayerProps) {
-  const loopLabel = LOOP_MODE_LABELS[loopMode] ?? 'Loop';
-  const loopTitle =
-    loopMode === 'none' ? 'Loop: off (click to cycle)' : `Loop: ${loopLabel} (click to cycle)`;
+  const [showSpeedPopover, setShowSpeedPopover] = useState(false);
+  const [showRepeatPopover, setShowRepeatPopover] = useState(false);
+
+  const closeSpeed = useCallback(() => setShowSpeedPopover(false), []);
+  const closeRepeat = useCallback(() => setShowRepeatPopover(false), []);
 
   return (
     <div
@@ -108,33 +199,45 @@ export function Player({
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5">
-        <button
-          type="button"
-          onClick={onSpeedChange}
-          className={toolBtn}
-          aria-label={`Playback speed ${playbackRate.toFixed(2)} times`}
-          title={`Playback speed (${playbackRate.toFixed(2)}×)`}
-        >
-          <Gauge className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
-        </button>
-
-        <button
-          type="button"
-          onClick={onLoopModeChange}
-          className={`${toolBtn} ${
-            loopMode !== 'none'
-              ? 'text-green-400 hover:bg-green-500/15 hover:text-green-300'
-              : ''
-          }`}
-          aria-label={loopTitle}
-          title={loopTitle}
-        >
-          {loopMode === 'one' ? (
-            <Repeat1 className="h-4 w-4 shrink-0" aria-hidden />
-          ) : (
-            <Repeat className="h-4 w-4 shrink-0" aria-hidden />
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowSpeedPopover((v) => !v);
+              setShowRepeatPopover(false);
+            }}
+            className={toolBtn}
+            aria-label={`Playback speed ${playbackRate.toFixed(1)}×`}
+            title={`Playback speed (${playbackRate.toFixed(1)}×)`}
+          >
+            <Gauge className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
+          </button>
+          {showSpeedPopover && (
+            <SpeedPopover speed={playbackRate} onChange={onSpeedChange} onClose={closeSpeed} />
           )}
-        </button>
+        </div>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowRepeatPopover((v) => !v);
+              setShowSpeedPopover(false);
+            }}
+            className={`${toolBtn} ${
+              repeatCount > 1
+                ? 'text-green-400 hover:bg-green-500/15 hover:text-green-300'
+                : ''
+            }`}
+            aria-label={`Repeat ${repeatCount} time${repeatCount > 1 ? 's' : ''}`}
+            title={`Repeat ${repeatCount}×`}
+          >
+            <Repeat className="h-4 w-4 shrink-0" aria-hidden />
+          </button>
+          {showRepeatPopover && (
+            <RepeatPopover count={repeatCount} onChange={onRepeatCountChange} onClose={closeRepeat} />
+          )}
+        </div>
 
         {showVideoToggle && onToggleVideoHidden && (
           <button

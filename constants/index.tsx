@@ -4,6 +4,7 @@ export const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5] as const;
 // Default values
 export const DEFAULT_RECOGNITION_LANG = 'en-US';
 export const DEFAULT_LOOP_MODE = 'none' as const;
+export const DEFAULT_REPEAT_COUNT = 1 as const;
 export const DEFAULT_APP_MODE = 'normal' as const;
 
 // Learning modes

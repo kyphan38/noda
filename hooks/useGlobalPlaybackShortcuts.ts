@@ -1,19 +1,16 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
-import type { AppMode, Sentence } from '@/types';
+import type { AppMode, RepeatCount, Sentence } from '@/types';
 import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 type ModeChange = (mode: AppMode) => void | Promise<void>;
 
-/**
- * Space / L / R / Ctrl replay-at-sentence-start, H toggles captions in normal mode, and ⌘1–2 mode switching for audio lessons.
- */
 export function useGlobalPlaybackShortcuts(
   selectedItemType: 'lesson' | 'deck' | undefined,
   appMode: AppMode,
   toggleHideCaptions: (() => void) | undefined,
   handleModeChange: ModeChange,
   togglePlayPause: () => void,
-  toggleLoopMode: () => void,
+  cycleRepeatCount: () => void,
   loopTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
   isLoopDelayingRef: MutableRefObject<boolean>,
   audioRef: RefObject<HTMLMediaElement | null>,
@@ -68,7 +65,7 @@ export function useGlobalPlaybackShortcuts(
         togglePlayPause();
       } else if (e.code === 'KeyL' || e.code === 'KeyR') {
         e.preventDefault();
-        toggleLoopMode();
+        cycleRepeatCount();
       } else if (e.key === 'Control') {
         e.preventDefault();
         if (loopTimeoutRef.current) {
@@ -91,7 +88,7 @@ export function useGlobalPlaybackShortcuts(
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [
     togglePlayPause,
-    toggleLoopMode,
+    cycleRepeatCount,
     loopTimeoutRef,
     isLoopDelayingRef,
     audioRef,
