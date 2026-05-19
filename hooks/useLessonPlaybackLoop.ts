@@ -31,6 +31,14 @@ export function useLessonPlaybackLoop(
 
     const updateProgress = () => {
       if (audioRef.current) {
+        // Mobile browsers can take multiple RAF frames to resolve a seek.
+        // Running gap/boundary checks on stale currentTime would trigger
+        // conflicting seeks, causing timeline ↔ active-sentence mismatch.
+        if (audioRef.current.seeking) {
+          animationFrameId = requestAnimationFrame(updateProgress);
+          return;
+        }
+
         let time = audioRef.current.currentTime;
 
         const prevActiveSentenceId = lastActiveSentenceId;

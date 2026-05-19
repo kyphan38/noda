@@ -27,6 +27,7 @@ import { run as runStateLifecycle }  from './09-state-lifecycle.js';
 import { run as runMobile }          from './10-mobile.js';
 import { run as runUnicode }         from './11-unicode-normalization.js';
 import { run as runSpaceHandling }   from './12-space-handling.js';
+import { run as runMobileAudioSync } from './13-mobile-audio-sync.js';
 
 const groups = [
   runUnitUtils,
@@ -42,6 +43,7 @@ const groups = [
   runUnicode,
   runMobile,
   runSpaceHandling,
+  runMobileAudioSync,
 ];
 
 async function main() {

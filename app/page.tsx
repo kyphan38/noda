@@ -701,9 +701,9 @@ export default function NodaApp() {
         isLoopDelayingRef.current = false;
       }
       if (mediaRef.current) {
-        // Dictation: replay just this sentence (even if already completed).
         dictationReplayOnceRef.current = { sentenceId: sentence.id, end: sentence.end };
         mediaRef.current.currentTime = sentence.start;
+        setCurrentTime(sentence.start);
         mediaRef.current.play().catch(() => {});
       }
     }

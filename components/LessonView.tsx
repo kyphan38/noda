@@ -247,7 +247,7 @@ export function LessonView({
       )}
 
       {mediaURL && !isVideoLesson && (
-        <audio ref={mediaRef} src={mediaURL} className="hidden" {...mediaEvents} loop={false} />
+        <audio ref={mediaRef} src={mediaURL} preload="metadata" className="hidden" {...mediaEvents} loop={false} />
       )}
 
       <div className={`flex flex-col flex-1 min-h-0 ${mediaURL ? 'gap-4' : ''}`}>
