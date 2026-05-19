@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Play,
   Pause,
@@ -39,29 +40,69 @@ interface PlayerProps {
 const toolBtn =
   'flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white active:bg-gray-700';
 
+function usePopoverPosition(
+  triggerRef: React.RefObject<HTMLButtonElement | null>,
+  isOpen: boolean
+) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !triggerRef.current) {
+      setPos(null);
+      return;
+    }
+    const update = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPos({
+        top: rect.bottom + 6,
+        left: rect.left + rect.width / 2,
+      });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [isOpen, triggerRef]);
+
+  return pos;
+}
+
 function SpeedPopover({
   speed,
   onChange,
   onClose,
+  triggerRef,
 }: {
   speed: number;
   onChange: (s: number) => void;
   onClose: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const pos = usePopoverPosition(triggerRef, true);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (popoverRef.current?.contains(target)) return;
+      onClose();
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
+  }, [onClose, triggerRef]);
 
-  return (
+  if (!pos) return null;
+
+  return createPortal(
     <div
-      ref={ref}
-      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 flex flex-col items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-lg min-w-[140px] sm:min-w-[120px]"
+      ref={popoverRef}
+      style={{ position: 'fixed', top: pos.top, left: pos.left, transform: 'translateX(-50%)' }}
+      className="z-[9999] flex flex-col items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-lg min-w-[140px] sm:min-w-[120px]"
     >
       <span className="text-xs font-medium text-white tabular-nums">{speed.toFixed(1)}×</span>
       <input
@@ -78,7 +119,8 @@ function SpeedPopover({
         <span className="text-[10px] text-gray-500">0.0</span>
         <span className="text-[10px] text-gray-500">2.0</span>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -86,32 +128,42 @@ function RepeatPopover({
   count,
   onChange,
   onClose,
+  triggerRef,
 }: {
   count: RepeatCount;
   onChange: (c: RepeatCount) => void;
   onClose: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const pos = usePopoverPosition(triggerRef, true);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (popoverRef.current?.contains(target)) return;
+      onClose();
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
+  }, [onClose, triggerRef]);
+
+  if (!pos) return null;
 
   const options: RepeatCount[] = [1, 2, 3];
 
-  return (
+  return createPortal(
     <div
-      ref={ref}
-      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 flex items-center gap-1 rounded-xl border border-gray-700 bg-gray-900 px-2 py-2 shadow-lg"
+      ref={popoverRef}
+      style={{ position: 'fixed', top: pos.top, left: pos.left, transform: 'translateX(-50%)' }}
+      className="z-[9999] flex items-center gap-1 rounded-xl border border-gray-700 bg-gray-900 px-2 py-2 shadow-lg"
     >
       {options.map((n) => (
         <button
           key={n}
           type="button"
+          data-repeat-option={n}
           onClick={() => {
             onChange(n);
             onClose();
@@ -126,7 +178,8 @@ function RepeatPopover({
           {n}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -152,6 +205,9 @@ export function Player({
 }: PlayerProps) {
   const [showSpeedPopover, setShowSpeedPopover] = useState(false);
   const [showRepeatPopover, setShowRepeatPopover] = useState(false);
+
+  const speedBtnRef = useRef<HTMLButtonElement>(null);
+  const repeatBtnRef = useRef<HTMLButtonElement>(null);
 
   const closeSpeed = useCallback(() => setShowSpeedPopover(false), []);
   const closeRepeat = useCallback(() => setShowRepeatPopover(false), []);
@@ -199,45 +255,54 @@ export function Player({
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setShowSpeedPopover((v) => !v);
-              setShowRepeatPopover(false);
-            }}
-            className={toolBtn}
-            aria-label={`Playback speed ${playbackRate.toFixed(1)}×`}
-            title={`Playback speed (${playbackRate.toFixed(1)}×)`}
-          >
-            <Gauge className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
-          </button>
-          {showSpeedPopover && (
-            <SpeedPopover speed={playbackRate} onChange={onSpeedChange} onClose={closeSpeed} />
-          )}
-        </div>
+        <button
+          ref={speedBtnRef}
+          type="button"
+          onClick={() => {
+            setShowSpeedPopover((v) => !v);
+            setShowRepeatPopover(false);
+          }}
+          className={`${toolBtn} ${showSpeedPopover ? 'bg-gray-800 text-white' : ''}`}
+          aria-label={`Playback speed ${playbackRate.toFixed(1)}×`}
+          title={`Playback speed (${playbackRate.toFixed(1)}×)`}
+        >
+          <Gauge className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
+        </button>
+        {showSpeedPopover && (
+          <SpeedPopover
+            speed={playbackRate}
+            onChange={onSpeedChange}
+            onClose={closeSpeed}
+            triggerRef={speedBtnRef}
+          />
+        )}
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setShowRepeatPopover((v) => !v);
-              setShowSpeedPopover(false);
-            }}
-            className={`${toolBtn} ${
-              repeatCount > 1
-                ? 'text-green-400 hover:bg-green-500/15 hover:text-green-300'
-                : ''
-            }`}
-            aria-label={`Repeat ${repeatCount} time${repeatCount > 1 ? 's' : ''}`}
-            title={`Repeat ${repeatCount}×`}
-          >
-            <Repeat className="h-4 w-4 shrink-0" aria-hidden />
-          </button>
-          {showRepeatPopover && (
-            <RepeatPopover count={repeatCount} onChange={onRepeatCountChange} onClose={closeRepeat} />
-          )}
-        </div>
+        <button
+          ref={repeatBtnRef}
+          type="button"
+          data-repeat-trigger
+          onClick={() => {
+            setShowRepeatPopover((v) => !v);
+            setShowSpeedPopover(false);
+          }}
+          className={`${toolBtn} ${
+            repeatCount > 1
+              ? 'text-green-400 hover:bg-green-500/15 hover:text-green-300'
+              : ''
+          } ${showRepeatPopover ? 'bg-gray-800' : ''}`}
+          aria-label={`Repeat ${repeatCount} time${repeatCount > 1 ? 's' : ''}`}
+          title={`Repeat ${repeatCount}×`}
+        >
+          <Repeat className="h-4 w-4 shrink-0" aria-hidden />
+        </button>
+        {showRepeatPopover && (
+          <RepeatPopover
+            count={repeatCount}
+            onChange={onRepeatCountChange}
+            onClose={closeRepeat}
+            triggerRef={repeatBtnRef}
+          />
+        )}
 
         {showVideoToggle && onToggleVideoHidden && (
           <button
