@@ -4,9 +4,10 @@
 🎧 UNIVERSAL TRANSCRIPT GENERATOR
 ============================================
 Backend  : mlx-whisper (Apple Silicon)
+Alignment: stable-ts / faster-whisper (forced alignment)
 Model    : whisper-large-v3-mlx
 Language : English
-SRT mode : word-level timestamps (accurate)
+SRT mode : word-level timestamps (refined)
            fallback: proportional split
 Filters  : context-aware hallucination filter
 Splitting: hybrid (punctuation → clause → max words)
@@ -25,6 +26,7 @@ from pathlib import Path
 # ── Config ────────────────────────────────────────────────────────────────────
 
 MLX_MODEL = "mlx-community/whisper-large-v3-mlx"
+STABLE_TS_MODEL = "large-v3"
 INITIAL_PROMPT = ""
 
 PREPEND_PUNCTUATIONS = "\"'¿([{-"
@@ -401,9 +403,10 @@ def _filter_slow_lines(lines: list[list[dict]]) -> list[list[dict]]:
     return result
 
 
-def srt_from_words(words: list[dict]) -> str:
+def srt_from_words(words: list[dict], *, skip_slow_filter: bool = False) -> str:
     lines = split_words_into_lines(words)
-    lines = _filter_slow_lines(lines)
+    if not skip_slow_filter:
+        lines = _filter_slow_lines(lines)
     # Pre-compute start_ms for each line so we can clamp the previous end.
     line_starts = [sec_to_ms(ln[0]["start"]) if ln else None for ln in lines]
     blocks = []
@@ -503,16 +506,17 @@ def validate_srt_timing(content: str) -> list[str]:
     return warnings
 
 
-def json_to_srt(json_path: Path, srt_path: Path) -> int:
-    raw_words = extract_words(json_path)
+def json_to_srt(json_path: Path, srt_path: Path, *, words_override: list[dict] | None = None) -> int:
+    raw_words = words_override if words_override else extract_words(json_path)
+    is_refined = words_override is not None
 
     if raw_words:
         words = dedupe_words(raw_words)
         words = filter_tail_silence(words)
 
         if words:
-            print(f"   ✔  Word-level: {len(words)} words")
-            content = srt_from_words(words)
+            print(f"   ✔  Word-level{' (refined)' if is_refined else ''}: {len(words)} words")
+            content = srt_from_words(words, skip_slow_filter=is_refined)
         else:
             print("   ⚠  All words filtered — segment fallback")
             segments = extract_segments_fallback(json_path)
@@ -592,12 +596,69 @@ def run_mlx_whisper(media_path: Path, output_dir: Path) -> Path | None:
         wav_path.unlink(missing_ok=True)
 
 
+_stable_ts_model = None
+
+def _get_stable_ts_model():
+    global _stable_ts_model
+    if _stable_ts_model is not None:
+        return _stable_ts_model
+    try:
+        import stable_whisper
+    except ImportError:
+        print("   ⚠  stable-ts not installed — using raw Whisper timestamps")
+        print("   💡  pip install stable-ts faster-whisper")
+        return None
+    print("🔧  Loading stable-ts model …")
+    _stable_ts_model = stable_whisper.load_faster_whisper(STABLE_TS_MODEL)
+    return _stable_ts_model
+
+
+def _refine_timestamps(media_path: Path, json_path: Path) -> list[dict] | None:
+    """Use stable-ts forced alignment for accurate word-level timestamps."""
+    model = _get_stable_ts_model()
+    if model is None:
+        return None
+
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    segments = data.get("segments", [])
+    if not segments:
+        return None
+
+    clean_segments = filter_segments(segments)
+    full_text = " ".join(
+        seg.get("text", "").strip()
+        for seg in clean_segments
+        if seg.get("text", "").strip()
+    )
+    if not full_text.strip():
+        return None
+
+    print("🔧  Refining word timestamps (stable-ts forced alignment) …")
+    result = model.align(str(media_path), full_text, language="en")
+
+    words = []
+    for segment in result.segments:
+        for w in segment.words:
+            word = w.word.strip()
+            if not word:
+                continue
+            words.append({"word": word, "start": round(w.start, 3), "end": round(w.end, 3)})
+
+    if words:
+        print(f"   ✔  Refined {len(words)} word timestamps")
+        return words
+
+    print("   ⚠  Refinement produced no words — keeping raw timestamps")
+    return None
+
+
 def transcribe_to_srt(media_path: Path, output_dir: Path, srt_path: Path) -> bool:
     json_path = run_mlx_whisper(media_path, output_dir)
     if not json_path:
         return False
     try:
-        count = json_to_srt(json_path, srt_path)
+        refined = _refine_timestamps(media_path, json_path)
+        count = json_to_srt(json_path, srt_path, words_override=refined)
         print(f"✅  {count} lines → {srt_path}")
 
         lines = srt_path.read_text(encoding="utf-8").strip().split("\n\n")
