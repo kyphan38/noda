@@ -618,7 +618,7 @@ export default function NodaApp() {
     }
   }, [selectedItem?.id, selectedItem?.type, transcript.length]);
 
-  const handleSentenceClick = (sentence: Sentence) => {
+  const handleSentenceClick = useCallback((sentence: Sentence) => {
     if (mediaRef.current) {
       const inDictation = appModeRef.current === 'dictation';
       const seekTarget = inDictation
@@ -636,7 +636,7 @@ export default function NodaApp() {
         mediaRef.current.play().catch(() => {});
       }
     }
-  };
+  }, [mediaRef, appModeRef, setCurrentTime, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef]);
 
   const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
     const targetNorm = normalizeDictationTarget(sentence.text);
@@ -717,7 +717,7 @@ export default function NodaApp() {
     }
   }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange]);
 
-  const handleDictationRetry = (sentence: Sentence) => {
+  const handleDictationRetry = useCallback((sentence: Sentence) => {
     setCompletedSentences((prev) => {
       const next = { ...prev };
       delete next[sentence.id];
@@ -728,7 +728,7 @@ export default function NodaApp() {
       delete next[sentence.id];
       return next;
     });
-  };
+  }, [setCompletedSentences, setDictationInputs]);
 
   const handleResetDictationProgress = () => {
     setDictationInputs({});
