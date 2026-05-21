@@ -25,7 +25,7 @@ from pathlib import Path
 # ── Config ────────────────────────────────────────────────────────────────────
 
 MLX_MODEL = "mlx-community/whisper-large-v3-mlx"
-INITIAL_PROMPT = "Hello! How are you doing today? I am doing great, thank you."
+INITIAL_PROMPT = ""
 
 PREPEND_PUNCTUATIONS = "\"'¿([{-"
 APPEND_PUNCTUATIONS  = "\"'.,。，!！?？:：\")]}、"
@@ -42,6 +42,7 @@ MIN_WORDS_PER_BLOCK    = 3
 MIN_WORD_DURATION_SEC  = 0.05
 SILENCE_GAP_THRESHOLD  = 2.0
 END_PADDING_MS         = 150  # buffer after last word's Whisper end timestamp
+MIN_LINE_WPS           = 1.0  # lines below this words/sec are likely hallucinations
 
 
 # ── Hallucination patterns (two tiers) ────────────────────────────────────────
@@ -84,6 +85,23 @@ _ALWAYS_RE  = re.compile("|".join(ALWAYS_FILTER_PATTERNS),  re.IGNORECASE)
 _SUSPECT_RE = re.compile("|".join(SUSPECT_FILTER_PATTERNS), re.IGNORECASE)
 
 
+def _is_prompt_leakage(text: str, prompt: str) -> bool:
+    """Detect if transcribed text was hallucinated from the initial prompt."""
+    if not prompt:
+        return False
+    clean = lambda s: re.sub(r'[^\w\s]', '', s.lower()).split()
+    text_words = clean(text)
+    prompt_words = clean(prompt)
+    if len(text_words) < 3 or not prompt_words:
+        return False
+    prompt_str = ' '.join(prompt_words)
+    text_str = ' '.join(text_words)
+    if text_str in prompt_str:
+        return True
+    overlap = sum(1 for w in text_words if w in prompt_words)
+    return overlap / len(text_words) >= 0.8
+
+
 # ── Timestamp helpers ─────────────────────────────────────────────────────────
 
 def ms_to_ts(ms: float) -> str:
@@ -122,6 +140,12 @@ def filter_segments(segments: list[dict]) -> list[dict]:
         end   = float(seg.get("end",   0))
         dur   = end - start
 
+        # Tier 0: initial prompt leakage
+        if _is_prompt_leakage(text, INITIAL_PROMPT):
+            print(f"   🧹  Filtered prompt leakage: \"{text[:60]}\"")
+            removed += 1
+            continue
+
         # Tier 1: always filter
         if _ALWAYS_RE.search(text):
             removed += 1
@@ -147,6 +171,13 @@ def filter_segments(segments: list[dict]) -> list[dict]:
             if suspicious:
                 removed += 1
                 continue
+
+        # Tier 3: suspiciously slow speaking rate (hallucination during silence)
+        seg_words = text.split()
+        if len(seg_words) > 2 and dur > 0 and len(seg_words) / dur < MIN_LINE_WPS:
+            print(f"   🧹  Filtered slow segment ({len(seg_words)/dur:.1f} wps): \"{text[:60]}\"")
+            removed += 1
+            continue
 
         kept.append(seg)
 
@@ -353,8 +384,26 @@ def split_words_into_lines(words: list[dict]) -> list[list[dict]]:
 
 # ── SRT builders ──────────────────────────────────────────────────────────────
 
+def _filter_slow_lines(lines: list[list[dict]]) -> list[list[dict]]:
+    """Remove word groups with suspiciously slow speaking rate (likely hallucinations)."""
+    result = []
+    for ln in lines:
+        if not ln:
+            continue
+        duration = ln[-1]["end"] - ln[0]["start"]
+        word_count = len(ln)
+        if duration > 0 and word_count > 2 and word_count / duration < MIN_LINE_WPS:
+            text = " ".join(w["word"] for w in ln).strip()
+            wps = word_count / duration
+            print(f"   🧹  Filtered slow line ({wps:.1f} wps, {word_count} words in {duration:.1f}s): \"{text[:60]}\"")
+            continue
+        result.append(ln)
+    return result
+
+
 def srt_from_words(words: list[dict]) -> str:
     lines = split_words_into_lines(words)
+    lines = _filter_slow_lines(lines)
     # Pre-compute start_ms for each line so we can clamp the previous end.
     line_starts = [sec_to_ms(ln[0]["start"]) if ln else None for ln in lines]
     blocks = []
@@ -407,6 +456,53 @@ def srt_from_segments(segments: list[dict]) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
+def validate_srt_timing(content: str) -> list[str]:
+    """Check generated SRT for timing anomalies."""
+    warnings: list[str] = []
+    blocks = content.strip().split('\n\n')
+
+    prev_end_ms = 0
+    for block in blocks:
+        lines_block = block.split('\n')
+        if len(lines_block) < 3:
+            continue
+
+        idx = lines_block[0].strip()
+        time_match = re.match(
+            r'(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})',
+            lines_block[1],
+        )
+        if not time_match:
+            continue
+
+        start_ms = ts_to_ms(time_match.group(1))
+        end_ms = ts_to_ms(time_match.group(2))
+        duration_s = (end_ms - start_ms) / 1000.0
+
+        text = ' '.join(lines_block[2:]).strip()
+        word_count = len(text.split())
+
+        if duration_s <= 0:
+            warnings.append(f"Line {idx}: zero/negative duration ({duration_s:.2f}s)")
+            prev_end_ms = end_ms
+            continue
+
+        wps = word_count / duration_s
+
+        if word_count > 2 and wps < MIN_LINE_WPS:
+            warnings.append(
+                f"Line {idx}: {wps:.1f} wps ({word_count} words in {duration_s:.1f}s)"
+                f" — suspiciously slow, possible hallucination"
+            )
+
+        if wps > 9:
+            warnings.append(f"Line {idx}: {wps:.1f} wps — suspiciously fast")
+
+        prev_end_ms = end_ms
+
+    return warnings
+
+
 def json_to_srt(json_path: Path, srt_path: Path) -> int:
     raw_words = extract_words(json_path)
 
@@ -425,6 +521,12 @@ def json_to_srt(json_path: Path, srt_path: Path) -> int:
         segments = extract_segments_fallback(json_path)
         print(f"   ⚠  No word timestamps — fallback ({len(segments)} segments)")
         content = srt_from_segments(segments)
+
+    warnings = validate_srt_timing(content)
+    if warnings:
+        print(f"   ⚠️  {len(warnings)} timing warning(s):")
+        for w in warnings[:10]:
+            print(f"      {w}")
 
     srt_path.write_text(content, encoding="utf-8")
     count = content.strip().count("\n\n") + 1 if content.strip() else 0

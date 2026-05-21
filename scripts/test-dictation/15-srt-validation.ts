@@ -83,11 +83,11 @@ function findTimingIssues(sentences: Sentence[]): TimingIssue[] {
       });
     }
 
-    if (wps < 0.3 && words > 2) {
+    if (wps < 0.8 && words > 2) {
       issues.push({
         lineId: s.id,
         type: 'speaking-rate-low',
-        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) — below 0.3 wps threshold`,
+        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) — below 0.8 wps threshold`,
       });
     }
   }
@@ -370,6 +370,30 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     return true;
   });
 
+  unitCheck(report, '15k2. Detection: flags low speaking rate (< 0.8 wps)', () => {
+    const srt = [
+      '1', '00:00:00,000 --> 00:00:05,500',
+      'Only three words here',
+    ].join('\n');
+    const issues = findTimingIssues(parseTranscript(srt));
+    const rateIssues = issues.filter(i => i.type === 'speaking-rate-low');
+    if (rateIssues.length !== 1)
+      throw new Error(`Expected 1 low-rate issue for 4 words in 5.5s (0.73 wps), found ${rateIssues.length}`);
+    return true;
+  });
+
+  unitCheck(report, '15k3. Detection: normal speaking rate (>= 0.8 wps) not flagged', () => {
+    const srt = [
+      '1', '00:00:00,000 --> 00:00:04,000',
+      'These four words pass easily',
+    ].join('\n');
+    const issues = findTimingIssues(parseTranscript(srt));
+    const rateIssues = issues.filter(i => i.type === 'speaking-rate-low');
+    if (rateIssues.length !== 0)
+      throw new Error(`5 words in 4s (1.25 wps) should not be flagged, found ${rateIssues.length} issues`);
+    return true;
+  });
+
   unitCheck(report, '15l. Detection: clean SRT has no issues', () => {
     const srtPath = path.join(process.cwd(), 'scripts', 'fixtures', 'test-lesson.srt');
     const srt = fs.readFileSync(srtPath, 'utf8');
@@ -388,9 +412,9 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     const srtContent = fs.readFileSync(realSrtPath, 'utf8');
     const sentences = parseTranscript(srtContent);
 
-    unitCheck(report, '15m. Real SRT: parses all 823 sentences', () => {
-      if (sentences.length !== 823)
-        throw new Error(`Expected 823 sentences, got ${sentences.length}`);
+    unitCheck(report, '15m. Real SRT: parses all 822 sentences', () => {
+      if (sentences.length !== 822)
+        throw new Error(`Expected 822 sentences, got ${sentences.length}`);
       return true;
     });
 
@@ -417,38 +441,39 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       return true;
     });
 
-    unitCheck(report, '15q. Real SRT line 23: timestamp and text match expected', () => {
-      const line23 = sentences.find(s => s.id === 23);
-      if (!line23) throw new Error('Line 23 not found in parsed output');
-      if (Math.abs(line23.start - 78.7) > 0.01)
-        throw new Error(`Line 23 start: expected 78.7s, got ${line23.start}s`);
-      if (Math.abs(line23.end - 79.76) > 0.01)
-        throw new Error(`Line 23 end: expected 79.76s, got ${line23.end}s`);
-      if (line23.text !== 'And along the way,')
-        throw new Error(`Line 23 text: expected "And along the way,", got "${line23.text}"`);
+    unitCheck(report, '15q. Real SRT line 22: timestamp and text match expected', () => {
+      const line22 = sentences.find(s => s.id === 22);
+      if (!line22) throw new Error('Line 22 not found in parsed output');
+      if (Math.abs(line22.start - 78.7) > 0.01)
+        throw new Error(`Line 22 start: expected 78.7s, got ${line22.start}s`);
+      if (Math.abs(line22.end - 79.76) > 0.01)
+        throw new Error(`Line 22 end: expected 79.76s, got ${line22.end}s`);
+      if (line22.text !== 'And along the way,')
+        throw new Error(`Line 22 text: expected "And along the way,", got "${line22.text}"`);
       return true;
     });
 
-    unitCheck(report, '15r. Real SRT: at t=79.0s sentence matching returns line 23', () => {
+    unitCheck(report, '15r. Real SRT: at t=79.0s sentence matching returns line 22', () => {
       const active = findActiveSentence(sentences, 79.0);
       if (!active)
         throw new Error('No active sentence at t=79.0s');
-      if (active.id !== 23)
-        throw new Error(`At t=79.0s, expected line 23, got line ${active.id} ("${active.text}")`);
+      if (active.id !== 22)
+        throw new Error(`At t=79.0s, expected line 22, got line ${active.id} ("${active.text}")`);
       return true;
     });
 
-    unitCheck(report, '15s. Real SRT line 22: duration reasonable for word count', () => {
+    unitCheck(report, '15s. Real SRT line 22: speaking rate within normal range', () => {
       const line22 = sentences.find(s => s.id === 22);
       if (!line22) throw new Error('Line 22 not found');
       const duration = line22.end - line22.start;
       const words = line22.text.split(/\s+/).filter(w => w).length;
       const wps = words / duration;
-      // Line 22 ("How are you doing today?") is 5 words in 6.37s = 0.78 wps.
-      // This is slow but plausible — likely includes a pause or greeting.
-      // Threshold 0.7 catches truly broken timestamps while tolerating natural pauses.
-      if (wps < 0.7)
-        throw new Error(`Line 22 ("${line22.text}"): ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) — suspiciously slow, may indicate timestamp offset`);
+      if (wps < 0.8)
+        throw new Error(`Line 22 ("${line22.text}"): ${wps.toFixed(2)} wps — below 0.8 threshold`);
+      const issues = findTimingIssues([line22]);
+      const rateIssues = issues.filter(i => i.type === 'speaking-rate-low');
+      if (rateIssues.length > 0)
+        throw new Error(`Line 22 unexpectedly flagged: ${rateIssues[0].message}`);
       return true;
     });
 
@@ -464,7 +489,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       if (lowRate.length > 0)
         throw new Error(`2-word sentence should be exempt from low-rate check, but got: ${lowRate[0].message}`);
 
-      // A 3-word sentence in a longer duration SHOULD be flagged (0.27 wps < 0.3)
+      // A 3-word sentence in a longer duration SHOULD be flagged (0.27 wps < 0.8)
       const srt2 = [
         '1', '00:00:00,000 --> 00:00:11,000', 'Thank you kindly',
       ].join('\n');
@@ -475,13 +500,17 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       return true;
     });
 
-    unitCheck(report, '15t. Real SRT lines 22-24: continuous timeline (no large gaps)', () => {
+    unitCheck(report, '15t. Real SRT lines 21-24: continuous timeline (no large gaps)', () => {
+      const line21 = sentences.find(s => s.id === 21)!;
       const line22 = sentences.find(s => s.id === 22)!;
       const line23 = sentences.find(s => s.id === 23)!;
       const line24 = sentences.find(s => s.id === 24)!;
-      if (!line22 || !line23 || !line24) throw new Error('Missing lines 22-24');
+      if (!line21 || !line22 || !line23 || !line24) throw new Error('Missing lines 21-24');
+      const gap21to22 = line22.start - line21.end;
       const gap22to23 = line23.start - line22.end;
       const gap23to24 = line24.start - line23.end;
+      if (gap21to22 > 9.0)
+        throw new Error(`Gap between line 21 and 22: ${gap21to22.toFixed(3)}s — may indicate missing content`);
       if (gap22to23 > 0.5)
         throw new Error(`Gap between line 22 and 23: ${gap22to23.toFixed(3)}s — may indicate missing content`);
       if (gap23to24 > 0.5)
@@ -552,26 +581,11 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       return true;
     });
 
-    unitCheck(report, '15y. Real SRT line 23: rate ratio vs neighbors (documents detector limit)', () => {
+    unitCheck(report, '15y. Real SRT lines 20-26: no relative anomalies after hallucination fix', () => {
       const nearby = sentences.filter(s => s.id >= 20 && s.id <= 26);
       const anomalies = findRelativeTimingAnomalies(nearby);
-      const line23 = sentences.find(s => s.id === 23)!;
-      const line23wps = wordsPerSec(line23);
-      const neighborIds = [21, 22, 24, 25];
-      const neighborRates = neighborIds
-        .map(id => sentences.find(s => s.id === id))
-        .filter((s): s is Sentence => !!s && s.text.split(/\s+/).filter(w => w).length > 1)
-        .map(s => wordsPerSec(s));
-      const avgNeighbor = neighborRates.reduce((a, b) => a + b, 0) / neighborRates.length;
-      const ratio = line23wps > avgNeighbor ? line23wps / avgNeighbor : avgNeighbor / line23wps;
-      // Line 23 has a KNOWN timing issue (audio says "for stories on our"
-      // but SRT says "And along the way,"). The rate ratio (~1.5x) is below
-      // the 2.5x anomaly threshold — this test documents that the heuristic
-      // cannot catch small timing shifts where the rate stays plausible.
-      if (anomalies.some(a => a.lineId === 23))
-        throw new Error(`Line 23 unexpectedly flagged (ratio ${ratio.toFixed(1)}x): ${anomalies.find(a => a.lineId === 23)?.message}`);
-      if (ratio >= 2.5)
-        throw new Error(`Line 23 ratio ${ratio.toFixed(1)}x exceeds threshold — detector SHOULD have caught it`);
+      if (anomalies.length > 0)
+        throw new Error(`Unexpected anomalies in lines 20-26:\n${anomalies.map(a => a.message).join('\n')}`);
       return true;
     });
   }
@@ -735,33 +749,33 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       return true;
     });
 
-    unitCheck(report, '15ak. Real SRT: mask pattern at line 23 matches screenshot', () => {
-      const line23 = sentences.find(s => s.id === 23);
-      if (!line23) throw new Error('Line 23 not found');
-      const mask = maskPattern(line23.text);
+    unitCheck(report, '15ak. Real SRT: mask pattern at line 22 matches expected', () => {
+      const line22 = sentences.find(s => s.id === 22);
+      if (!line22) throw new Error('Line 22 not found');
+      const mask = maskPattern(line22.text);
       if (mask !== '*** ***** *** ***')
-        throw new Error(`Line 23 mask "${mask}" does not match screenshot pattern "*** ***** *** ***"`);
+        throw new Error(`Line 22 mask "${mask}" does not match expected pattern "*** ***** *** ***"`);
       return true;
     });
 
-    unitCheck(report, '15al. Real SRT: line 23 and 24 have distinct masks', () => {
+    unitCheck(report, '15al. Real SRT: line 22 and 23 have distinct masks', () => {
+      const line22 = sentences.find(s => s.id === 22);
       const line23 = sentences.find(s => s.id === 23);
-      const line24 = sentences.find(s => s.id === 24);
-      if (!line23 || !line24) throw new Error('Missing lines 23/24');
+      if (!line22 || !line23) throw new Error('Missing lines 22/23');
+      const mask22 = maskPattern(line22.text);
       const mask23 = maskPattern(line23.text);
-      const mask24 = maskPattern(line24.text);
-      if (mask23 === mask24)
-        throw new Error(`Lines 23 and 24 have identical mask "${mask23}" — user cannot tell them apart in dictation mode`);
+      if (mask22 === mask23)
+        throw new Error(`Lines 22 and 23 have identical mask "${mask22}" — user cannot tell them apart in dictation mode`);
       return true;
     });
 
-    unitCheck(report, '15am. Real SRT: boundary sweep at 0.1s intervals around line 23', () => {
-      const line23 = sentences.find(s => s.id === 23)!;
+    unitCheck(report, '15am. Real SRT: boundary sweep at 0.1s intervals around line 22', () => {
+      const line22 = sentences.find(s => s.id === 22)!;
       const errors: string[] = [];
-      for (let t = line23.start; t < line23.end; t += 0.1) {
+      for (let t = line22.start; t < line22.end; t += 0.1) {
         const active = findActiveSentence(sentences, t);
-        if (!active || active.id !== 23)
-          errors.push(`t=${t.toFixed(2)}s → line ${active?.id ?? 'none'} (expected 23)`);
+        if (!active || active.id !== 22)
+          errors.push(`t=${t.toFixed(2)}s → line ${active?.id ?? 'none'} (expected 22)`);
       }
       if (errors.length > 0)
         throw new Error(`${errors.length} boundary mismatches:\n${errors.join('\n')}`);
