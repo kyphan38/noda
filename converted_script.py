@@ -561,6 +561,30 @@ def extract_wav(media_path: Path, wav_path: Path):
         sys.exit(1)
 
 
+def normalize_audio(media_path: Path) -> Path:
+    """Re-encode MP3 as CBR for accurate browser seeking (VBR without Xing header causes seek drift)."""
+    if media_path.suffix.lower() != ".mp3":
+        return media_path
+    probe = subprocess.run(
+        ["ffprobe", "-v", "quiet", "-show_entries", "format=bit_rate",
+         "-of", "default=noprint_wrappers=1:nokey=1", str(media_path)],
+        capture_output=True, text=True,
+    )
+    bitrate = int(probe.stdout.strip() or "0")
+    target_kbps = max(128, min(320, round(bitrate / 1000 / 32) * 32)) if bitrate else 128
+    cbr_path = media_path.with_stem(media_path.stem + "_cbr")
+    print(f"🔧  Normalizing MP3 to CBR {target_kbps}k for accurate seeking …")
+    cmd = ["ffmpeg", "-nostdin", "-y", "-i", str(media_path),
+           "-c:a", "libmp3lame", "-b:a", f"{target_kbps}k", str(cbr_path)]
+    if subprocess.run(cmd, stderr=subprocess.DEVNULL).returncode != 0:
+        print("   ⚠  CBR normalization failed — keeping original")
+        return media_path
+    media_path.unlink()
+    cbr_path.rename(media_path)
+    print(f"   ✔  Normalized to CBR {target_kbps}k")
+    return media_path
+
+
 # ── mlx_whisper runner ────────────────────────────────────────────────────────
 
 def run_mlx_whisper(media_path: Path, output_dir: Path) -> Path | None:
@@ -729,6 +753,7 @@ def mode_youtube():
         if subprocess.run(dl_cmd).returncode != 0:
             sys.exit("❌  Download failed.")
         print(f"✅  Downloaded {media_ext.upper()}")
+        normalize_audio(media_path)
     else:
         print(f"⏩  Already exists: {media_path}")
 
@@ -775,6 +800,7 @@ def mode_local():
             print(f"⏩  Skipping '{media_path.name}'")
             continue
         print(f"---\n🎧  [{i}/{len(media_files)}] {media_path.name}")
+        normalize_audio(media_path)
         if not transcribe_to_srt(media_path, output_dir, srt_path):
             failed.append(media_path.name)
 
