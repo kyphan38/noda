@@ -29,6 +29,7 @@ import { run as runUnicode }         from './11-unicode-normalization.js';
 import { run as runSpaceHandling }   from './12-space-handling.js';
 import { run as runMobileAudioSync } from './13-mobile-audio-sync.js';
 import { run as runPlayerPopovers }  from './14-player-popovers.js';
+import { run as runSrtValidation }   from './15-srt-validation.js';
 
 const groups = [
   runUnitUtils,
@@ -46,6 +47,7 @@ const groups = [
   runSpaceHandling,
   runMobileAudioSync,
   runPlayerPopovers,
+  runSrtValidation,
 ];
 
 async function main() {
