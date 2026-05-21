@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, LoopMode, RepeatCount, Sentence } from '@/types';
-import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
+import { REPEAT_PAUSE_MS, SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 type RefBool = MutableRefObject<boolean>;
 type RefMode = MutableRefObject<AppMode>;
@@ -65,10 +65,28 @@ export function useLessonPlaybackLoop(
           replayOnceRef.current &&
           time >= replayOnceRef.current.end - 0.03
         ) {
-          audioRef.current.pause();
-          time = replayOnceRef.current.end - 0.05;
-          audioRef.current.currentTime = time;
-          replayOnceRef.current = null;
+          const rpCount = repeatCountRef.current;
+          const rpShouldRepeat = rpCount > 1 && sentencePlayCountRef.current < rpCount - 1;
+
+          if (rpShouldRepeat && !isLoopDelayingRef.current) {
+            isLoopDelayingRef.current = true;
+            audioRef.current.pause();
+            const seekTo = activeSentenceRef.current?.start ?? 0;
+            loopTimeoutRef.current = setTimeout(() => {
+              sentencePlayCountRef.current += 1;
+              if (audioRef.current) {
+                audioRef.current.currentTime = seekTo;
+                audioRef.current.play().catch(() => {});
+              }
+              isLoopDelayingRef.current = false;
+            }, REPEAT_PAUSE_MS);
+          } else {
+            audioRef.current.pause();
+            time = replayOnceRef.current.end - 0.05;
+            audioRef.current.currentTime = time;
+            replayOnceRef.current = null;
+            sentencePlayCountRef.current = 0;
+          }
         } else if (activeSentenceRef.current) {
           if (time >= activeSentenceRef.current.end - 0.03) {
             const currentRepeatCount = repeatCountRef.current;
@@ -85,7 +103,7 @@ export function useLessonPlaybackLoop(
                     audioRef.current.play().catch(() => {});
                   }
                   isLoopDelayingRef.current = false;
-                }, 500);
+                }, REPEAT_PAUSE_MS);
               }
             } else if (shouldRepeat) {
               if (!isLoopDelayingRef.current) {
@@ -99,7 +117,7 @@ export function useLessonPlaybackLoop(
                     audioRef.current.play().catch(() => {});
                   }
                   isLoopDelayingRef.current = false;
-                }, 500);
+                }, REPEAT_PAUSE_MS);
               }
             } else if (appModeRef.current === 'dictation') {
               if (replayOnceRef.current && replayOnceRef.current.sentenceId !== activeSentenceRef.current.id) {
