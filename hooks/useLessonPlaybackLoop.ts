@@ -1,6 +1,7 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, LoopMode, RepeatCount, Sentence } from '@/types';
 import { REPEAT_PAUSE_MS, SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
+import { shouldRepeatSentenceAtEnd } from '@/lib/repeat-count';
 
 type RefBool = MutableRefObject<boolean>;
 type RefMode = MutableRefObject<AppMode>;
@@ -65,8 +66,10 @@ export function useLessonPlaybackLoop(
           replayOnceRef.current &&
           time >= replayOnceRef.current.end - 0.03
         ) {
-          const rpCount = repeatCountRef.current;
-          const rpShouldRepeat = rpCount > 1 && sentencePlayCountRef.current < rpCount - 1;
+          const rpShouldRepeat = shouldRepeatSentenceAtEnd(
+            repeatCountRef.current,
+            sentencePlayCountRef.current
+          );
 
           if (rpShouldRepeat && !isLoopDelayingRef.current) {
             isLoopDelayingRef.current = true;
@@ -89,8 +92,10 @@ export function useLessonPlaybackLoop(
           }
         } else if (activeSentenceRef.current) {
           if (time >= activeSentenceRef.current.end - 0.03) {
-            const currentRepeatCount = repeatCountRef.current;
-            const shouldRepeat = currentRepeatCount > 1 && sentencePlayCountRef.current < currentRepeatCount - 1;
+            const shouldRepeat = shouldRepeatSentenceAtEnd(
+              repeatCountRef.current,
+              sentencePlayCountRef.current
+            );
 
             if (loopModeRef.current === 'one') {
               if (!isLoopDelayingRef.current) {

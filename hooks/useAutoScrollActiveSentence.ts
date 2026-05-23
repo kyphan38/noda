@@ -1,5 +1,5 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
-import { scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
+import { findActiveTranscriptIndex, scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
 import type { Sentence } from '@/types';
 
 /**
@@ -15,23 +15,13 @@ export function useAutoScrollActiveSentence(
   const prevActiveIndexRef = useRef(-1);
 
   useEffect(() => {
-    let activeIndex = -1;
-    for (let i = prevActiveIndexRef.current >= 0 ? prevActiveIndexRef.current : 0; i < transcript.length; i++) {
-      const s = transcript[i];
-      if (currentTime >= s.start && currentTime < s.end) {
-        activeIndex = i;
-        break;
-      }
-      if (s.start > currentTime) break;
-    }
-    if (activeIndex === -1 && prevActiveIndexRef.current > 0) {
-      for (let i = prevActiveIndexRef.current - 1; i >= 0; i--) {
-        const s = transcript[i];
-        if (currentTime >= s.start && currentTime < s.end) {
-          activeIndex = i;
-          break;
-        }
-        if (s.end <= currentTime) break;
+    let activeIndex = findActiveTranscriptIndex(currentTime, transcript);
+
+    // Prefer scanning forward from last known index when still inside that sentence.
+    if (prevActiveIndexRef.current >= 0) {
+      const s = transcript[prevActiveIndexRef.current];
+      if (s && currentTime >= s.start && currentTime < s.end) {
+        activeIndex = prevActiveIndexRef.current;
       }
     }
 

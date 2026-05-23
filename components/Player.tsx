@@ -12,8 +12,16 @@ import {
   Eye,
   EyeOff,
   RotateCcw,
+  Infinity,
 } from 'lucide-react';
 import { RepeatCount } from '@/types';
+import {
+  REPEAT_COUNT_OPTIONS,
+  isRepeatCountActive,
+  repeatCountAriaLabel,
+  repeatCountTitle,
+  repeatOptionAriaLabel,
+} from '@/lib/repeat-count';
 import { formatTime } from '@/lib/utils';
 
 interface PlayerProps {
@@ -151,15 +159,13 @@ function RepeatPopover({
 
   if (!pos) return null;
 
-  const options: RepeatCount[] = [1, 2, 3];
-
   return createPortal(
     <div
       ref={popoverRef}
       style={{ position: 'fixed', top: pos.top, left: pos.left, transform: 'translateX(-50%)' }}
       className="z-[9999] flex items-center gap-1 rounded-xl border border-gray-700 bg-gray-900 px-2 py-2 shadow-lg"
     >
-      {options.map((n) => (
+      {REPEAT_COUNT_OPTIONS.map((n) => (
         <button
           key={n}
           type="button"
@@ -173,9 +179,13 @@ function RepeatPopover({
               ? 'bg-green-600 text-white'
               : 'text-gray-400 hover:bg-gray-800 hover:text-white'
           }`}
-          aria-label={`Repeat ${n} time${n > 1 ? 's' : ''}`}
+          aria-label={repeatOptionAriaLabel(n)}
         >
-          {n}
+          {n === 'infinite' ? (
+            <Infinity className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+          ) : (
+            n
+          )}
         </button>
       ))}
     </div>,
@@ -286,12 +296,12 @@ export function Player({
             setShowSpeedPopover(false);
           }}
           className={`${toolBtn} ${
-            repeatCount > 1
+            isRepeatCountActive(repeatCount)
               ? 'text-green-400 hover:bg-green-500/15 hover:text-green-300'
               : ''
           } ${showRepeatPopover ? 'bg-gray-800' : ''}`}
-          aria-label={`Repeat ${repeatCount} time${repeatCount > 1 ? 's' : ''}`}
-          title={`Repeat ${repeatCount}×`}
+          aria-label={repeatCountAriaLabel(repeatCount)}
+          title={repeatCountTitle(repeatCount)}
         >
           <Repeat className="h-4 w-4 shrink-0" aria-hidden />
         </button>

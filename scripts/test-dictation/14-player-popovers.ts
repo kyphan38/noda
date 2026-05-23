@@ -40,7 +40,7 @@ export async function run(page: Page, report: ReportEntry[]) {
 
   const repeatTrigger = () => page.locator('button[data-repeat-trigger]');
   const speedTrigger = () => page.locator('button[aria-label^="Playback speed"]');
-  const repeatOption = (n: number) => page.locator(`button[data-repeat-option="${n}"]`);
+  const repeatOption = (n: number | 'infinite') => page.locator(`button[data-repeat-option="${n}"]`);
   const speedSlider = () => page.locator('input[aria-label="Playback speed"]');
 
   // ── Speed Popover ─────────────────────────────────────────────────────────
@@ -91,11 +91,12 @@ export async function run(page: Page, report: ReportEntry[]) {
     return (await repeatOption(2).count()) === 1;
   });
 
-  await check(report, '14h. Repeat popover has 3 options', async () => {
+  await check(report, '14h. Repeat popover has 4 options (1, 2, 3, infinite)', async () => {
     return (
       (await repeatOption(1).count()) === 1 &&
       (await repeatOption(2).count()) === 1 &&
-      (await repeatOption(3).count()) === 1
+      (await repeatOption(3).count()) === 1 &&
+      (await repeatOption('infinite').count()) === 1
     );
   });
 
@@ -196,7 +197,8 @@ export async function run(page: Page, report: ReportEntry[]) {
 
   const mRepeatTrigger = () => mobilePage.locator('button[data-repeat-trigger]');
   const mSpeedTrigger = () => mobilePage.locator('button[aria-label^="Playback speed"]');
-  const mRepeatOption = (n: number) => mobilePage.locator(`button[data-repeat-option="${n}"]`);
+  const mRepeatOption = (n: number | 'infinite') =>
+    mobilePage.locator(`button[data-repeat-option="${n}"]`);
   const mSpeedSlider = () => mobilePage.locator('input[aria-label="Playback speed"]');
 
   await check(report, '14p. Mobile: speed popover opens', async () => {

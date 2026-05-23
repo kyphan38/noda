@@ -15,6 +15,7 @@ import {
   scrollTranscriptToTop,
   rewriteSlotWidth,
   getRewriteStatusCenterDeltaY,
+  sleep,
 } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
@@ -70,4 +71,22 @@ export async function run(page: Page, report: ReportEntry[]) {
     const visible = await isRowVisible(page, completeIdx);
     return completed && visible;
   }, 20_000);
+
+  await check(report, '16g. Normal→Dictation scrolls active line into view', async () => {
+    const targetIdx = 8;
+    const normalTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Normal' });
+    const dictTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Dictation' });
+    const currentMode = page.locator('nav[aria-label="Lesson mode"] button[aria-current="page"]');
+    if ((await currentMode.textContent())?.trim() === 'Dictation') {
+      await normalTab.click();
+      await sleep(400);
+    }
+    await seekToSentence(page, targetIdx);
+    await waitForActive(page, targetIdx, 4_000);
+    await scrollTranscriptToTop(page);
+    await dictTab.click();
+    await waitForActive(page, targetIdx, 4_000);
+    await sleep(600);
+    return isRowVisible(page, targetIdx);
+  }, 15_000);
 }

@@ -3,7 +3,10 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
-import { scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
+import {
+  scrollDictationTargetRow,
+  scrollTranscriptRowIntoView,
+} from '@/lib/transcript-scroll';
 import { patchFlashcardCompletionModalShownFirestore, restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
@@ -32,6 +35,7 @@ import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { hasAllowlistConfig, isAllowedUser } from '@/lib/auth/allowed-user';
 import { buildItemSearchString, parseItemFromSearch } from '@/lib/item-url';
 import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
+import { cycleRepeatCount as getNextRepeatCount } from '@/lib/repeat-count';
 
 function pushItemHistoryState(
   row: {
@@ -175,10 +179,17 @@ export default function NodaApp() {
         const el = mediaRef.current;
         if (el) {
           el.pause();
-          el.currentTime = 0;
+          if (mode === 'normal') {
+            el.currentTime = 0;
+            setCurrentTime(0);
+          }
+        } else if (mode === 'normal') {
+          setCurrentTime(0);
         }
-        setCurrentTime(0);
         setIsPlaying(false);
+        if (mode === 'dictation') {
+          lastScrolledIndexRef.current = -1;
+        }
       }
       await applyLessonAppMode(mode);
     },
@@ -571,8 +582,7 @@ export default function NodaApp() {
   }, [isE2EMode, setTranscriptText, setIsStarted, setLessonName, setMediaURL]);
 
   const cycleRepeatCount = useCallback(() => {
-    const next = repeatCount === 3 ? 1 : (repeatCount + 1) as 1 | 2 | 3;
-    changeRepeatCount(next);
+    changeRepeatCount(getNextRepeatCount(repeatCount));
   }, [repeatCount, changeRepeatCount]);
 
   useGlobalPlaybackShortcuts(
@@ -606,6 +616,36 @@ export default function NodaApp() {
   );
 
   useAutoScrollActiveSentence(currentTime, transcript, scrollContainerRef, lastScrolledIndexRef);
+
+  const prevAppModeRef = useRef(appMode);
+  useLayoutEffect(() => {
+    const enteredDictation =
+      appMode === 'dictation' &&
+      prevAppModeRef.current !== 'dictation' &&
+      selectedItem?.type === 'lesson' &&
+      transcript.length > 0;
+
+    prevAppModeRef.current = appMode;
+
+    if (!enteredDictation) return;
+
+    lastScrolledIndexRef.current = -1;
+    const scrollAfterMount = () => {
+      const mediaTime = mediaRef.current?.currentTime ?? currentTime;
+      scrollDictationTargetRow(
+        scrollContainerRef.current,
+        transcript,
+        mediaTime,
+        completedSentences,
+        lastScrolledIndexRef,
+        'smooth',
+      );
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollAfterMount);
+    });
+  }, [appMode, selectedItem?.type, currentTime, transcript, completedSentences, mediaRef]);
 
   useLayoutEffect(() => {
     if (selectedItem?.type !== 'lesson' || transcript.length === 0) return;
