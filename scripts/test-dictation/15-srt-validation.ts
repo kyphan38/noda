@@ -852,6 +852,39 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     });
   }
 
+  // ── Word-presence and word-count regression guards ─────────────────────────
+
+  console.log('\n─── 15. Word-Presence Regression ───');
+
+  if (fs.existsSync(realSrtPath)) {
+    const srtContent = fs.readFileSync(realSrtPath, 'utf8');
+    const sentences = parseTranscript(srtContent);
+    const allText = sentences.map(s => s.text).join('\n');
+
+    unitCheck(report, '15aq. Real SRT: previously-dropped short words are present', () => {
+      const required: [string, string][] = [
+        ['A few months ago', 'block 7 — word "A" was dropped'],
+        ['I asked the people', 'block 8 — word "I" was dropped'],
+        ["I'm an American who", 'block 26 — word "an" was dropped'],
+        ["how it's designed", 'block 30 — word "how" was dropped'],
+        ['my first item of business', 'block 34 — word "my" was dropped'],
+      ];
+      const missing = required.filter(([phrase]) => !allText.includes(phrase));
+      if (missing.length > 0)
+        throw new Error(`${missing.length} known short words still missing from SRT:\n${missing.map(([p, reason]) => `  "${p}" — ${reason}`).join('\n')}`);
+      return true;
+    });
+
+    unitCheck(report, '15ar. Real SRT: total word count above safe threshold', () => {
+      const totalWords = sentences.reduce(
+        (sum, s) => sum + s.text.split(/\s+/).filter(w => w).length, 0,
+      );
+      if (totalWords < 5900)
+        throw new Error(`Total word count ${totalWords} is below 5900 — pipeline may be dropping words`);
+      return true;
+    });
+  }
+
   unitCheck(report, '15ap. Matching: rapid seek across multiple boundaries', () => {
     const srt = [
       '1', '00:00:00,000 --> 00:00:01,000', 'A', '',
