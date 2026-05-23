@@ -853,29 +853,67 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
   }
 
   // ── Word-presence and word-count regression guards ─────────────────────────
+  // Uses a committed fixture so these tests run on any machine (no audio/ dependency).
 
   console.log('\n─── 15. Word-Presence Regression ───');
+
+  const excerptPath = path.join(process.cwd(), 'scripts', 'fixtures', 'switzerland-excerpt.srt');
+  const excerptContent = fs.readFileSync(excerptPath, 'utf8');
+  const excerptSentences = parseTranscript(excerptContent);
+  const excerptText = excerptSentences.map(s => s.text).join('\n');
+
+  unitCheck(report, '15aq. Excerpt: previously-dropped short words are present', () => {
+    const required: [string, string][] = [
+      ['A few months ago', 'word "A" was dropped by dedupe_words'],
+      ['I asked the people', 'word "I" was dropped by dedupe_words'],
+      ["I'm an American who", 'word "an" was dropped by dedupe_words'],
+      ["how it's designed", 'word "how" was dropped by dedupe_words'],
+      ['my first item of business', 'word "my" was dropped by dedupe_words'],
+    ];
+    const missing = required.filter(([phrase]) => !excerptText.includes(phrase));
+    if (missing.length > 0)
+      throw new Error(`${missing.length} known short words missing from excerpt:\n${missing.map(([p, reason]) => `  "${p}" — ${reason}`).join('\n')}`);
+    return true;
+  });
+
+  unitCheck(report, '15ar. Excerpt: no negative durations', () => {
+    const bad = excerptSentences.filter(s => s.end < s.start);
+    if (bad.length > 0)
+      throw new Error(`${bad.length} sentences with negative duration: ${bad.map(s => `Line ${s.id}`).join(', ')}`);
+    return true;
+  });
+
+  unitCheck(report, '15as. Excerpt: no overlapping timestamps', () => {
+    const issues = findTimingIssues(excerptSentences).filter(i => i.type === 'overlap');
+    if (issues.length > 0)
+      throw new Error(`${issues.length} overlaps:\n${issues.slice(0, 5).map(i => i.message).join('\n')}`);
+    return true;
+  });
+
+  unitCheck(report, '15at. Excerpt: start times are monotonically increasing', () => {
+    const violations: string[] = [];
+    for (let i = 1; i < excerptSentences.length; i++) {
+      if (excerptSentences[i].start < excerptSentences[i - 1].start)
+        violations.push(`Line ${excerptSentences[i].id} starts before line ${excerptSentences[i - 1].id}`);
+    }
+    if (violations.length > 0)
+      throw new Error(`${violations.length} out-of-order:\n${violations.join('\n')}`);
+    return true;
+  });
+
+  unitCheck(report, '15au. Excerpt: IDs are sequential 1..N', () => {
+    for (let i = 0; i < excerptSentences.length; i++) {
+      if (excerptSentences[i].id !== i + 1)
+        throw new Error(`Index ${i} has id ${excerptSentences[i].id}, expected ${i + 1}`);
+    }
+    return true;
+  });
 
   if (fs.existsSync(realSrtPath)) {
     const srtContent = fs.readFileSync(realSrtPath, 'utf8');
     const sentences = parseTranscript(srtContent);
-    const allText = sentences.map(s => s.text).join('\n');
 
-    unitCheck(report, '15aq. Real SRT: previously-dropped short words are present', () => {
-      const required: [string, string][] = [
-        ['A few months ago', 'block 7 — word "A" was dropped'],
-        ['I asked the people', 'block 8 — word "I" was dropped'],
-        ["I'm an American who", 'block 26 — word "an" was dropped'],
-        ["how it's designed", 'block 30 — word "how" was dropped'],
-        ['my first item of business', 'block 34 — word "my" was dropped'],
-      ];
-      const missing = required.filter(([phrase]) => !allText.includes(phrase));
-      if (missing.length > 0)
-        throw new Error(`${missing.length} known short words still missing from SRT:\n${missing.map(([p, reason]) => `  "${p}" — ${reason}`).join('\n')}`);
-      return true;
-    });
-
-    unitCheck(report, '15ar. Real SRT: total word count above safe threshold', () => {
+    unitCheck(report, '15av. Real SRT: total word count above safe threshold', () => {
       const totalWords = sentences.reduce(
         (sum, s) => sum + s.text.split(/\s+/).filter(w => w).length, 0,
       );
