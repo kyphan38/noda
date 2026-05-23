@@ -412,9 +412,9 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     const srtContent = fs.readFileSync(realSrtPath, 'utf8');
     const sentences = parseTranscript(srtContent);
 
-    unitCheck(report, '15m. Real SRT: parses all 814 sentences', () => {
-      if (sentences.length !== 814)
-        throw new Error(`Expected 814 sentences, got ${sentences.length}`);
+    unitCheck(report, '15m. Real SRT: parses all 829 sentences', () => {
+      if (sentences.length !== 829)
+        throw new Error(`Expected 829 sentences, got ${sentences.length}`);
       return true;
     });
 
@@ -433,7 +433,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     });
 
     unitCheck(report, '15p. Real SRT: speaking rate within bounds (allowing stable-ts alignment artifacts)', () => {
-      const knownAlignmentArtifacts = new Set([203, 283, 587]);
+      const knownAlignmentArtifacts = new Set([669, 827]);
       const issues = findTimingIssues(sentences).filter(
         i => (i.type === 'speaking-rate-high' || i.type === 'speaking-rate-low')
           && !knownAlignmentArtifacts.has(i.lineId)
@@ -446,10 +446,10 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     unitCheck(report, '15q. Real SRT line 22: timestamp and text match expected', () => {
       const line22 = sentences.find(s => s.id === 22);
       if (!line22) throw new Error('Line 22 not found in parsed output');
-      if (Math.abs(line22.start - 75.02) > 0.01)
-        throw new Error(`Line 22 start: expected 75.02s, got ${line22.start}s`);
-      if (Math.abs(line22.end - 79.89) > 0.01)
-        throw new Error(`Line 22 end: expected 79.89s, got ${line22.end}s`);
+      if (Math.abs(line22.start - 78.64) > 0.01)
+        throw new Error(`Line 22 start: expected 78.64s, got ${line22.start}s`);
+      if (Math.abs(line22.end - 79.74) > 0.01)
+        throw new Error(`Line 22 end: expected 79.74s, got ${line22.end}s`);
       if (line22.text !== 'And along the way,')
         throw new Error(`Line 22 text: expected "And along the way,", got "${line22.text}"`);
       return true;
@@ -586,7 +586,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     unitCheck(report, '15y. Real SRT lines 20-26: no unexpected relative anomalies', () => {
       const nearby = sentences.filter(s => s.id >= 20 && s.id <= 26);
       const anomalies = findRelativeTimingAnomalies(nearby);
-      const knownWideAlignment = new Set([22]);
+      const knownWideAlignment = new Set<number>();
       const unexpected = anomalies.filter(a => !knownWideAlignment.has(a.lineId));
       if (unexpected.length > 0)
         throw new Error(`Unexpected anomalies in lines 20-26:\n${unexpected.map(a => a.message).join('\n')}`);
@@ -744,7 +744,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     });
 
     unitCheck(report, '15aj. Real SRT: no unexpected micro-duration multi-word sentences (< 0.3s)', () => {
-      const knownQuickExclamations = new Set([587, 597]);
+      const knownQuickExclamations = new Set([600, 669, 827]);
       const micro = sentences.filter(s => {
         const words = s.text.split(/\s+/).filter(w => w).length;
         return (s.end - s.start) < 0.3 && words > 1 && !knownQuickExclamations.has(s.id);

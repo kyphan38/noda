@@ -41,7 +41,6 @@ CLAUSE_CONJUNCTIONS  = {
 
 MAX_WORDS_PER_BLOCK    = 14
 MIN_WORDS_PER_BLOCK    = 3
-MIN_WORD_DURATION_SEC  = 0.05
 SILENCE_GAP_THRESHOLD  = 2.0
 END_PADDING_MS         = 150  # buffer after last word's Whisper end timestamp
 MIN_LINE_WPS           = 1.0  # lines below this words/sec are likely hallucinations
@@ -216,9 +215,12 @@ def dedupe_words(words: list[dict]) -> list[dict]:
     for w in words:
         duration = w["end"] - w["start"]
 
-        if duration < MIN_WORD_DURATION_SEC:
+        if duration < 0:
             removed += 1
             continue
+
+        if duration == 0:
+            w = {**w, "end": w["start"] + 0.001}
 
         if (result
                 and result[-1]["word"].lower() == w["word"].lower()
@@ -258,7 +260,7 @@ def extract_segments_fallback(json_path: Path) -> list[dict]:
     for seg in clean:
         text = seg.get("text", "").strip()
         dur  = float(seg.get("end", 0)) - float(seg.get("start", 0))
-        if text and dur >= MIN_WORD_DURATION_SEC:
+        if text and dur > 0:
             segs.append({
                 "text":  text,
                 "start": float(seg.get("start", 0)),
