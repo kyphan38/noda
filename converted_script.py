@@ -693,12 +693,12 @@ def _refine_timestamps(media_path: Path, json_path: Path) -> list[dict] | None:
     return None
 
 
-def transcribe_to_srt(media_path: Path, output_dir: Path, srt_path: Path) -> bool:
+def transcribe_to_srt(media_path: Path, output_dir: Path, srt_path: Path, *, refine: bool = True) -> bool:
     json_path = run_mlx_whisper(media_path, output_dir)
     if not json_path:
         return False
     try:
-        refined = _refine_timestamps(media_path, json_path)
+        refined = _refine_timestamps(media_path, json_path) if refine else None
         count = json_to_srt(json_path, srt_path, words_override=refined)
         print(f"✅  {count} lines → {srt_path}")
 
@@ -716,7 +716,7 @@ def transcribe_to_srt(media_path: Path, output_dir: Path, srt_path: Path) -> boo
 
 # ── Mode 1: YouTube ───────────────────────────────────────────────────────────
 
-def mode_youtube():
+def mode_youtube(*, refine: bool = True):
     check_deps(need_ytdlp=True)
     url = input("🔗  Paste the YouTube link: ").strip()
     if not url:
@@ -786,7 +786,7 @@ def mode_youtube():
     print(f"2. GENERATING TRANSCRIPT …")
     print("======================================")
 
-    if not transcribe_to_srt(media_path, output_dir, srt_path):
+    if not transcribe_to_srt(media_path, output_dir, srt_path, refine=refine):
         sys.exit("❌  Transcription failed.")
     _print_results(media_path, srt_path)
 
@@ -795,7 +795,7 @@ def mode_youtube():
 
 MEDIA_EXTENSIONS = {".mp3", ".m4a", ".wav", ".mp4", ".mkv", ".mov"}
 
-def mode_local():
+def mode_local(*, refine: bool = True):
     check_deps()
     output_dir = Path("./subs")
     output_dir.mkdir(exist_ok=True)
@@ -818,7 +818,7 @@ def mode_local():
             continue
         print(f"---\n🎧  [{i}/{len(media_files)}] {media_path.name}")
         normalize_audio(media_path)
-        if not transcribe_to_srt(media_path, output_dir, srt_path):
+        if not transcribe_to_srt(media_path, output_dir, srt_path, refine=refine):
             failed.append(media_path.name)
 
     print("======================================")
@@ -847,9 +847,13 @@ def ask(prompt, choices):
 # ── Entry ─────────────────────────────────────────────────────────────────────
 
 def main():
+    refine = "--no-refine" not in sys.argv
+
     print("============================================")
     print("🎧  UNIVERSAL TRANSCRIPT GENERATOR")
     print("    mlx-whisper • large-v3 • Apple Silicon")
+    if not refine:
+        print("    ⚡ stable-ts refinement SKIPPED")
     print("============================================\n")
 
     print("📥  Input source:")
@@ -860,9 +864,9 @@ def main():
 
     print()
     if mode == "youtube":
-        mode_youtube()
+        mode_youtube(refine=refine)
     else:
-        mode_local()
+        mode_local(refine=refine)
 
     print("\n✨  Done!")
 
