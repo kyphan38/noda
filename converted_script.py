@@ -383,7 +383,22 @@ def split_words_into_lines(words: list[dict]) -> list[list[dict]]:
     for chunk in raw_chunks:
         final.extend(_split_long_chunk(chunk))
 
-    return final
+    # Layer 4: merge forward-orphans — short blocks followed by a large silence
+    # gap indicate Whisper placed words at the wrong timestamp (e.g. "A few"
+    # stranded 8s before the rest of the sentence). Merge them into the next
+    # block so they don't appear over silence.
+    merged = []
+    for i, blk in enumerate(final):
+        if (merged
+                and len(merged[-1]) < MIN_WORDS_PER_BLOCK
+                and blk
+                and merged[-1]
+                and blk[0]["start"] - merged[-1][-1]["end"] > SILENCE_GAP_THRESHOLD):
+            merged[-1].extend(blk)
+        else:
+            merged.append(blk)
+
+    return merged
 
 
 # ── SRT builders ──────────────────────────────────────────────────────────────

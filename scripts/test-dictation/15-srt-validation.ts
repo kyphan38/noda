@@ -412,9 +412,9 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     const srtContent = fs.readFileSync(realSrtPath, 'utf8');
     const sentences = parseTranscript(srtContent);
 
-    unitCheck(report, '15m. Real SRT: parses all 829 sentences', () => {
-      if (sentences.length !== 829)
-        throw new Error(`Expected 829 sentences, got ${sentences.length}`);
+    unitCheck(report, '15m. Real SRT: parses all 810 sentences', () => {
+      if (sentences.length !== 810)
+        throw new Error(`Expected 810 sentences, got ${sentences.length}`);
       return true;
     });
 
@@ -433,7 +433,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     });
 
     unitCheck(report, '15p. Real SRT: speaking rate within bounds (allowing stable-ts alignment artifacts)', () => {
-      const knownAlignmentArtifacts = new Set([669, 827]);
+      const knownAlignmentArtifacts = new Set([656, 808]);
       const issues = findTimingIssues(sentences).filter(
         i => (i.type === 'speaking-rate-high' || i.type === 'speaking-rate-low')
           && !knownAlignmentArtifacts.has(i.lineId)
@@ -744,7 +744,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     });
 
     unitCheck(report, '15aj. Real SRT: no unexpected micro-duration multi-word sentences (< 0.3s)', () => {
-      const knownQuickExclamations = new Set([600, 669, 827]);
+      const knownQuickExclamations = new Set([589, 656, 808]);
       const micro = sentences.filter(s => {
         const words = s.text.split(/\s+/).filter(w => w).length;
         return (s.end - s.start) < 0.3 && words > 1 && !knownQuickExclamations.has(s.id);
