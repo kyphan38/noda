@@ -5,52 +5,119 @@ alwaysApply: true
 
 # Git Commit Format (noda)
 
-Use Conventional Commits for every commit in this repo.
+Every commit in this repository must follow this strict, professional Conventional Commits convention. The git root is `noda/`. You **MUST** run `git` commands from this repository's root, not the workspace.
+
+---
+
+## 1. Structure
+
+Every commit message consists of a **Subject Line**, a **Detailed Body** (required for non-trivial changes), and an **Optional Footer**.
 
 ```
 <type>(<scope>): <summary>
+
+[Detailed Body]
+- **Context / Why**: Rationale for the change, the problem solved, or business/product requirements.
+- **Key Changes**:
+  - Detailed list of specific technical additions, refactorings, database schemas, or API endpoints.
+- **Verification**: How the change was tested and verified to ensure correctness.
+
+[Optional Footer]
+Refs: #issue_id / Breaking Change details
 ```
 
-| Part | Rule |
-|------|------|
-| **type** | `feat` `fix` `refactor` `perf` `test` `docs` `style` `chore` `build` `ci` |
-| **scope** | Code area below. Omit only for repo-wide changes. |
-| **summary** | Imperative, lowercase, no trailing period, ≤ 72 chars |
+### 1.1 Subject Line
+- **Type**: Must be one of the pre-defined commit types (see below).
+- **Scope**: Must refer to a specific component or module (see below). Omit only for repo-wide configuration changes.
+- **Summary**: Concise, written in the **imperative, present-tense mood** (e.g., "add", not "added" or "adds"), fully lowercased, with no trailing period, and strictly **≤ 72 characters**.
 
-### Scopes
+### 1.2 Detailed Body (Highly Encouraged)
+Required for any complex, non-obvious fixes, new features, or breaking changes. It must separate from the subject line by a blank line and use the structured three-part breakdown:
+- **Context / Why**: Background context explaining the business or technical reason for the change.
+- **Key Changes**: Precise bullet points describing the exact technical implementation.
+- **Verification**: How the changes were verified (e.g., unit test suites, emulator checks, responsive visual checks).
+
+---
+
+## 2. Subject Line Components
+
+### 2.1 Approved Types
+
+| Type | Intent & Usage | Production Code Impact |
+|:---|:---|:---:|
+| `feat` | A new feature or user-visible capability (e.g., audio play controls) | **Yes** |
+| `fix` | A bug fix or regression repair (e.g., segment loading retries) | **Yes** |
+| `refactor` | Restructuring existing code without changing external behavior | **No** |
+| `perf` | Measurable performance improvement | **Yes** |
+| `test` | Adding, refactoring, or correcting test suites only | **No** |
+| `docs` | Documentation updates (e.g., README) | **No** |
+| `style` | Formatting, linting, missing semicolons (no logic/content changes) | **No** |
+| `chore` | Build tools, dependency bumps, configuration, directory housekeeping | **No** |
+| `build` | Changes affecting build processes or Next.js configurations | **No** |
+| `ci` | Changes to integration pipelines, action runner scripts, workflows | **No** |
+
+### 2.2 Allowed Scopes for noda
 
 `dictation`, `lesson`, `audio`, `ui`, `api`, `db`, `auth`
 
-### Body
+> [!NOTE]
+> Never use the repository name `noda` as a scope. The scope must identify the specific area *within* the repository.
 
-Add when the change is non-obvious — explain **why**, not what.
+---
 
-### Agent rules
+## 3. Developer & Agent Checklist
 
-1. One logical change per commit.
-2. Never use `feat: fix features`, `wip`, `updates`, or `misc`.
-3. Bug fix → `fix`, not `feat`. Docs only → `docs`.
-4. Run `git log --oneline -10` and match existing tone.
-5. Commit only — do not push unless asked.
-6. Never commit `.env`, keys, or build artifacts.
+Before creating a commit:
+1. **One Logical Change per Commit**: Split unrelated edits into independent commits.
+2. **Subject Describes Outcome**: Focus on the action/outcome (e.g., `feat(dictation): scroll to active line on mode switch`), not the specific file name (e.g., `update ActiveLine.tsx`).
+3. **Never Use Vague Placeholders**: Never commit with messages like `feat: fix features`, `wip`, `updates`, `misc`, or `more fixes`.
+4. **Run Git in Repo Root**: Ensure you are in the `/Users/kyphan/ws/app/noda` directory before executing git commands.
+5. **No Credentials or Temp Files**: Do not stage or commit `.env` files, credentials, local debug logs, or build output directories (`.next`, `build`, etc.).
+6. **No Authorship Tags**: Never add author or co-author metadata (such as `Co-authored-by:`) to the commit message. Git tracks authorship automatically.
 
-### Examples
+---
 
+## 4. Professional Examples
+
+### Example 1: New UI Feature
+```markdown
+feat(dictation): scroll active line into viewport on mode toggles
+
+- **Context / Why**: Dictation typing lists are long; toggling between audio listening and typing modes disoriented users because the viewport scrolled to the page top.
+- **Key Changes**:
+  - Implemented an offset ref scroll behavior on active transcription items.
+  - Linked scroll behavior to fire on dictation mode state change transitions.
+- **Verification**:
+  - Verified active line transitions maintain centered alignment in mobile and web browsers.
 ```
-✅ feat(dictation): scroll to active line on mode switch
-✅ fix(audio): retry playback when segment load fails
-✅ refactor(lesson): extract shared scroll helpers
 
-❌ feat: fix features
-❌ noda updates
-❌ feat(noda): add lesson view
+### Example 2: Bug Fix
+```markdown
+fix(audio): retry player segment loading on network failures
+
+- **Context / Why**: Dictation playback encountered severe stalls or complete silence if any segment load request timed out due to unstable user connections.
+- **Key Changes**:
+  - Wrapped segment requests in a exponential backoff retry loop (up to 3 attempts).
+  - Emitted informative warnings to state boundaries upon maximum retries.
+- **Verification**:
+  - Mocked network timeout errors on chunk files and confirmed the player retries and finishes playback successfully.
 ```
+
+---
+
+## 5. Commit Command (For Agents)
+
+Always commit using the multi-line Heredoc format to handle the detailed body correctly:
 
 ```bash
 git commit -m "$(cat <<'EOF'
 feat(scope): short imperative summary
 
-Why this change was needed.
+- **Context / Why**: Background context on why this change is necessary.
+- **Key Changes**:
+  - Description of change A
+  - Description of change B
+- **Verification**: How this was tested.
 EOF
 )"
 ```
