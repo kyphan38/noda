@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:e2e": "PORT=3010 NEXT_PUBLIC_E2E_MODE=true next dev",
     "build": "next build",
     "preview": "npx serve@latest out",
     "lint": "eslint .",

@@ -8,7 +8,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-export const APP_URL = 'http://localhost:3000';
+/** Dedicated E2E port — avoids clashing with a normal `npm run dev` on 3000. */
+export const E2E_PORT = Number(process.env.E2E_PORT ?? 3010);
+export const APP_URL = process.env.APP_URL ?? `http://localhost:${E2E_PORT}`;
 export const SLOW_THRESHOLD_MS = 3000;
 export const CHAR_DELAY_MS = 80;
 
@@ -191,6 +193,33 @@ export async function isRowVisible(page: Page, index: number): Promise<boolean> 
   }, index);
 }
 
+export async function scrollTranscriptToTop(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const scroll = document.querySelector('.overflow-y-auto') as HTMLElement | null;
+    if (scroll) scroll.scrollTop = 0;
+  });
+}
+
+export async function rewriteSlotWidth(page: Page, index: number): Promise<number> {
+  return page.evaluate((i: number) => {
+    const slot = document.querySelector(`[data-index="${i}"] [data-dictation-rewrite-slot]`);
+    if (!slot) return 0;
+    return (slot as HTMLElement).getBoundingClientRect().width;
+  }, index);
+}
+
+export async function getRewriteStatusCenterDeltaY(page: Page, index: number): Promise<number | null> {
+  return page.evaluate((i: number) => {
+    const row = document.querySelector(`[data-index="${i}"]`);
+    const rewrite = row?.querySelector('[data-dictation-rewrite]');
+    const status = row?.querySelector('[data-dictation-status-icon]');
+    if (!rewrite || !status) return null;
+    const r = rewrite.getBoundingClientRect();
+    const s = status.getBoundingClientRect();
+    return Math.abs(r.top + r.height / 2 - (s.top + s.height / 2));
+  }, index);
+}
+
 export async function countSpans(page: Page, index: number, className: string): Promise<number> {
   return page.evaluate(
     ([i, cls]: [number, string]) =>
@@ -261,10 +290,43 @@ export async function clearInput(page: Page) {
   await sleep(80);
 }
 
+/** Scroll transcript row into view (E2E mirror of lib/transcript-scroll). */
+export async function scrollRowIntoView(page: Page, index: number): Promise<void> {
+  await page.evaluate((i: number) => {
+    const row = document.querySelector(`[data-index="${i}"]`);
+    const scroll = row?.closest('.overflow-y-auto') as HTMLElement | null;
+    if (!row || !scroll) return;
+    const el = row as HTMLElement;
+    const containerRect = scroll.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const targetScrollTop =
+      scroll.scrollTop +
+      (elRect.top - containerRect.top) -
+      (scroll.clientHeight - el.offsetHeight) / 2;
+    scroll.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'instant' });
+  }, index);
+}
+
+/** Click Rewrite line after scrolling into view; returns true if row is no longer completed. */
+export async function clickRewriteLine(page: Page, index: number): Promise<boolean> {
+  await dismissModal(page);
+  const btn = page.locator(`[data-index="${index}"] button[data-dictation-rewrite]`);
+  if ((await btn.count()) === 0) return false;
+  await scrollRowIntoView(page, index);
+  await btn.click({ timeout: 5_000 });
+  await sleep(200);
+  return !(await isRowCompleted(page, index));
+}
+
 export async function activateClean(page: Page, index: number) {
+  await dismissModal(page);
   await seekToSentence(page, index);
   await waitForActive(page, index, 4_000);
   await pauseAudio(page);
+  await scrollRowIntoView(page, index);
+  if (await isRowCompleted(page, index)) {
+    await clickRewriteLine(page, index);
+  }
   await clearInput(page);
 }
 

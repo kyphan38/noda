@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
+import { scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
 import { patchFlashcardCompletionModalShownFirestore, restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
@@ -631,12 +632,17 @@ export default function NodaApp() {
       isLoopDelayingRef.current = false;
       if (inDictation) {
         dictationReplayOnceRef.current = { sentenceId: sentence.id, end: sentence.end };
+        const idx = transcriptRef.current.findIndex((s) => s.id === sentence.id);
+        const container = scrollContainerRef.current;
+        if (idx >= 0 && container && scrollTranscriptRowIntoView(container, idx, 'smooth')) {
+          lastScrolledIndexRef.current = idx;
+        }
       }
       if (mediaRef.current.paused) {
         mediaRef.current.play().catch(() => {});
       }
     }
-  }, [mediaRef, appModeRef, setCurrentTime, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef]);
+  }, [mediaRef, appModeRef, setCurrentTime, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, scrollContainerRef]);
 
   const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
     const targetNorm = normalizeDictationTarget(sentence.text);
@@ -661,8 +667,14 @@ export default function NodaApp() {
         clearTimeout(loopTimeoutRef.current);
         isLoopDelayingRef.current = false;
       }
+
+      const idx = transcriptRef.current.findIndex((s) => s.id === sentence.id);
+      const container = scrollContainerRef.current;
+      if (idx >= 0 && container && scrollTranscriptRowIntoView(container, idx, 'smooth')) {
+        lastScrolledIndexRef.current = idx;
+      }
     }
-  }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef]);
+  }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef, transcriptRef, scrollContainerRef, lastScrolledIndexRef]);
 
   const handleDictationKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => {
     if (e.key === 'Enter') {

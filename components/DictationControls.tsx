@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
-import { RotateCcw, Lightbulb, CornerDownLeft } from 'lucide-react';
+import { Lightbulb, CornerDownLeft } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
 
@@ -92,8 +92,8 @@ export function DictationControls({
           <div className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-all text-green-400">
             {targetNorm}
           </div>
-          <div className="shrink-0 flex items-center gap-1">
-            {isMobile && isActive && (
+          {isMobile && isActive && (
+            <div className="shrink-0 flex items-center">
               <button
                 type="button"
                 data-dictation-next
@@ -103,21 +103,8 @@ export function DictationControls({
               >
                 <CornerDownLeft className="h-4 w-4" />
               </button>
-            )}
-            {onDictationRetry && (
-              <button
-                type="button"
-                title="Practice this sentence again"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDictationRetry(sentence);
-                }}
-                className="shrink-0 rounded-lg border border-transparent p-1.5 text-emerald-500/90 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 active:bg-emerald-500/20"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
         {isActive && (
           <input

@@ -6,7 +6,7 @@ import {
   ReportEntry, check, sleep, LESSON_SENTENCES,
   activateClean, completeTyping, pressEnter, isRowCompleted,
   seekToSentence, waitForActive, pauseAudio, getAudioTime, isAudioPaused,
-  dismissModal,
+  dismissModal, clickRewriteLine,
 } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
@@ -18,9 +18,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await seekToSentence(page, 1);
     await waitForActive(page, 1, 4_000);
     await sleep(200);
-    const retryBtn = page.locator(`[data-index="1"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() === 0) return false;
-    await retryBtn.click();
+    if (!(await clickRewriteLine(page, 1))) return false;
     await sleep(300);
     const completed = await isRowCompleted(page, 1);
     return !completed;

@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Play, CheckCircle2 } from 'lucide-react';
+import React from 'react';
+import { Play, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
 import { DictationControls } from './DictationControls';
 
@@ -35,7 +35,7 @@ export function TranscriptSentence({
   onDictationRetry,
   isMobile = false,
 }: TranscriptSentenceProps) {
-  const statusRef = useRef<HTMLDivElement | null>(null);
+  const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
 
   return (
     <div
@@ -84,9 +84,48 @@ export function TranscriptSentence({
         )}
       </div>
 
-      <div ref={statusRef} className="shrink-0 flex flex-row items-center justify-end gap-2 self-center">
-        {isActive && <Play className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 fill-current animate-pulse" />}
-        {isPast && !isActive && <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />}
+      <div className="shrink-0 flex flex-row items-center justify-end gap-1 self-center">
+        {showDictationActions && (
+          <div
+            data-dictation-rewrite-slot
+            className="flex h-10 w-10 shrink-0 items-center justify-center"
+            aria-hidden={!isCompleted}
+          >
+            {isCompleted ? (
+              <button
+                type="button"
+                data-dictation-rewrite
+                title="Rewrite line"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDictationRetry(sentence);
+                }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-transparent text-emerald-500/90 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 active:bg-emerald-500/20"
+              >
+                <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+              </button>
+            ) : null}
+          </div>
+        )}
+        <div
+          data-dictation-status-slot
+          className="flex h-10 w-10 shrink-0 items-center justify-center"
+        >
+          {isActive && (
+            <Play
+              data-dictation-status-icon
+              className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400 fill-current animate-pulse"
+              aria-hidden
+            />
+          )}
+          {isPast && !isActive && (
+            <CheckCircle2
+              data-dictation-status-icon
+              className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600"
+              aria-hidden
+            />
+          )}
+        </div>
       </div>
     </div>
   );

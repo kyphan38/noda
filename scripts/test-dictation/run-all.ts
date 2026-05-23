@@ -2,11 +2,11 @@
 /**
  * Playwright dictation E2E — baseline regression suite (runner).
  *
- * Prerequisites:  dev server running with E2E mode:
- *   NEXT_PUBLIC_E2E_MODE=true npm run dev
+ * Prerequisites:  E2E dev server (port 3010, not 3000):
+ *   npm run dev:e2e
  *
  * Run:
- *   npx tsx scripts/test-dictation/run-all.ts
+ *   npm run test:dictation
  *
  * Each group lives in its own file; this runner orchestrates them in order
  * with a shared browser context and combined report.
@@ -30,6 +30,7 @@ import { run as runSpaceHandling }   from './12-space-handling.js';
 import { run as runMobileAudioSync } from './13-mobile-audio-sync.js';
 import { run as runPlayerPopovers }  from './14-player-popovers.js';
 import { run as runSrtValidation }   from './15-srt-validation.js';
+import { run as runDictationUi }     from './16-dictation-ui.js';
 
 const groups = [
   runUnitUtils,
@@ -48,6 +49,7 @@ const groups = [
   runMobileAudioSync,
   runPlayerPopovers,
   runSrtValidation,
+  runDictationUi,
 ];
 
 async function main() {

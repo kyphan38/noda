@@ -5,6 +5,7 @@
 import { Page } from '@playwright/test';
 import {
   ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
+  clickRewriteLine,
   SENTENCE_STARTS, SENTENCE_ENDS,
   activateClean, completeTyping, pressEnter, countSpans,
   waitForActive, seekToSentence, pauseAudio, setAudioTime, isRowCompleted,
@@ -65,11 +66,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await seekToSentence(page, kbIdx);
     await waitForActive(page, kbIdx, 4_000);
     await pauseAudio(page);
-    const retryBtn = page.locator(`[data-index="${kbIdx}"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() > 0) {
-      await retryBtn.click();
-      await sleep(300);
-    }
+    await clickRewriteLine(page, kbIdx);
   }
 
   await check(report, '5e. Ctrl replays (seeks back)', async () => {

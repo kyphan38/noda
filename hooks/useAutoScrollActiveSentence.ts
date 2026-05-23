@@ -1,4 +1,5 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
+import { scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
 import type { Sentence } from '@/types';
 
 /**
@@ -37,17 +38,7 @@ export function useAutoScrollActiveSentence(
     prevActiveIndexRef.current = activeIndex;
 
     if (activeIndex !== -1 && activeIndex !== lastScrolledIndexRef.current && scrollContainerRef.current) {
-      const activeElement = scrollContainerRef.current.querySelector(`[data-index="${activeIndex}"]`);
-      if (activeElement) {
-        const container = scrollContainerRef.current;
-        const el = activeElement as HTMLElement;
-        const containerRect = container.getBoundingClientRect();
-        const elRect = el.getBoundingClientRect();
-        const targetScrollTop =
-          container.scrollTop +
-          (elRect.top - containerRect.top) -
-          (container.clientHeight - el.offsetHeight) / 2;
-        container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' });
+      if (scrollTranscriptRowIntoView(scrollContainerRef.current, activeIndex, 'smooth')) {
         lastScrolledIndexRef.current = activeIndex;
       }
     }

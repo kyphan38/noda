@@ -24,12 +24,6 @@ export async function run(page: Page, report: ReportEntry[]) {
 
   // Sentence 10 may already be completed by group 3e — retry to reset it
   await dismissModal(page);
-  await activateClean(page, idx);
-  const retryBtn = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-  if (await retryBtn.count() > 0) {
-    await retryBtn.click();
-    await sleep(300);
-  }
 
   await check(report, '11a. Activate apostrophe sentence', async () => {
     await activateClean(page, idx);
@@ -76,12 +70,6 @@ export async function run(page: Page, report: ReportEntry[]) {
   // Regression: typing letters without spaces should still complete (auto-space)
   await check(report, '11g. Apostrophe sentence completes without explicit spaces', async () => {
     await activateClean(page, idx);
-    const retry = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-    if (await retry.count() > 0) {
-      await retry.click();
-      await sleep(300);
-      await activateClean(page, idx);
-    }
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();

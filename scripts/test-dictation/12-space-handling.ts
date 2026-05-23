@@ -11,11 +11,12 @@ import { Page } from '@playwright/test';
 import {
   ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
   activateClean, completeTyping, pressEnter, countSpans, countStars,
-  isRowCompleted,
+  isRowCompleted, dismissModal,
 } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 12. Space Handling ───');
+  await dismissModal(page);
   const idx = 0;
   const target = LESSON_SENTENCES[idx]; // "the cat sat on the mat"
 
@@ -120,13 +121,6 @@ export async function run(page: Page, report: ReportEntry[]) {
   // ── 12g. Completion without any spaces typed ───────────────────────────────
   await check(report, '12g. Completion without any spaces typed', async () => {
     await activateClean(page, idx);
-    // Retry if already completed
-    const retryBtn = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() > 0) {
-      await retryBtn.click();
-      await sleep(300);
-      await activateClean(page, idx);
-    }
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
@@ -139,34 +133,22 @@ export async function run(page: Page, report: ReportEntry[]) {
   // ── 12h. Backspace after auto-inserted space removes letter ────────────────
   await check(report, '12h. Backspace after auto-space removes previous letter', async () => {
     await activateClean(page, idx);
-    const retryBtn = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() > 0) {
-      await retryBtn.click();
-      await sleep(300);
-      await activateClean(page, idx);
-    }
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     // Type "thec" → displays "the c" (5 green)
     await ta.pressSequentially('thec', { delay: CHAR_DELAY_MS });
     const greenBefore = await countSpans(page, idx, 'text-emerald-500');
-    // Backspace → removes 'c', space collapses → "the" (3 green)
+    // Backspace removes 'c'; auto-inserted boundary space stays → "the " (4 green)
     await ta.press('Backspace');
-    await sleep(100);
+    await sleep(150);
     const greenAfter = await countSpans(page, idx, 'text-emerald-500');
-    return greenBefore === 5 && greenAfter === 3;
+    return greenBefore === 5 && greenAfter === 4;
   });
 
   // ── 12i. Backspace after typed space removes the space ─────────────────────
   await check(report, '12i. Backspace after typed space returns to pre-space', async () => {
     await activateClean(page, idx);
-    const retryBtn = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() > 0) {
-      await retryBtn.click();
-      await sleep(300);
-      await activateClean(page, idx);
-    }
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
@@ -183,12 +165,6 @@ export async function run(page: Page, report: ReportEntry[]) {
   // ── 12j. Tab hint at word boundary includes space ──────────────────────────
   await check(report, '12j. Tab hint after last letter of word auto-spaces', async () => {
     await activateClean(page, idx);
-    const retryBtn = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() > 0) {
-      await retryBtn.click();
-      await sleep(300);
-      await activateClean(page, idx);
-    }
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
@@ -203,12 +179,6 @@ export async function run(page: Page, report: ReportEntry[]) {
   // ── 12k. No gray stars at space positions that have been typed past ────────
   await check(report, '12k. No gray stars remain at passed space positions', async () => {
     await activateClean(page, idx);
-    const retryBtn = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() > 0) {
-      await retryBtn.click();
-      await sleep(300);
-      await activateClean(page, idx);
-    }
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
@@ -231,12 +201,6 @@ export async function run(page: Page, report: ReportEntry[]) {
   // ── 12l. Wrong char at space position shows red ────────────────────────────
   await check(report, '12l. Wrong char display: red at expected positions', async () => {
     await activateClean(page, idx);
-    const retryBtn = page.locator(`[data-index="${idx}"] button[title="Practice this sentence again"]`);
-    if (await retryBtn.count() > 0) {
-      await retryBtn.click();
-      await sleep(300);
-      await activateClean(page, idx);
-    }
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
