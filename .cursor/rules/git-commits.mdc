@@ -1,0 +1,56 @@
+---
+description: Git commit message format for noda
+alwaysApply: true
+---
+
+# Git Commit Format (noda)
+
+Use Conventional Commits for every commit in this repo.
+
+```
+<type>(<scope>): <summary>
+```
+
+| Part | Rule |
+|------|------|
+| **type** | `feat` `fix` `refactor` `perf` `test` `docs` `style` `chore` `build` `ci` |
+| **scope** | Code area below. Omit only for repo-wide changes. |
+| **summary** | Imperative, lowercase, no trailing period, ≤ 72 chars |
+
+### Scopes
+
+`dictation`, `lesson`, `audio`, `ui`, `api`, `db`, `auth`
+
+### Body
+
+Add when the change is non-obvious — explain **why**, not what.
+
+### Agent rules
+
+1. One logical change per commit.
+2. Never use `feat: fix features`, `wip`, `updates`, or `misc`.
+3. Bug fix → `fix`, not `feat`. Docs only → `docs`.
+4. Run `git log --oneline -10` and match existing tone.
+5. Commit only — do not push unless asked.
+6. Never commit `.env`, keys, or build artifacts.
+
+### Examples
+
+```
+✅ feat(dictation): scroll to active line on mode switch
+✅ fix(audio): retry playback when segment load fails
+✅ refactor(lesson): extract shared scroll helpers
+
+❌ feat: fix features
+❌ noda updates
+❌ feat(noda): add lesson view
+```
+
+```bash
+git commit -m "$(cat <<'EOF'
+feat(scope): short imperative summary
+
+Why this change was needed.
+EOF
+)"
+```
