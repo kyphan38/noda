@@ -923,6 +923,106 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     });
   }
 
+  // ── Forward-merge orphan and --no-refine regression guards ────────────────
+
+  console.log('\n─── 15. Forward-Merge Orphan Guards ───');
+
+  unitCheck(report, '15aw. Orphan detection: finds short block before silence gap', () => {
+    // Simulates the bug where Whisper places "A few" at 29s (silence) and
+    // "months ago..." at 37s (speech). The detector should flag this pattern.
+    const srt = [
+      '1', '00:00:28,120 --> 00:00:28,630', 'planet.', '',
+      '2', '00:00:29,740 --> 00:00:30,800', 'A few', '',
+      '3', '00:00:37,700 --> 00:00:39,060', 'months ago, I asked the people',
+    ].join('\n');
+    const sentences = parseTranscript(srt);
+    let orphanFound = false;
+    for (let i = 0; i < sentences.length - 1; i++) {
+      const s = sentences[i];
+      const next = sentences[i + 1];
+      const words = s.text.split(/\s+/).filter(w => w).length;
+      const gap = next.start - s.end;
+      if (words < 3 && gap > 2.0) orphanFound = true;
+    }
+    if (!orphanFound)
+      throw new Error('Expected to detect orphan "A few" block before 6.9s gap');
+    return true;
+  });
+
+  unitCheck(report, '15ax. Orphan guard: short block WITHOUT gap is valid', () => {
+    // Short blocks that are NOT followed by a silence gap are normal
+    // (e.g. "It's smooth." followed immediately by "It's quiet.").
+    const srt = [
+      '1', '00:00:02,680 --> 00:00:03,540', "It's smooth.", '',
+      '2', '00:00:03,960 --> 00:00:04,680', "It's quiet.", '',
+      '3', '00:00:05,400 --> 00:00:06,860', 'And then you just arrive.',
+    ].join('\n');
+    const sentences = parseTranscript(srt);
+    if (sentences.length !== 3)
+      throw new Error(`Expected 3 sentences, got ${sentences.length}`);
+    if (sentences[0].text !== "It's smooth.")
+      throw new Error(`Line 1 should be "It's smooth.", got "${sentences[0].text}"`);
+    return true;
+  });
+
+  if (fs.existsSync(realSrtPath)) {
+    const srtContent = fs.readFileSync(realSrtPath, 'utf8');
+    const sentences = parseTranscript(srtContent);
+
+    unitCheck(report, '15ay. Real SRT: no orphan blocks before silence gaps', () => {
+      const orphans: string[] = [];
+      for (let i = 0; i < sentences.length - 1; i++) {
+        const s = sentences[i];
+        const next = sentences[i + 1];
+        const words = s.text.split(/\s+/).filter(w => w).length;
+        const gap = next.start - s.end;
+        if (words < 3 && gap > 2.0)
+          orphans.push(`Line ${s.id}: "${s.text}" (${words}w) → ${gap.toFixed(1)}s gap`);
+      }
+      if (orphans.length > 0)
+        throw new Error(`${orphans.length} orphan blocks before silence gaps:\n${orphans.slice(0, 5).join('\n')}`);
+      return true;
+    });
+  }
+
+  const noRefineSrtPath = path.join(process.cwd(), 'scripts', 'fixtures', 'switzerland-no-refine.srt');
+  if (fs.existsSync(noRefineSrtPath)) {
+    const nrContent = fs.readFileSync(noRefineSrtPath, 'utf8');
+    const nrSentences = parseTranscript(nrContent);
+
+    unitCheck(report, '15az. No-refine SRT: structurally valid (no overlaps, no negatives)', () => {
+      const issues = findTimingIssues(nrSentences);
+      const structural = issues.filter(i => i.type === 'overlap' || i.type === 'negative-duration');
+      if (structural.length > 0)
+        throw new Error(`${structural.length} structural issues in no-refine SRT:\n${structural.slice(0, 5).map(i => i.message).join('\n')}`);
+      return true;
+    });
+
+    unitCheck(report, '15ba. No-refine SRT: no orphan blocks before silence gaps', () => {
+      const orphans: string[] = [];
+      for (let i = 0; i < nrSentences.length - 1; i++) {
+        const s = nrSentences[i];
+        const next = nrSentences[i + 1];
+        const words = s.text.split(/\s+/).filter(w => w).length;
+        const gap = next.start - s.end;
+        if (words < 3 && gap > 2.0)
+          orphans.push(`Line ${s.id}: "${s.text}" (${words}w) → ${gap.toFixed(1)}s gap`);
+      }
+      if (orphans.length > 0)
+        throw new Error(`${orphans.length} orphan blocks in no-refine SRT:\n${orphans.slice(0, 5).join('\n')}`);
+      return true;
+    });
+
+    unitCheck(report, '15bb. No-refine SRT: key phrases present', () => {
+      const allText = nrSentences.map(s => s.text).join('\n');
+      const required = ['A few months ago', 'I asked the people'];
+      const missing = required.filter(p => !allText.includes(p));
+      if (missing.length > 0)
+        throw new Error(`Missing phrases in no-refine SRT: ${missing.join(', ')}`);
+      return true;
+    });
+  }
+
   unitCheck(report, '15ap. Matching: rapid seek across multiple boundaries', () => {
     const srt = [
       '1', '00:00:00,000 --> 00:00:01,000', 'A', '',
