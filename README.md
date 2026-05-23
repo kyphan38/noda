@@ -21,4 +21,4 @@ Any change requires a rebuild/redeploy.
 - noda uses client-side Firebase auth gating.
 - Only allowlisted user can render app content.
 - Since this is static export (`output: "export"`), there is no server middleware enforcement in noda.
-- **Authoritative enforcement** is [Firestore rules](firestore.rules) and [Storage rules](storage.rules): only `users/{userId}/...` where `request.auth.uid == userId`. After deploy, confirm once in **Firebase Console → Firestore → Rules → Rules Playground** (e.g. read as another `userId` → expect deny).
+- **Authoritative enforcement** is [Firestore rules](firestore.rules) and [Storage rules](storage.rules): only `users/{userId}/...` where `request.auth.uid == userId`. After deploy, confirm once in **Firebase Console → Firestore → Rules → Rules Playground** (e.g. read as another `userId` → expect deny). 
