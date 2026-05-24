@@ -18,6 +18,7 @@ export function useMediaPlayer() {
   const loopModeRef = useRef<LoopMode>(loopMode);
   const repeatCountRef = useRef<RepeatCount>(repeatCount);
   const sentencePlayCountRef = useRef<number>(0);
+  const userSeekTargetRef = useRef<number | null>(null);
 
   useEffect(() => {
     loopModeRef.current = loopMode;
@@ -98,6 +99,7 @@ export function useMediaPlayer() {
     repeatCount,
     repeatCountRef,
     sentencePlayCountRef,
+    userSeekTargetRef,
     mediaRef,
     loopTimeoutRef,
     isLoopDelayingRef,

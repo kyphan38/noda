@@ -86,7 +86,7 @@ export default function NodaApp() {
     mediaFile, setMediaFile, mediaURL, setMediaURL,
     duration, setDuration, currentTime, setCurrentTime,
     isPlaying, setIsPlaying, playbackRate, loopMode,
-    repeatCount, repeatCountRef, sentencePlayCountRef,
+    repeatCount, repeatCountRef, sentencePlayCountRef, userSeekTargetRef,
     mediaRef, loopTimeoutRef, isLoopDelayingRef, loopModeRef,
     togglePlayPause, handleSeek, changeSpeed, toggleLoopMode, changeRepeatCount,
   } = useMediaPlayer();
@@ -612,7 +612,8 @@ export default function NodaApp() {
     activeSentenceRef,
     dictationReplayOnceRef,
     repeatCountRef,
-    sentencePlayCountRef
+    sentencePlayCountRef,
+    userSeekTargetRef
   );
 
   useAutoScrollActiveSentence(currentTime, transcript, scrollContainerRef, lastScrolledIndexRef);
@@ -668,6 +669,8 @@ export default function NodaApp() {
       mediaRef.current.currentTime = seekTarget;
       setCurrentTime(sentence.start);
       lastScrolledIndexRef.current = -1;
+      sentencePlayCountRef.current = 0;
+      userSeekTargetRef.current = sentence.id;
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
       isLoopDelayingRef.current = false;
       if (inDictation) {
@@ -682,7 +685,7 @@ export default function NodaApp() {
         mediaRef.current.play().catch(() => {});
       }
     }
-  }, [mediaRef, appModeRef, setCurrentTime, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, scrollContainerRef]);
+  }, [mediaRef, appModeRef, setCurrentTime, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, scrollContainerRef, sentencePlayCountRef, userSeekTargetRef]);
 
   const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
     const targetNorm = normalizeDictationTarget(sentence.text);

@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, LoopMode, RepeatCount, Sentence } from '@/types';
-import { REPEAT_PAUSE_MS, SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
+import { REPEAT_PAUSE_MS } from '@/constants';
 import { shouldRepeatSentenceAtEnd } from '@/lib/repeat-count';
 
 type RefBool = MutableRefObject<boolean>;
@@ -21,7 +21,8 @@ export function useLessonPlaybackLoop(
   activeSentenceRef: MutableRefObject<Sentence | null>,
   replayOnceRef: RefReplayOnce,
   repeatCountRef: MutableRefObject<RepeatCount>,
-  sentencePlayCountRef: MutableRefObject<number>
+  sentencePlayCountRef: MutableRefObject<number>,
+  userSeekTargetRef: MutableRefObject<number | null>
 ) {
   useEffect(() => {
     let animationFrameId: number;
@@ -44,6 +45,11 @@ export function useLessonPlaybackLoop(
         // Reset play count when active sentence changes
         if (currentSentence && prevActiveSentenceId !== null && currentSentence.id !== prevActiveSentenceId) {
           sentencePlayCountRef.current = 0;
+        }
+
+        // Clear user seek target once the target sentence becomes active
+        if (currentSentence && userSeekTargetRef.current === currentSentence.id) {
+          userSeekTargetRef.current = null;
         }
 
         if (
@@ -97,28 +103,26 @@ export function useLessonPlaybackLoop(
               sentencePlayCountRef.current
             );
 
-            if (loopModeRef.current === 'one') {
+            if (loopModeRef.current === 'one' && userSeekTargetRef.current === null) {
               if (!isLoopDelayingRef.current) {
                 isLoopDelayingRef.current = true;
                 audioRef.current.pause();
                 loopTimeoutRef.current = setTimeout(() => {
                   if (audioRef.current && loopModeRef.current === 'one' && activeSentenceRef.current) {
-                    const preRoll = appModeRef.current === 'dictation' ? 0 : SENTENCE_PRE_ROLL_SECONDS;
-                    audioRef.current.currentTime = Math.max(0, activeSentenceRef.current.start - preRoll);
+                    audioRef.current.currentTime = activeSentenceRef.current.start;
                     audioRef.current.play().catch(() => {});
                   }
                   isLoopDelayingRef.current = false;
                 }, REPEAT_PAUSE_MS);
               }
-            } else if (shouldRepeat) {
+            } else if (shouldRepeat && userSeekTargetRef.current === null) {
               if (!isLoopDelayingRef.current) {
                 isLoopDelayingRef.current = true;
                 audioRef.current.pause();
                 loopTimeoutRef.current = setTimeout(() => {
                   sentencePlayCountRef.current += 1;
                   if (audioRef.current && activeSentenceRef.current) {
-                    const preRoll = appModeRef.current === 'dictation' ? 0 : SENTENCE_PRE_ROLL_SECONDS;
-                    audioRef.current.currentTime = Math.max(0, activeSentenceRef.current.start - preRoll);
+                    audioRef.current.currentTime = activeSentenceRef.current.start;
                     audioRef.current.play().catch(() => {});
                   }
                   isLoopDelayingRef.current = false;
@@ -175,5 +179,6 @@ export function useLessonPlaybackLoop(
     replayOnceRef,
     repeatCountRef,
     sentencePlayCountRef,
+    userSeekTargetRef,
   ]);
 }
