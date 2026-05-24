@@ -10,7 +10,8 @@
     "preview": "npx serve@latest out",
     "lint": "eslint .",
     "clean": "next clean",
-    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test": "npm run test:unit && npm run test:dictation",
     "test:ui": "vitest --ui",
     "test:setup-auth": "npx tsx scripts/setup-auth.ts",
     "test:dictation": "npx tsx scripts/test-dictation/run-all.ts"
