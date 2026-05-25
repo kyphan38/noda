@@ -10,3 +10,4 @@ out/
 *.tsbuildinfo
 audio/
 __pycache__/
+test-results/
