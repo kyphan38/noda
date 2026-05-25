@@ -730,6 +730,14 @@ export default function NodaApp() {
       const nextSentence = idx >= 0 && idx < tr.length - 1 ? tr[idx + 1] : null;
 
       if (mediaRef.current) {
+        // Clean up any pending repeat timeout from the previous sentence
+        if (loopTimeoutRef.current) {
+          clearTimeout(loopTimeoutRef.current);
+          loopTimeoutRef.current = null;
+        }
+        isLoopDelayingRef.current = false;
+        sentencePlayCountRef.current = 0;
+
         if (nextSentence) {
           dictationReplayOnceRef.current = { sentenceId: nextSentence.id, end: nextSentence.end };
           mediaRef.current.currentTime = nextSentence.start;
@@ -770,7 +778,7 @@ export default function NodaApp() {
         mediaRef.current.play().catch(() => {});
       }
     }
-  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange]);
+  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange, sentencePlayCountRef]);
 
   const handleDictationRetry = useCallback((sentence: Sentence) => {
     setCompletedSentences((prev) => {

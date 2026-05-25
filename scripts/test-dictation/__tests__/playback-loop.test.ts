@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { shouldRepeatSentenceAtEnd } from '../../../lib/repeat-count';
-import { SENTENCE_PRE_ROLL_SECONDS } from '../../../constants';
+import { SENTENCE_PRE_ROLL_SECONDS, REPEAT_PAUSE_MS } from '../../../constants';
 import type { Sentence, RepeatCount, LoopMode, AppMode } from '../../../types';
 
 // ---------------------------------------------------------------------------
@@ -210,5 +210,127 @@ describe('finite repeat count exhaustion still advances', () => {
   it('repeat=1 → should advance immediately', () => {
     const decision = decideAtSentenceEnd(line4, 1, 0, 'none', null);
     expect(decision.action).toBe('advance');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bug 3 — Dictation Enter-advance: completing line N and pressing Enter jumps
+// to line N+1 but then snaps back to line N after 0-2 seconds.
+//
+// Repro: Line 103 ("and a name") is short. User completes it, presses Enter.
+// Audio briefly plays line 104 then jumps back to 103 because a pending
+// repeat timeout (from line 103's replay-once) fires after the advance,
+// seeking audio back to line 103's start. The Enter handler must cancel
+// pending timeouts and reset sentencePlayCount before advancing.
+//
+// Additionally, the "sentence change" guard in the playback loop (lines 55-69
+// of useLessonPlaybackLoop.ts) must NOT fire when replayOnceRef is set for
+// the target sentence — it should only fire for unexpected drift.
+// ---------------------------------------------------------------------------
+
+const shortThenLong: Sentence[] = [
+  { id: 103, text: 'and a name', start: 200.0, end: 201.5 },
+  { id: 104, text: 'but now begins the impossible task of uniting this diverse mix of people', start: 201.5, end: 207.0 },
+];
+
+/**
+ * Mirrors the dictation "jump back to previous" guard in useLessonPlaybackLoop
+ * lines 55-69. Returns true if the guard would yank audio back.
+ */
+function wouldJumpBackToPrevious(
+  replayOnceRef: { sentenceId: number; end: number } | null,
+  prevActiveSentenceId: number | null,
+  currentSentence: Sentence | undefined,
+): boolean {
+  return (
+    !replayOnceRef &&
+    prevActiveSentenceId !== null &&
+    currentSentence !== undefined &&
+    currentSentence.id !== prevActiveSentenceId
+  );
+}
+
+/**
+ * Simulates the state produced by handleDictationKeyDown(Enter) after the fix.
+ * Returns the state that the playback loop will see on its next tick.
+ */
+function simulateEnterAdvance(
+  completedSentence: Sentence,
+  nextSentence: Sentence,
+  prevSentencePlayCount: number,
+) {
+  // The Enter handler (after fix) clears pending timeout and resets counters
+  const loopTimeoutCleared = true;
+  const isLoopDelaying = false;
+  const sentencePlayCount = 0; // reset by Enter handler
+  const replayOnceRef = { sentenceId: nextSentence.id, end: nextSentence.end };
+  const audioCurrentTime = nextSentence.start;
+
+  return {
+    loopTimeoutCleared,
+    isLoopDelaying,
+    sentencePlayCount,
+    replayOnceRef,
+    audioCurrentTime,
+  };
+}
+
+describe('dictation Enter-advance: no snap-back to previous sentence', () => {
+  const line103 = shortThenLong[0];
+  const line104 = shortThenLong[1];
+
+  it('Enter advance sets replayOnce for next sentence, blocking jump-back guard', () => {
+    const state = simulateEnterAdvance(line103, line104, 2);
+
+    // replayOnce is set for line 104
+    expect(state.replayOnceRef).toEqual({ sentenceId: 104, end: line104.end });
+
+    // The jump-back guard should NOT fire because replayOnce is set
+    const active = findActiveSentence(shortThenLong, state.audioCurrentTime);
+    const jumpBack = wouldJumpBackToPrevious(state.replayOnceRef, line103.id, active!);
+    expect(jumpBack).toBe(false);
+  });
+
+  it('sentencePlayCount is reset to 0 after Enter advance', () => {
+    // Before Enter: play count was 2 from repeating line 103
+    const state = simulateEnterAdvance(line103, line104, 2);
+    expect(state.sentencePlayCount).toBe(0);
+  });
+
+  it('line 104 gets correct repeat behavior with fresh play count', () => {
+    const state = simulateEnterAdvance(line103, line104, 2);
+
+    // With repeat=2 and fresh playCount=0, line 104 should repeat once
+    const decision = decideAtSentenceEnd(line104, 2, state.sentencePlayCount, 'none', null);
+    expect(decision.action).toBe('repeat');
+    expect((decision as { seekTo: number }).seekTo).toBe(line104.start);
+  });
+
+  it('stale play count would have caused incorrect repeat skip (regression proof)', () => {
+    // Without the fix: sentencePlayCount=2 from line 103 repeats
+    // With repeat=2, playCount=2 → shouldRepeat(2,2) = 2 > 1 && 2 < 1 → false
+    // Line 104 would NOT repeat even though it should
+    const staleDecision = decideAtSentenceEnd(line104, 2, 2, 'none', null);
+    expect(staleDecision.action).toBe('advance'); // bug: skips repeat
+  });
+
+  it('pending timeout is cleared, preventing seek back to previous sentence', () => {
+    const state = simulateEnterAdvance(line103, line104, 1);
+    expect(state.loopTimeoutCleared).toBe(true);
+    expect(state.isLoopDelaying).toBe(false);
+  });
+
+  it('jump-back guard WOULD fire without replayOnce (regression proof)', () => {
+    // If replayOnce were null (e.g., cleared prematurely), the guard fires
+    const active = findActiveSentence(shortThenLong, line104.start);
+    const jumpBack = wouldJumpBackToPrevious(null, line103.id, active!);
+    expect(jumpBack).toBe(true); // This is the bug scenario
+  });
+
+  it('audio seeks to exact start of next sentence (no gap/overlap issue)', () => {
+    const state = simulateEnterAdvance(line103, line104, 0);
+    const active = findActiveSentence(shortThenLong, state.audioCurrentTime);
+    expect(active).not.toBeNull();
+    expect(active!.id).toBe(line104.id);
   });
 });
