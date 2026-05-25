@@ -11,5 +11,6 @@ export default defineConfig({
     include: ['scripts/test-dictation/__tests__/**/*.test.ts'],
     globals: false,
     fileParallelism: false,
+    globalSetup: ['scripts/test-dictation/__tests__/global-setup.ts'],
   },
 });
