@@ -31,6 +31,7 @@ import { run as runMobileAudioSync } from './13-mobile-audio-sync.js';
 import { run as runPlayerPopovers }  from './14-player-popovers.js';
 import { run as runSrtValidation }   from './15-srt-validation.js';
 import { run as runDictationUi }     from './16-dictation-ui.js';
+import { run as runWordWrap }        from './17-word-wrap.js';
 
 const groups = [
   runUnitUtils,
@@ -50,6 +51,7 @@ const groups = [
   runPlayerPopovers,
   runSrtValidation,
   runDictationUi,
+  runWordWrap,
 ];
 
 async function main() {

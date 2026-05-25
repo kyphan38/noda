@@ -89,7 +89,7 @@ export function DictationControls({
     return (
       <div className="flex flex-col">
         <div className="flex items-start gap-2">
-          <div className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-all text-green-400">
+          <div className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-words text-green-400">
             {targetNorm}
           </div>
           {isMobile && isActive && (
@@ -127,7 +127,7 @@ export function DictationControls({
       {/* Feedback div */}
       <div
         aria-hidden
-        className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 cursor-text whitespace-pre-wrap break-all"
+        className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 cursor-text whitespace-pre-wrap break-words"
         onClick={(e) => {
           if (isActive) {
             e.stopPropagation();
@@ -139,32 +139,71 @@ export function DictationControls({
           }
         }}
       >
-        {targetNorm.split('').map((ch, i) => {
-          const typed = i < inputNorm.length ? inputNorm[i] : undefined;
-          const isSpace = ch === ' ';
+        {(() => {
+          const words = targetNorm.split(' ');
+          let gi = 0; // global character index
+          return words.map((word, wIdx) => {
+            const wordStart = gi;
+            const wordChars = word.split('').map((ch, ci) => {
+              const i = wordStart + ci;
+              const typed = i < inputNorm.length ? inputNorm[i] : undefined;
+              return (
+                <React.Fragment key={i}>
+                  {isActive && i === inputNorm.length && (
+                    <span
+                      aria-hidden
+                      className="border-l border-emerald-400 animate-pulse"
+                    />
+                  )}
+                  {typed === undefined ? (
+                    <span className="text-gray-500">{'*'}</span>
+                  ) : typed === ch ? (
+                    <span className="text-emerald-500">{ch}</span>
+                  ) : (
+                    <span className="text-red-500">{typed}</span>
+                  )}
+                </React.Fragment>
+              );
+            });
+            gi = wordStart + word.length;
 
-          return (
-            <React.Fragment key={i}>
-              {isActive && i === inputNorm.length && (
-                <span
-                  aria-hidden
-                  className="inline-block w-px h-[1.1em] bg-emerald-400 animate-pulse align-text-bottom"
-                />
-              )}
-              {typed === undefined ? (
-                <span className="text-gray-500">{isSpace ? ' ' : '*'}</span>
-              ) : typed === ch ? (
-                <span className="text-emerald-500">{isSpace ? ' ' : ch}</span>
-              ) : (
-                <span className="text-red-500">{typed === ' ' ? '\u00a0' : typed}</span>
-              )}
-            </React.Fragment>
-          );
-        })}
+            // Space separator between words
+            let spaceEl: React.ReactNode = null;
+            if (wIdx < words.length - 1) {
+              const spaceIdx = gi;
+              const spaceTyped = spaceIdx < inputNorm.length ? inputNorm[spaceIdx] : undefined;
+              spaceEl = (
+                <React.Fragment key={`sp-${spaceIdx}`}>
+                  {isActive && spaceIdx === inputNorm.length && (
+                    <span
+                      aria-hidden
+                      className="border-l border-emerald-400 animate-pulse"
+                    />
+                  )}
+                  {spaceTyped === undefined ? (
+                    <span className="text-gray-500">{' '}</span>
+                  ) : spaceTyped === ' ' ? (
+                    <span className="text-emerald-500">{' '}</span>
+                  ) : (
+                    <span className="text-red-500">{'\u00a0'}</span>
+                  )}
+                </React.Fragment>
+              );
+              gi++; // advance past the space
+            }
+
+            return (
+              <React.Fragment key={wIdx}>
+                <span className="whitespace-nowrap">{wordChars}</span>
+                {spaceEl}
+              </React.Fragment>
+            );
+          });
+        })()}
         {isActive && inputNorm.length >= targetNorm.length && targetNorm.length > 0 && (
           <span
             aria-hidden
-            className="inline-block w-px h-[1.1em] bg-emerald-400 animate-pulse align-text-bottom"
+            className="border-l border-emerald-400 animate-pulse"
           />
         )}
       </div>
