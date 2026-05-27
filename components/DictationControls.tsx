@@ -160,7 +160,7 @@ export function DictationControls({
                   ) : typed === ch ? (
                     <span className="text-emerald-500">{ch}</span>
                   ) : (
-                    <span className="text-red-500">{typed}</span>
+                    <span className="text-red-400/80">{typed}</span>
                   )}
                 </React.Fragment>
               );
@@ -185,7 +185,7 @@ export function DictationControls({
                   ) : spaceTyped === ' ' ? (
                     <span className="text-emerald-500">{' '}</span>
                   ) : (
-                    <span className="text-red-500">{'\u00a0'}</span>
+                    <span className="text-red-400/80">{'\u00a0'}</span>
                   )}
                 </React.Fragment>
               );
