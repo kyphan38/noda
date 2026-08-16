@@ -27,6 +27,7 @@ export function useLessonPlaybackLoop(
   useEffect(() => {
     let animationFrameId: number;
     let lastActiveSentenceId: number | null = null;
+    let lastSetTime: number | null = null;
 
     const updateProgress = () => {
       if (audioRef.current) {
@@ -153,7 +154,10 @@ export function useLessonPlaybackLoop(
           audioRef.current.currentTime = time;
         }
 
-        setCurrentTime(time);
+        if (time !== lastSetTime) {
+          lastSetTime = time;
+          setCurrentTime(time);
+        }
       }
       animationFrameId = requestAnimationFrame(updateProgress);
     };

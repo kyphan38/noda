@@ -36,7 +36,7 @@ interface SidebarSectionProps {
   isMobile?: boolean;
 }
 
-export function SidebarSection({
+function SidebarSectionImpl({
   type,
   title,
   items,
@@ -194,3 +194,5 @@ export function SidebarSection({
     </div>
   );
 }
+
+export const SidebarSection = React.memo(SidebarSectionImpl);

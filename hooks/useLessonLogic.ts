@@ -16,6 +16,37 @@ import {
   type LessonRecord,
 } from '@/lib/db';
 
+const LESSON_ROW_COMPARE_KEYS = [
+  'id',
+  'name',
+  'language',
+  'folderId',
+  'sortKey',
+  'progress',
+  'totalSentences',
+  'kind',
+  'isTrashed',
+  'hasMedia',
+  'mediaType',
+  'trashedAt',
+] as const;
+
+function lessonRowsShallowEqual(
+  a: readonly Record<string, unknown>[],
+  b: readonly Record<string, unknown>[]
+): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    for (const key of LESSON_ROW_COMPARE_KEYS) {
+      if (x[key] !== y[key]) return false;
+    }
+  }
+  return true;
+}
+
 export function useLessonLogic(
   mediaFile: File | null,
   setMediaFile: (file: File | null) => void,
@@ -127,7 +158,8 @@ export function useLessonLogic(
       try {
         listUnsubscribe = subscribeLessonsFirestore(
           (lessons) => {
-            setLessonsList(mapLessonsToRows(lessons));
+            const next = mapLessonsToRows(lessons);
+            setLessonsList((prev) => (lessonRowsShallowEqual(prev, next) ? prev : next));
             if (!didReceiveFirstSnapshot) {
               didReceiveFirstSnapshot = true;
               setIsListLoading(false);

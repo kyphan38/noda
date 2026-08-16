@@ -42,7 +42,7 @@ export function TranscriptSentence({
       data-index={index}
       onClick={() => onSentenceClick(sentence)}
       className={`
-        group flex cursor-pointer items-baseline gap-2 sm:gap-4 rounded-xl px-2 sm:px-3 py-3 sm:py-4 mb-2 sm:mb-2.5 transition-all duration-200
+        group flex cursor-pointer items-baseline gap-2 sm:gap-4 rounded-xl px-2 sm:px-3 py-3 sm:py-4 mb-2 sm:mb-2.5 transition duration-200
         ${
           isActive
             ? 'border border-emerald-400/30 bg-emerald-400/10 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]'

@@ -13,6 +13,8 @@ import {
   EyeOff,
   RotateCcw,
   Infinity,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { RepeatCount } from '@/types';
 import {
@@ -41,6 +43,9 @@ interface PlayerProps {
   showCaptionsToggle?: boolean;
   captionsHidden?: boolean;
   onToggleCaptions?: () => void;
+  showFocusToggle?: boolean;
+  focusMode?: boolean;
+  onToggleFocusMode?: () => void;
   showReset?: boolean;
   onReset?: () => void;
 }
@@ -210,6 +215,9 @@ export function Player({
   showCaptionsToggle = false,
   captionsHidden = false,
   onToggleCaptions,
+  showFocusToggle = false,
+  focusMode = false,
+  onToggleFocusMode,
   showReset = false,
   onReset,
 }: PlayerProps) {
@@ -342,6 +350,22 @@ export function Player({
               <EyeOff className="h-4 w-4 shrink-0" aria-hidden />
             ) : (
               <Eye className="h-4 w-4 shrink-0" aria-hidden />
+            )}
+          </button>
+        )}
+
+        {showFocusToggle && onToggleFocusMode && (
+          <button
+            type="button"
+            onClick={onToggleFocusMode}
+            className={`${toolBtn} ${focusMode ? 'bg-gray-800 text-white' : ''}`}
+            aria-label={focusMode ? 'Exit focus mode' : 'Enter focus mode'}
+            title={focusMode ? 'Exit focus mode' : 'Focus mode'}
+          >
+            {focusMode ? (
+              <Minimize2 className="h-4 w-4 shrink-0" aria-hidden />
+            ) : (
+              <Maximize2 className="h-4 w-4 shrink-0" aria-hidden />
             )}
           </button>
         )}

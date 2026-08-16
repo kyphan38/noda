@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Player } from './Player';
 import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
@@ -12,6 +12,7 @@ import {
   DictationInputs,
   CompletedSentences,
 } from '@/types';
+import { findActiveTranscriptIndex } from '@/lib/transcript-scroll';
 
 const MemoPlayer = React.memo(Player);
 const MemoTranscript = React.memo(Transcript);
@@ -44,6 +45,9 @@ interface LessonViewProps {
   isMobile: boolean;
   setDuration: (d: number) => void;
   setIsPlaying: (v: boolean) => void;
+  onMediaError?: (e: React.SyntheticEvent<HTMLMediaElement>) => void;
+  /** Notified whenever Focus Mode (single-line expanded video view) becomes active/inactive, so the page shell can widen to make room. */
+  onFocusModeChange?: (active: boolean) => void;
 }
 
 export function LessonView({
@@ -74,10 +78,14 @@ export function LessonView({
   isMobile,
   setDuration,
   setIsPlaying,
+  onMediaError,
+  onFocusModeChange,
 }: LessonViewProps) {
   const [seekDisabled, setSeekDisabled] = useState(false);
   const [videoHidden, setVideoHidden] = useState(false);
   const [hevcWarning, setHevcWarning] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const onFocusModeChangeRef = React.useRef(onFocusModeChange);
   const pendingToggleRestoreRef = React.useRef<{
     time: number;
     wasPlaying: boolean;
@@ -99,11 +107,40 @@ export function LessonView({
   const isVideoLesson = mediaType === 'video' && !!mediaURL;
   const videoLayout = isVideoLesson && !isMobile;
   const showVideoStage = videoLayout && !videoHidden;
+  const showFocusToggle = mode === 'normal' && showVideoStage;
+  const focusActive = focusMode && showFocusToggle;
+
+  const toggleFocusMode = useCallback(() => setFocusMode((v) => !v), []);
+
+  useEffect(() => {
+    onFocusModeChangeRef.current = onFocusModeChange;
+  }, [onFocusModeChange]);
+
+  useEffect(() => {
+    onFocusModeChangeRef.current?.(focusActive);
+  }, [focusActive]);
+
+  // Make sure the page shell is told to shrink back down if this view unmounts while still expanded.
+  useEffect(() => {
+    return () => onFocusModeChangeRef.current?.(false);
+  }, []);
+
+  const activeTranscriptIndex = useMemo(
+    () => findActiveTranscriptIndex(currentTime, transcript),
+    [currentTime, transcript]
+  );
+  const activeSentence =
+    activeTranscriptIndex >= 0 ? transcript[activeTranscriptIndex] : undefined;
 
   useEffect(() => {
     setVideoHidden(false);
     setHevcWarning(false);
+    setFocusMode(false);
   }, [lesson.id]);
+
+  useEffect(() => {
+    if (!showFocusToggle) setFocusMode(false);
+  }, [showFocusToggle]);
 
   useEffect(() => {
     setSeekDisabled(false);
@@ -192,6 +229,7 @@ export function LessonView({
     onEnded: () => setIsPlaying(false),
     onPlay: () => setIsPlaying(true),
     onPause: () => setIsPlaying(false),
+    onError: (e: React.SyntheticEvent<HTMLMediaElement>) => onMediaError?.(e),
   };
 
   return (
@@ -225,15 +263,17 @@ export function LessonView({
       )}
 
       {mediaURL && isVideoLesson && !isMobile && showVideoStage && (
-        <div className="relative shrink-0">
+        <div className={`relative ${focusActive ? 'flex-1 min-h-0' : 'shrink-0'}`}>
           <VideoPane
             ref={mediaRef as React.RefObject<HTMLVideoElement>}
             src={mediaURL}
             videoHidden={false}
+            expanded={focusActive}
             onLoadedMetadata={mediaEvents.onLoadedMetadata}
             onEnded={mediaEvents.onEnded}
             onPlay={mediaEvents.onPlay}
             onPause={mediaEvents.onPause}
+            onError={mediaEvents.onError}
           />
           {hevcWarning && (
             <div
@@ -250,7 +290,11 @@ export function LessonView({
         <audio ref={mediaRef} src={mediaURL} preload="metadata" className="hidden" {...mediaEvents} loop={false} />
       )}
 
-      <div className={`flex flex-col flex-1 min-h-0 ${mediaURL ? 'gap-4' : ''}`}>
+      <div
+        className={`flex flex-col ${focusActive ? 'shrink-0' : 'flex-1 min-h-0'} ${
+          mediaURL ? 'gap-4' : ''
+        }`}
+      >
         {mediaURL && (
           <div>
             <MemoPlayer
@@ -270,28 +314,46 @@ export function LessonView({
               showCaptionsToggle={mode === 'normal' && !!onToggleHideCaptions}
               captionsHidden={!!hideCaptions}
               onToggleCaptions={onToggleHideCaptions}
+              showFocusToggle={showFocusToggle}
+              focusMode={focusActive}
+              onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
               showReset={mode === 'dictation' && !!onResetDictation}
               onReset={onResetDictation}
             />
           </div>
         )}
 
-        <div className="flex-1 min-h-0 flex overflow-hidden">
-          <MemoTranscript
-            transcript={transcript}
-            currentTime={currentTime}
-            appMode={mode}
-            hideCaptions={hideCaptions}
-            dictationInputs={dictationInputs}
-            completedSentences={completedSentences}
-            scrollContainerRef={scrollContainerRef}
-            onSentenceClick={onSentenceClick}
-            onDictationChange={onDictationChange}
-            onDictationKeyDown={onDictationKeyDown}
-            onDictationRetry={onDictationRetry}
-            isMobile={isMobile}
-          />
-        </div>
+        {focusActive ? (
+          <div
+            className="shrink-0 rounded-2xl border border-gray-800 bg-gray-900 px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-center min-h-[64px] text-center transition-all duration-200"
+            aria-live="polite"
+          >
+            <p
+              className={`font-sans text-base sm:text-lg leading-relaxed ${
+                hideCaptions ? 'invisible select-none' : 'text-emerald-400 font-medium'
+              }`}
+            >
+              {activeSentence ? activeSentence.text : ''}
+            </p>
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 flex overflow-hidden">
+            <MemoTranscript
+              transcript={transcript}
+              currentTime={currentTime}
+              appMode={mode}
+              hideCaptions={hideCaptions}
+              dictationInputs={dictationInputs}
+              completedSentences={completedSentences}
+              scrollContainerRef={scrollContainerRef}
+              onSentenceClick={onSentenceClick}
+              onDictationChange={onDictationChange}
+              onDictationKeyDown={onDictationKeyDown}
+              onDictationRetry={onDictationRetry}
+              isMobile={isMobile}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

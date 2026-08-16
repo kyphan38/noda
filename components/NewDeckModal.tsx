@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, Upload } from 'lucide-react';
+import { Layers, Loader2, Upload } from 'lucide-react';
 import { isLessonNameTaken } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -13,7 +13,7 @@ export interface DeckData {
 
 interface NewDeckModalProps {
   onClose: () => void;
-  onSubmit: (data: DeckData) => void;
+  onSubmit: (data: DeckData) => void | Promise<void>;
   getTakenFlashcardDeckNames: () => string[];
   folders?: Array<{ id: string; name: string }>;
 }
@@ -25,6 +25,7 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
   const [cardCount, setCardCount] = useState(0);
   const [dropActive, setDropActive] = useState(false);
   const [uploadedFileNameConflict, setUploadedFileNameConflict] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const lines = content.split('\n').filter(l => l.trim().length > 0);
@@ -77,13 +78,19 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
     if (isTxt) ingestTextFile(file);
   };
 
-  const handleSubmit = () => {
-    if (deckName && cardCount > 0) {
-      onSubmit({
-        name: deckName,
-        folderId,
-        content
-      });
+  const handleSubmit = async () => {
+    if (!deckName || cardCount === 0 || isSaving) return;
+    setIsSaving(true);
+    try {
+      await Promise.resolve(
+        onSubmit({
+          name: deckName,
+          folderId,
+          content,
+        })
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -111,7 +118,7 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
           </Alert>
         ) : null}
 
-        <div className="space-y-6">
+        <div className={`space-y-6 ${isSaving ? 'pointer-events-none opacity-70' : ''}`}>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Deck Name</label>
             <input
@@ -124,6 +131,7 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
               }}
               autoCorrect="off"
               autoCapitalize="off"
+              disabled={isSaving}
             />
           </div>
 
@@ -133,6 +141,7 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
               value={folderId ?? ''}
               onChange={(e) => setFolderId(e.target.value ? e.target.value : null)}
+              disabled={isSaving}
             >
               <option value="">(Root)</option>
               {folders.map((f) => (
@@ -167,6 +176,7 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
                 onChange={(e) => setContent(e.target.value)}
                 autoCorrect="off"
                 autoCapitalize="off"
+                disabled={isSaving}
               />
             </div>
             <p className="text-xs text-gray-500 mt-2">Drop a .txt file onto the box above to import lines.</p>
@@ -192,6 +202,7 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
                     accept=".txt,text/plain"
                     onChange={handleFileUpload}
                     className="hidden"
+                    disabled={isSaving}
                   />
                 </label>
               </div>
@@ -201,11 +212,18 @@ export function NewDeckModal({ onClose, onSubmit, getTakenFlashcardDeckNames, fo
           <Button
             type="button"
             variant="default"
-            className="h-auto w-full justify-center rounded-xl py-4 text-lg font-bold"
-            disabled={!deckName || cardCount === 0}
-            onClick={handleSubmit}
+            className="h-auto w-full justify-center gap-2 rounded-xl py-4 text-lg font-bold"
+            disabled={!deckName || cardCount === 0 || isSaving}
+            onClick={() => void handleSubmit()}
           >
-            Create ({cardCount} cards)
+            {isSaving ? (
+              <>
+                <Loader2 className="animate-spin shrink-0" size={22} aria-hidden />
+                Saving…
+              </>
+            ) : (
+              `Create (${cardCount} cards)`
+            )}
           </Button>
         </div>
       </div>

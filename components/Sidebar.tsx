@@ -168,7 +168,7 @@ interface SidebarProps {
   isMobile?: boolean;
 }
 
-export function Sidebar({
+function SidebarImpl({
   isOpen,
   onToggle,
   lessons,
@@ -204,39 +204,55 @@ export function Sidebar({
     return m;
   }, [folders]);
 
-  const activeLessons: LessonItem[] = lessons
-    .filter((l) => !l.isTrashed && l.kind === 'audio')
-    .map((l) => ({
-      id: l.id,
-      name: l.name,
-      language: 'en',
-      folderId: l.folderId ?? null,
-      sortKey: l.sortKey,
-      progress: l.progress,
-      hasMedia: l.hasMedia,
-      mediaType: l.mediaType,
-      type: 'lesson',
-    }));
+  const activeLessons: LessonItem[] = useMemo(
+    () =>
+      lessons
+        .filter((l) => !l.isTrashed && l.kind === 'audio')
+        .map((l) => ({
+          id: l.id,
+          name: l.name,
+          language: 'en',
+          folderId: l.folderId ?? null,
+          sortKey: l.sortKey,
+          progress: l.progress,
+          hasMedia: l.hasMedia,
+          mediaType: l.mediaType,
+          type: 'lesson' as const,
+        })),
+    [lessons]
+  );
 
-  const activeDecks: DeckItem[] = lessons
-    .filter((l) => !l.isTrashed && l.kind === 'flashcard')
-    .map((l) => ({
-      id: l.id,
-      name: l.name,
-      language: 'en',
-      folderId: l.folderId ?? null,
-      sortKey: l.sortKey,
-      cardCount: l.totalSentences,
-      progress: l.progress,
-      type: 'deck',
-    }));
+  const activeDecks: DeckItem[] = useMemo(
+    () =>
+      lessons
+        .filter((l) => !l.isTrashed && l.kind === 'flashcard')
+        .map((l) => ({
+          id: l.id,
+          name: l.name,
+          language: 'en',
+          folderId: l.folderId ?? null,
+          sortKey: l.sortKey,
+          cardCount: l.totalSentences,
+          progress: l.progress,
+          type: 'deck' as const,
+        })),
+    [lessons]
+  );
 
-  const filteredLessons = searching
-    ? activeLessons.filter((x) => x.name.toLowerCase().includes(searchTerm))
-    : activeLessons;
-  const filteredDecks = searching
-    ? activeDecks.filter((x) => x.name.toLowerCase().includes(searchTerm))
-    : activeDecks;
+  const filteredLessons = useMemo(
+    () =>
+      searching
+        ? activeLessons.filter((x) => x.name.toLowerCase().includes(searchTerm))
+        : activeLessons,
+    [searching, activeLessons, searchTerm]
+  );
+  const filteredDecks = useMemo(
+    () =>
+      searching
+        ? activeDecks.filter((x) => x.name.toLowerCase().includes(searchTerm))
+        : activeDecks,
+    [searching, activeDecks, searchTerm]
+  );
 
   const forcedExpanded = useMemo(() => {
     if (!searching) return undefined;
@@ -252,7 +268,7 @@ export function Sidebar({
     return out;
   }, [searching, filteredLessons, filteredDecks, folderParentById]);
 
-  const trashed = lessons.filter((l) => l.isTrashed);
+  const trashed = useMemo(() => lessons.filter((l) => l.isTrashed), [lessons]);
   const trashExpanded = expandedSections.trash ?? false;
 
   const flexColWidth = isMobile ? 'w-0' : isOpen ? 'w-72' : 'w-0';
@@ -268,7 +284,7 @@ export function Sidebar({
         />
       )}
       <div
-        className={`shrink-0 transition-all duration-300 ease-in-out ${flexColWidth} relative z-50`}
+        className={`shrink-0 transition-[width] duration-300 ease-in-out ${flexColWidth} relative z-50`}
       >
         <div
           className={`fixed inset-y-0 left-0 w-72 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out ${
@@ -407,3 +423,5 @@ export function Sidebar({
     </>
   );
 }
+
+export const Sidebar = React.memo(SidebarImpl);

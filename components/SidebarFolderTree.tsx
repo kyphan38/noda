@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { DeckItem, LessonItem, SidebarFolder } from '@/types';
 import { SidebarFolderRow } from './SidebarFolderRow';
 import { LessonCard } from './LessonCard';
@@ -15,7 +15,7 @@ function folderKey(id: string): string {
 
 const MAX_VISIBLE_PER_CONTAINER = 10;
 
-export function SidebarFolderTree({
+function SidebarFolderTreeImpl({
   kind,
   items,
   folders,
@@ -100,6 +100,33 @@ export function SidebarFolderTree({
     setOverTarget((prev) => {
       if (prev?.targetId === next?.targetId && prev?.position === next?.position) return prev;
       return next;
+    });
+  };
+
+  // `dragover` fires at mousemove frequency; throttle the layout-reading
+  // getBoundingClientRect() + position calc to at most once per paint via rAF.
+  // setOverTargetIfChanged already dedupes the resulting state update, so this
+  // only skips redundant reads - the drop-indicator behavior is unchanged.
+  const dragOverFrameRef = useRef<number | null>(null);
+  const pendingDragOverRef = useRef<{ el: HTMLDivElement; clientY: number; targetId: string } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (dragOverFrameRef.current != null) cancelAnimationFrame(dragOverFrameRef.current);
+    };
+  }, []);
+
+  const scheduleDragOverUpdate = (el: HTMLDivElement, clientY: number, targetId: string) => {
+    pendingDragOverRef.current = { el, clientY, targetId };
+    if (dragOverFrameRef.current != null) return;
+    dragOverFrameRef.current = requestAnimationFrame(() => {
+      dragOverFrameRef.current = null;
+      const pending = pendingDragOverRef.current;
+      pendingDragOverRef.current = null;
+      if (!pending) return;
+      const r = pending.el.getBoundingClientRect();
+      const before = pending.clientY < r.top + r.height / 2;
+      setOverTargetIfChanged({ targetId: pending.targetId, position: before ? 'before' : 'after' });
     });
   };
 
@@ -249,9 +276,7 @@ export function SidebarFolderTree({
                 if (!p || p.entity !== 'item') return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
-                const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                const before = e.clientY < r.top + r.height / 2;
-                setOverTargetIfChanged({ targetId: it.id, position: before ? 'before' : 'after' });
+                scheduleDragOverUpdate(e.currentTarget as HTMLDivElement, e.clientY, it.id);
               }}
               onDrop={(e) => {
                 if (!enableDnd) return;
@@ -356,9 +381,7 @@ export function SidebarFolderTree({
                 e.dataTransfer.dropEffect = 'move';
 
                 if (p.entity !== 'folder') return;
-                const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                const before = e.clientY < r.top + r.height / 2;
-                setOverTargetIfChanged({ targetId: f.id, position: before ? 'before' : 'after' });
+                scheduleDragOverUpdate(e.currentTarget as HTMLDivElement, e.clientY, f.id);
               }}
               onDrop={(e) => {
                 if (!enableDnd) return;
@@ -475,9 +498,7 @@ export function SidebarFolderTree({
                         if (!p || p.entity !== 'item') return;
                         e.preventDefault();
                         e.dataTransfer.dropEffect = 'move';
-                        const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                        const before = e.clientY < r.top + r.height / 2;
-                        setOverTargetIfChanged({ targetId: it.id, position: before ? 'before' : 'after' });
+                        scheduleDragOverUpdate(e.currentTarget as HTMLDivElement, e.clientY, it.id);
                       }}
                       onDrop={(e) => {
                         if (!enableDnd) return;
@@ -582,9 +603,7 @@ export function SidebarFolderTree({
                           e.dataTransfer.dropEffect = 'move';
 
                           if (p.entity !== 'folder') return;
-                          const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                          const before = e.clientY < r.top + r.height / 2;
-                          setOverTargetIfChanged({ targetId: sf.id, position: before ? 'before' : 'after' });
+                          scheduleDragOverUpdate(e.currentTarget as HTMLDivElement, e.clientY, sf.id);
                         }}
                         onDrop={(e) => {
                           if (!enableDnd) return;
@@ -693,9 +712,7 @@ export function SidebarFolderTree({
                                   if (!p || p.entity !== 'item') return;
                                   e.preventDefault();
                                   e.dataTransfer.dropEffect = 'move';
-                                  const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                  const before = e.clientY < r.top + r.height / 2;
-                                  setOverTargetIfChanged({ targetId: it.id, position: before ? 'before' : 'after' });
+                                  scheduleDragOverUpdate(e.currentTarget as HTMLDivElement, e.clientY, it.id);
                                 }}
                                 onDrop={(e) => {
                                   if (!enableDnd) return;
@@ -800,9 +817,7 @@ export function SidebarFolderTree({
                                     e.dataTransfer.dropEffect = 'move';
 
                                     if (p.entity !== 'folder') return;
-                                    const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                    const before = e.clientY < r.top + r.height / 2;
-                                    setOverTargetIfChanged({ targetId: tf.id, position: before ? 'before' : 'after' });
+                                    scheduleDragOverUpdate(e.currentTarget as HTMLDivElement, e.clientY, tf.id);
                                   }}
                                   onDrop={(e) => {
                                     if (!enableDnd) return;
@@ -948,3 +963,5 @@ export function SidebarFolderTree({
     </div>
   );
 }
+
+export const SidebarFolderTree = React.memo(SidebarFolderTreeImpl);

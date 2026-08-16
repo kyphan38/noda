@@ -41,6 +41,28 @@ function nowSortKey(): number {
   return Date.now();
 }
 
+function foldersShallowEqual(a: SidebarFolder[], b: SidebarFolder[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.id !== y.id ||
+      x.name !== y.name ||
+      x.kind !== y.kind ||
+      x.language !== y.language ||
+      x.parentId !== y.parentId ||
+      x.sortKey !== y.sortKey ||
+      x.createdAt !== y.createdAt ||
+      x.updatedAt !== y.updatedAt
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function useFolders(): UseFoldersResult {
   const [folders, setFolders] = useState<SidebarFolder[]>([]);
   const [localFolderOverrides, setLocalFolderOverrides] = useState<Record<string, FolderOverride>>({});
@@ -136,18 +158,17 @@ export function useFolders(): UseFoldersResult {
               return r;
             });
 
-            setFolders(
-              sanitized.map((r: SidebarFolderRecord) => ({
-                id: r.id,
-                name: r.name,
-                kind: r.kind,
-                language: r.language,
-                parentId: r.parentId ?? null,
-                sortKey: r.sortKey ?? 0,
-                createdAt: r.createdAt ?? Date.now(),
-                updatedAt: r.updatedAt ?? Date.now(),
-              }))
-            );
+            const next = sanitized.map((r: SidebarFolderRecord) => ({
+              id: r.id,
+              name: r.name,
+              kind: r.kind,
+              language: r.language,
+              parentId: r.parentId ?? null,
+              sortKey: r.sortKey ?? 0,
+              createdAt: r.createdAt ?? Date.now(),
+              updatedAt: r.updatedAt ?? Date.now(),
+            }));
+            setFolders((prev) => (foldersShallowEqual(prev, next) ? prev : next));
           },
           (error) => {
             console.error('Failed to subscribe sidebar folders', error);

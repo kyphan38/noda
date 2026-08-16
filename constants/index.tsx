@@ -29,4 +29,6 @@ export const DICTATION_SAVE_DEBOUNCE_MS = 200;
 export const PRONUNCIATION_SCORE_THRESHOLD = 80; // Min score to show "Next" button
 export const REPEAT_PAUSE_MS = 750;
 export const SENTENCE_PRE_ROLL_SECONDS = 0.1;
+/** Seconds to skip when pressing the Left/Right arrow keys. Change this number to adjust the skip amount. */
+export const ARROW_SKIP_SECONDS = 5;
 

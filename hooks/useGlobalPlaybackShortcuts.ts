@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, RepeatCount, Sentence } from '@/types';
-import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
+import { ARROW_SKIP_SECONDS, SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 type ModeChange = (mode: AppMode) => void | Promise<void>;
 
@@ -63,6 +63,14 @@ export function useGlobalPlaybackShortcuts(
       if (e.code === 'Space') {
         e.preventDefault();
         togglePlayPause();
+      } else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+        e.preventDefault();
+        const media = audioRef.current;
+        if (media && Number.isFinite(media.currentTime)) {
+          const delta = e.code === 'ArrowLeft' ? -ARROW_SKIP_SECONDS : ARROW_SKIP_SECONDS;
+          const maxTime = Number.isFinite(media.duration) ? media.duration : Infinity;
+          media.currentTime = Math.min(Math.max(0, media.currentTime + delta), maxTime);
+        }
       } else if (e.code === 'KeyL' || e.code === 'KeyR') {
         e.preventDefault();
         cycleRepeatCount();

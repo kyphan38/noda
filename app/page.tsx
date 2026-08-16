@@ -67,6 +67,9 @@ export default function NodaApp() {
   const [headerItemMenuOpen, setHeaderItemMenuOpen] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
   const [hideCaptions, setHideCaptions] = useState(false);
+  // True while LessonView's Focus Mode (expanded single-line video view) is active.
+  // Lets the page shell drop its max-w-4xl cap so the video can use the full width/height.
+  const [pageFocusActive, setPageFocusActive] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
@@ -238,15 +241,15 @@ export default function NodaApp() {
     setSelectedItem(null);
   }, [handleNewLesson, saveTranscriptScrollForCurrentLesson]);
 
-  const openNewLessonModal = () => {
+  const openNewLessonModal = useCallback(() => {
     handleNewLessonWrapper();
     setUploadMode('lesson');
-  };
+  }, [handleNewLessonWrapper]);
 
-  const openNewDeckModal = () => {
+  const openNewDeckModal = useCallback(() => {
     handleNewLessonWrapper();
     setUploadMode('deck');
-  };
+  }, [handleNewLessonWrapper]);
 
   const closeUploadModal = () => {
     setUploadMode('idle');
@@ -328,13 +331,13 @@ export default function NodaApp() {
     ]
   );
 
-  const handleItemSelect = (item: LessonItem | DeckItem) => {
+  const handleItemSelect = useCallback((item: LessonItem | DeckItem) => {
     const row = lessonsListEffective.find((l) => l.id === item.id);
     if (!row || row.isTrashed) return;
     applySelectionFromRow(row, { pushHistory: true });
-  };
+  }, [lessonsListEffective, applySelectionFromRow]);
 
-  const handleTrashItem = async (id: string) => {
+  const handleTrashItem = useCallback(async (id: string) => {
     try {
       await trashLessonFirestore(id);
       if (selectedItem?.id === id) {
@@ -343,15 +346,33 @@ export default function NodaApp() {
     } catch {
       setToast({ message: 'Could not move item to trash.', type: 'error' });
     }
-  };
+  }, [selectedItem?.id, handleNewLessonWrapper]);
 
-  const handleRestoreItem = async (id: string) => {
+  const handleRestoreItem = useCallback(async (id: string) => {
     try {
       await restoreLessonFirestore(id);
     } catch {
       setToast({ message: 'Could not restore item.', type: 'error' });
     }
-  };
+  }, []);
+
+  const handleDeleteForeverMany = useCallback((ids: string[]) => {
+    setTrashDeleteIds(ids);
+  }, []);
+
+  const handleToggleSection = useCallback((section: string, expanded: boolean) => {
+    setExpandedSections((prev) => ({ ...prev, [section]: expanded }));
+  }, [setExpandedSections]);
+
+  const folderActions = useMemo(() => ({
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    moveFolder,
+    reorderFolder,
+    moveItem,
+    reorderItem,
+  }), [createFolder, renameFolder, deleteFolder, moveFolder, reorderFolder, moveItem, reorderItem]);
 
   // Revoke blob URLs whenever mediaURL changes or the app unmounts. handleLoadLesson / handleNewLesson
   // and other paths call setMediaURL without revoking the previous URL; handleMediaUpload revokes in its
@@ -799,11 +820,11 @@ export default function NodaApp() {
     completedSentencesRef.current = {};
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await signOut(getFirebaseAuth());
     setAuthState('unauthorized');
     window.history.replaceState({}, '', window.location.pathname);
-  };
+  }, []);
 
   if (!isMounted) {
     return null;
@@ -829,15 +850,7 @@ export default function NodaApp() {
           onToggle={setIsSidebarOpen}
           lessons={lessonsListEffective}
           folders={effectiveFolders}
-          folderActions={{
-            createFolder,
-            renameFolder,
-            deleteFolder,
-            moveFolder,
-            reorderFolder,
-            moveItem,
-            reorderItem,
-          }}
+          folderActions={folderActions}
           isListLoading={isListLoading}
           selectedItemId={selectedItem?.id}
           expandedSections={expandedSections}
@@ -847,18 +860,20 @@ export default function NodaApp() {
           onTrashItem={handleTrashItem}
           onRestoreItem={handleRestoreItem}
           onDeleteForever={setLessonToDelete}
-          onDeleteForeverMany={(ids) => setTrashDeleteIds(ids)}
+          onDeleteForeverMany={handleDeleteForeverMany}
           onRenameLesson={handleRenameLesson}
-          onLogout={() => void handleLogout()}
-          onToggleSection={(section, expanded) =>
-            setExpandedSections((prev) => ({ ...prev, [section]: expanded }))
-          }
+          onLogout={handleLogout}
+          onToggleSection={handleToggleSection}
           isMobile={viewport.isMobile}
         />
       </div>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <div className="max-w-4xl mx-auto w-full p-3 md:p-4 flex flex-col h-full min-h-0">
+        <div
+          className={`mx-auto w-full p-3 md:p-4 flex flex-col h-full min-h-0 transition-[max-width] duration-300 ${
+            pageFocusActive ? 'max-w-none' : 'max-w-4xl'
+          }`}
+        >
           <AppHeader
             isSidebarOpen={isSidebarOpen}
             onOpenSidebar={() => setIsSidebarOpen(true)}
@@ -935,6 +950,8 @@ export default function NodaApp() {
                   isMobile={viewport.isMobile}
                   setDuration={setDuration}
                   setIsPlaying={setIsPlaying}
+                  onMediaError={() => setToast({ message: 'Could not load media file.', type: 'error' })}
+                  onFocusModeChange={setPageFocusActive}
                 />
               </div>
             )}
