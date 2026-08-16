@@ -15,7 +15,9 @@ export function useGlobalPlaybackShortcuts(
   isLoopDelayingRef: MutableRefObject<boolean>,
   audioRef: RefObject<HTMLMediaElement | null>,
   activeSentenceRef: MutableRefObject<Sentence | null>,
-  replayOnceRef: MutableRefObject<{ sentenceId: number; end: number } | null>
+  replayOnceRef: MutableRefObject<{ sentenceId: number; end: number } | null>,
+  shadowingActiveRef: MutableRefObject<boolean>,
+  onShadowingNext: () => void
 ) {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -74,6 +76,13 @@ export function useGlobalPlaybackShortcuts(
       } else if (e.code === 'KeyL' || e.code === 'KeyR') {
         e.preventDefault();
         cycleRepeatCount();
+      } else if (e.key === 'Enter' && shadowingActiveRef.current && appMode === 'normal') {
+        e.preventDefault();
+        if (loopTimeoutRef.current) {
+          clearTimeout(loopTimeoutRef.current);
+          isLoopDelayingRef.current = false;
+        }
+        onShadowingNext();
       } else if (e.key === 'Control') {
         e.preventDefault();
         if (loopTimeoutRef.current) {
@@ -106,5 +115,7 @@ export function useGlobalPlaybackShortcuts(
     handleModeChange,
     activeSentenceRef,
     replayOnceRef,
+    shadowingActiveRef,
+    onShadowingNext,
   ]);
 }

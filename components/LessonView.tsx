@@ -48,6 +48,9 @@ interface LessonViewProps {
   onMediaError?: (e: React.SyntheticEvent<HTMLMediaElement>) => void;
   /** Notified whenever Focus Mode (single-line expanded video view) becomes active/inactive, so the page shell can widen to make room. */
   onFocusModeChange?: (active: boolean) => void;
+  /** Shadowing practice (Normal mode only): pauses after each line; Enter = next line, Control = replay line. */
+  shadowingActive?: boolean;
+  onToggleShadowing?: () => void;
 }
 
 export function LessonView({
@@ -80,6 +83,8 @@ export function LessonView({
   setIsPlaying,
   onMediaError,
   onFocusModeChange,
+  shadowingActive,
+  onToggleShadowing,
 }: LessonViewProps) {
   const [seekDisabled, setSeekDisabled] = useState(false);
   const [videoHidden, setVideoHidden] = useState(false);
@@ -345,6 +350,9 @@ export function LessonView({
             showFocusToggle={showFocusToggle}
             focusMode={focusActive}
             onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
+            showShadowingToggle={mode === 'normal' && !!onToggleShadowing}
+            shadowingActive={!!shadowingActive}
+            onToggleShadowing={mode === 'normal' ? onToggleShadowing : undefined}
             showReset={mode === 'dictation' && !!onResetDictation}
             onReset={onResetDictation}
           />

@@ -15,6 +15,7 @@ import {
   Infinity,
   Maximize2,
   Minimize2,
+  Ear,
 } from 'lucide-react';
 import { RepeatCount } from '@/types';
 import {
@@ -46,6 +47,9 @@ interface PlayerProps {
   showFocusToggle?: boolean;
   focusMode?: boolean;
   onToggleFocusMode?: () => void;
+  showShadowingToggle?: boolean;
+  shadowingActive?: boolean;
+  onToggleShadowing?: () => void;
   showReset?: boolean;
   onReset?: () => void;
 }
@@ -228,6 +232,9 @@ export function Player({
   showFocusToggle = false,
   focusMode = false,
   onToggleFocusMode,
+  showShadowingToggle = false,
+  shadowingActive = false,
+  onToggleShadowing,
   showReset = false,
   onReset,
 }: PlayerProps) {
@@ -330,6 +337,22 @@ export function Player({
             onClose={closeRepeat}
             triggerRef={repeatBtnRef}
           />
+        )}
+
+        {showShadowingToggle && onToggleShadowing && (
+          <button
+            type="button"
+            onClick={onToggleShadowing}
+            className={`${toolBtn} ${shadowingActive ? 'bg-gray-800 text-white' : ''}`}
+            aria-label={shadowingActive ? 'Turn off shadowing mode' : 'Turn on shadowing mode'}
+            title={
+              shadowingActive
+                ? 'Shadowing on: pauses after each line (Enter = next line, Control = repeat line)'
+                : 'Shadowing mode'
+            }
+          >
+            <Ear className="h-4 w-4 shrink-0" aria-hidden />
+          </button>
         )}
 
         {showVideoToggle && onToggleVideoHidden && (

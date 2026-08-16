@@ -67,6 +67,13 @@ export default function NodaApp() {
   const [headerItemMenuOpen, setHeaderItemMenuOpen] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
   const [hideCaptions, setHideCaptions] = useState(false);
+  // Shadowing practice (Normal mode only): pauses after each line; Enter = next line, Control = replay line.
+  const [shadowingActive, setShadowingActive] = useState(false);
+  const shadowingActiveRef = useRef(shadowingActive);
+  useEffect(() => {
+    shadowingActiveRef.current = shadowingActive;
+  }, [shadowingActive]);
+  const toggleShadowing = useCallback(() => setShadowingActive((v) => !v), []);
   // True while LessonView's Focus Mode (expanded single-line video view) is active.
   // Lets the page shell drop its max-w-4xl cap so the video can use the full width/height.
   const [pageFocusActive, setPageFocusActive] = useState(false);
@@ -392,6 +399,10 @@ export default function NodaApp() {
   }, [selectedItem?.id]);
 
   useEffect(() => {
+    setShadowingActive(false);
+  }, [selectedItem?.id]);
+
+  useEffect(() => {
     if (loopTimeoutRef.current) {
       clearTimeout(loopTimeoutRef.current);
       loopTimeoutRef.current = null;
@@ -606,6 +617,21 @@ export default function NodaApp() {
     changeRepeatCount(getNextRepeatCount(repeatCount));
   }, [repeatCount, changeRepeatCount]);
 
+  // Shadowing: jump to the next line and play it (Enter key).
+  const handleShadowingNext = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    const tr = transcriptRef.current;
+    const current = activeSentenceRef.current;
+    const next = current
+      ? tr.find((s) => s.start > current.start)
+      : tr.find((s) => s.start > media.currentTime);
+    if (!next) return;
+    media.currentTime = next.start;
+    setCurrentTime(next.start);
+    media.play().catch(() => {});
+  }, [mediaRef, activeSentenceRef, transcriptRef, setCurrentTime]);
+
   useGlobalPlaybackShortcuts(
     selectedItem?.type,
     appMode,
@@ -617,7 +643,9 @@ export default function NodaApp() {
     isLoopDelayingRef,
     mediaRef,
     activeSentenceRef,
-    dictationReplayOnceRef
+    dictationReplayOnceRef,
+    shadowingActiveRef,
+    handleShadowingNext
   );
 
   useLessonPlaybackLoop(
@@ -629,6 +657,7 @@ export default function NodaApp() {
     isLoopDelayingRef,
     loopModeRef,
     appModeRef,
+    shadowingActiveRef,
     completedSentencesRef,
     activeSentenceRef,
     dictationReplayOnceRef,
@@ -952,6 +981,8 @@ export default function NodaApp() {
                   setIsPlaying={setIsPlaying}
                   onMediaError={() => setToast({ message: 'Could not load media file.', type: 'error' })}
                   onFocusModeChange={setPageFocusActive}
+                  shadowingActive={shadowingActive}
+                  onToggleShadowing={toggleShadowing}
                 />
               </div>
             )}
