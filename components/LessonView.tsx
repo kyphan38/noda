@@ -290,71 +290,66 @@ export function LessonView({
         <audio ref={mediaRef} src={mediaURL} preload="metadata" className="hidden" {...mediaEvents} loop={false} />
       )}
 
-      <div
-        className={`flex flex-col ${focusActive ? 'shrink-0' : 'flex-1 min-h-0'} ${
-          mediaURL ? 'gap-4' : ''
-        }`}
-      >
-        {mediaURL && (
-          <div>
-            <MemoPlayer
-              isPlaying={isPlaying}
-              duration={duration}
-              currentTime={currentTime}
-              playbackRate={playbackRate}
-              repeatCount={repeatCount}
-              onPlayPause={onPlayPause}
-              onSeek={onSeek}
-              onSpeedChange={onSpeedChange}
-              onRepeatCountChange={onRepeatCountChange}
-              seekDisabled={seekDisabled}
-              showVideoToggle={isVideoLesson}
-              videoHidden={videoHidden}
-              onToggleVideoHidden={toggleVideoHidden}
-              showCaptionsToggle={mode === 'normal' && !!onToggleHideCaptions}
-              captionsHidden={!!hideCaptions}
-              onToggleCaptions={onToggleHideCaptions}
-              showFocusToggle={showFocusToggle}
-              focusMode={focusActive}
-              onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
-              showReset={mode === 'dictation' && !!onResetDictation}
-              onReset={onResetDictation}
-            />
-          </div>
-        )}
-
-        {focusActive ? (
-          <div
-            className="shrink-0 rounded-2xl border border-gray-800 bg-gray-900 px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-center min-h-[64px] text-center transition-all duration-200"
-            aria-live="polite"
+      {focusActive ? (
+        <div
+          className="shrink-0 rounded-2xl border border-gray-800 bg-gray-900 px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-center min-h-[64px] text-center transition-all duration-200"
+          aria-live="polite"
+        >
+          <p
+            className={`font-sans text-base sm:text-lg leading-relaxed ${
+              hideCaptions ? 'invisible select-none' : 'text-emerald-400 font-medium'
+            }`}
           >
-            <p
-              className={`font-sans text-base sm:text-lg leading-relaxed ${
-                hideCaptions ? 'invisible select-none' : 'text-emerald-400 font-medium'
-              }`}
-            >
-              {activeSentence ? activeSentence.text : ''}
-            </p>
-          </div>
-        ) : (
-          <div className="flex-1 min-h-0 flex overflow-hidden">
-            <MemoTranscript
-              transcript={transcript}
-              currentTime={currentTime}
-              appMode={mode}
-              hideCaptions={hideCaptions}
-              dictationInputs={dictationInputs}
-              completedSentences={completedSentences}
-              scrollContainerRef={scrollContainerRef}
-              onSentenceClick={onSentenceClick}
-              onDictationChange={onDictationChange}
-              onDictationKeyDown={onDictationKeyDown}
-              onDictationRetry={onDictationRetry}
-              isMobile={isMobile}
-            />
-          </div>
-        )}
-      </div>
+            {activeSentence ? activeSentence.text : ''}
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 flex overflow-hidden">
+          <MemoTranscript
+            transcript={transcript}
+            currentTime={currentTime}
+            appMode={mode}
+            hideCaptions={hideCaptions}
+            dictationInputs={dictationInputs}
+            completedSentences={completedSentences}
+            scrollContainerRef={scrollContainerRef}
+            onSentenceClick={onSentenceClick}
+            onDictationChange={onDictationChange}
+            onDictationKeyDown={onDictationKeyDown}
+            onDictationRetry={onDictationRetry}
+            isMobile={isMobile}
+          />
+        </div>
+      )}
+
+      {/* Control bar: always the last item, so it stays pinned to the bottom of the screen in every mode. */}
+      {mediaURL && (
+        <div className="shrink-0">
+          <MemoPlayer
+            isPlaying={isPlaying}
+            duration={duration}
+            currentTime={currentTime}
+            playbackRate={playbackRate}
+            repeatCount={repeatCount}
+            onPlayPause={onPlayPause}
+            onSeek={onSeek}
+            onSpeedChange={onSpeedChange}
+            onRepeatCountChange={onRepeatCountChange}
+            seekDisabled={seekDisabled}
+            showVideoToggle={isVideoLesson}
+            videoHidden={videoHidden}
+            onToggleVideoHidden={toggleVideoHidden}
+            showCaptionsToggle={mode === 'normal' && !!onToggleHideCaptions}
+            captionsHidden={!!hideCaptions}
+            onToggleCaptions={onToggleHideCaptions}
+            showFocusToggle={showFocusToggle}
+            focusMode={focusActive}
+            onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
+            showReset={mode === 'dictation' && !!onResetDictation}
+            onReset={onResetDictation}
+          />
+        </div>
+      )}
     </div>
   );
 }
