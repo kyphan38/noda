@@ -30,6 +30,83 @@ import * as path from "path";
 import { sliceAudioClip } from "./lib/sliceAudio";
 import { getShadowingModel } from "./lib/geminiClient";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
+import type { GenerativeModel } from "@google/generative-ai";
+
+/** Stage 6: thrown when Gemini's response text fails JSON.parse — caught by the
+ * caller to trigger a single automatic retry before giving up. */
+class GeminiJsonParseError extends Error {}
+
+/** Stage 6: the SDK's `requestOptions.timeout` (25000ms) aborts the underlying
+ * fetch on timeout, surfacing as an AbortError (or a message mentioning
+ * timeout/aborted depending on the runtime) — detect both. */
+function isGeminiTimeoutError(e: unknown): boolean {
+  if (!(e instanceof Error)) return false;
+  const name = e.name?.toLowerCase() ?? "";
+  const message = e.message?.toLowerCase() ?? "";
+  return name.includes("abort") || message.includes("timeout") || message.includes("timed out") || message.includes("aborted");
+}
+
+/** One Gemini call attempt: generate + parse JSON. Throws GeminiJsonParseError
+ * on malformed JSON so the caller can retry once; timeout/other errors
+ * propagate as-is. */
+async function callGeminiOnce(
+  model: GenerativeModel,
+  sourceText: string,
+  base64ClipAudio: string
+): Promise<unknown> {
+  const result = await model.generateContent(
+    {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: buildShadowingAnalysisPrompt(sourceText) },
+            { inlineData: { mimeType: "audio/wav", data: base64ClipAudio } },
+          ],
+        },
+      ],
+    },
+    { timeout: 25000 } // same convention as cogi's routes
+  );
+
+  const text = result.response.text();
+  if (!text) {
+    throw new HttpsError("internal", "Empty response from Gemini.");
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new GeminiJsonParseError("Gemini returned malformed JSON.");
+  }
+}
+
+/** Stage 6: one call, with a single automatic retry on malformed JSON
+ * (timeouts are not retried — they already ate the full 25s budget). */
+async function callGeminiWithRetry(
+  model: GenerativeModel,
+  sourceText: string,
+  base64ClipAudio: string
+): Promise<unknown> {
+  try {
+    return await callGeminiOnce(model, sourceText, base64ClipAudio);
+  } catch (e) {
+    if (isGeminiTimeoutError(e)) {
+      throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
+    }
+    if (!(e instanceof GeminiJsonParseError)) throw e;
+
+    // Malformed JSON on attempt 1 — retry exactly once (đã chốt trong plan).
+    try {
+      return await callGeminiOnce(model, sourceText, base64ClipAudio);
+    } catch (e2) {
+      if (isGeminiTimeoutError(e2)) {
+        throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
+      }
+      throw new HttpsError("internal", "Gemini returned malformed JSON after retry.");
+    }
+  }
+}
 
 interface AnalyzeShadowingPatternRequest {
   lessonId: string;
@@ -118,32 +195,7 @@ export const analyzeShadowingPattern = onCall(
       const base64ClipAudio = readFileSync(clipPath).toString("base64");
 
       const model = getShadowingModel();
-      const result = await model.generateContent(
-        {
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { text: buildShadowingAnalysisPrompt(sourceText) },
-                { inlineData: { mimeType: "audio/wav", data: base64ClipAudio } },
-              ],
-            },
-          ],
-        },
-        { timeout: 25000 } // same convention as cogi's routes
-      );
-
-      const text = result.response.text();
-      if (!text) {
-        throw new HttpsError("internal", "Empty response from Gemini.");
-      }
-
-      let analysis: unknown;
-      try {
-        analysis = JSON.parse(text);
-      } catch {
-        throw new HttpsError("internal", "Gemini returned malformed JSON.");
-      }
+      const analysis = await callGeminiWithRetry(model, sourceText, base64ClipAudio);
 
       const analysisResult = {
         sentenceId,
