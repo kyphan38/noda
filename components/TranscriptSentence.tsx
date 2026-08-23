@@ -1,7 +1,9 @@
 import React from 'react';
-import { Play, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Play, CheckCircle2, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
 import { DictationControls } from './DictationControls';
+import { ShadowingPatternPanel } from './ShadowingPatternPanel';
+import { useShadowingPatternAnalysis } from '@/hooks/useShadowingPatternAnalysis';
 
 interface TranscriptSentenceProps {
   sentence: Sentence;
@@ -9,6 +11,9 @@ interface TranscriptSentenceProps {
   isActive: boolean;
   isPast: boolean;
   appMode: AppMode;
+  /** For the shadowing-pattern explanation feature; icon is hidden when either is missing. */
+  lessonId: string | null;
+  mediaStoragePath: string | null;
   /** When true (normal mode only), caption text is visually hidden but layout stays. */
   hideCaptions?: boolean;
   dictationInput: string;
@@ -26,6 +31,8 @@ export function TranscriptSentence({
   isActive,
   isPast,
   appMode,
+  lessonId,
+  mediaStoragePath,
   hideCaptions,
   dictationInput,
   isCompleted,
@@ -36,6 +43,18 @@ export function TranscriptSentence({
   isMobile = false,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
+  // Hidden during dictation and caption-hidden (blind listening) modes — the analysis text
+  // would reveal the answer/transcript those modes are trying to keep hidden.
+  const shadowingEnabled =
+    appMode !== 'dictation' && !hideCaptions && !!lessonId && !!mediaStoragePath;
+  const shadowing = useShadowingPatternAnalysis(
+    lessonId,
+    sentence.id,
+    sentence.start,
+    sentence.end,
+    mediaStoragePath,
+    sentence.text
+  );
 
   return (
     <div
@@ -72,19 +91,46 @@ export function TranscriptSentence({
             isMobile={isMobile}
           />
         ) : (
-          <p
-            className={`
-              font-sans text-base sm:text-lg leading-relaxed
-              ${isActive ? 'text-emerald-400 font-medium sm:text-xl' : isPast ? 'text-gray-300' : 'text-gray-100'}
-              ${hideCaptions ? 'invisible select-none' : ''}
-            `}
-          >
-            {sentence.text}
-          </p>
+          <>
+            <p
+              className={`
+                font-sans text-base sm:text-lg leading-relaxed
+                ${isActive ? 'text-emerald-400 font-medium sm:text-xl' : isPast ? 'text-gray-300' : 'text-gray-100'}
+                ${hideCaptions ? 'invisible select-none' : ''}
+              `}
+            >
+              {sentence.text}
+            </p>
+            {shadowingEnabled && shadowing.status !== 'idle' && (
+              <ShadowingPatternPanel
+                status={shadowing.status}
+                analysis={shadowing.analysis}
+                error={shadowing.error}
+                onRetry={shadowing.trigger}
+              />
+            )}
+          </>
         )}
       </div>
 
       <div className="shrink-0 flex flex-row items-center justify-end gap-1 self-center">
+        {shadowingEnabled && (
+          <button
+            type="button"
+            title="Explain shadowing pattern"
+            onClick={(e) => {
+              e.stopPropagation();
+              shadowing.trigger();
+            }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-transparent text-emerald-500/90 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 active:bg-emerald-500/20"
+          >
+            {shadowing.status === 'loading' ? (
+              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+            )}
+          </button>
+        )}
         {showDictationActions && (
           <div
             data-dictation-rewrite-slot

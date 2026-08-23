@@ -76,6 +76,8 @@ export function useLessonLogic(
   >([]);
   const [isListLoading, setIsListLoading] = useState(true);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
+  /** Firebase Storage path of the loaded lesson's media (for the shadowing-pattern Cloud Function). */
+  const [mediaStoragePath, setMediaStoragePath] = useState<string | null>(null);
   const [lessonName, setLessonName] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
@@ -271,6 +273,7 @@ export function useLessonLogic(
       if (lesson) {
         currentLessonIdRef.current = lesson.id;
         setCurrentLessonId(lesson.id);
+        setMediaStoragePath(lesson.mediaPath ?? null);
         setLessonName(lesson.name);
         if (lesson.mediaUrl) {
           setMediaFile(null);
@@ -309,6 +312,7 @@ export function useLessonLogic(
     bumpLessonLoadGeneration();
     currentLessonIdRef.current = null;
     setCurrentLessonId(null);
+    setMediaStoragePath(null);
     setLessonName('');
     setMediaFile(null);
     setMediaURL(null);
@@ -374,6 +378,7 @@ export function useLessonLogic(
       await saveLessonFirestore(newLesson);
       currentLessonIdRef.current = lessonId;
       setCurrentLessonId(lessonId);
+      setMediaStoragePath(uploadedMedia.path);
       setLessonName(name);
     } else {
       const existingLesson = await getLessonFirestore(lessonId);
@@ -390,6 +395,7 @@ export function useLessonLogic(
         existingLesson.lastAccessed = Date.now();
         existingLesson.updatedAt = Date.now();
         await saveLessonFirestore(existingLesson);
+        setMediaStoragePath(uploadedMedia.path);
       }
     }
 
@@ -474,6 +480,7 @@ export function useLessonLogic(
     lessonsList,
     isListLoading,
     currentLessonId,
+    mediaStoragePath,
     lessonName,
     setLessonName,
     isSidebarOpen,

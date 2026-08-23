@@ -107,6 +107,7 @@ export default function NodaApp() {
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
     isStarted, setIsStarted,
     lessonsList, isListLoading,
+    currentLessonId, mediaStoragePath,
     setLessonName,
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
     expandedSections, setExpandedSections,
@@ -953,6 +954,8 @@ export default function NodaApp() {
               <div key={`${selectedItem.id}-${appMode}`} className="mode-content-fade flex flex-col flex-1 min-h-0">
                 <LessonView
                   lesson={selectedItem.data as LessonItem}
+                  lessonId={currentLessonId}
+                  mediaStoragePath={mediaStoragePath}
                   mode={appMode}
                   isPlaying={isPlaying}
                   duration={duration}

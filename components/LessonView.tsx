@@ -19,6 +19,9 @@ const MemoTranscript = React.memo(Transcript);
 
 interface LessonViewProps {
   lesson: LessonItem;
+  /** Current lesson id + Firebase Storage media path, for the shadowing-pattern Cloud Function. */
+  lessonId: string | null;
+  mediaStoragePath: string | null;
   mode: AppMode;
   isPlaying: boolean;
   duration: number;
@@ -55,6 +58,8 @@ interface LessonViewProps {
 
 export function LessonView({
   lesson,
+  lessonId,
+  mediaStoragePath,
   mode,
   isPlaying,
   duration,
@@ -312,6 +317,8 @@ export function LessonView({
         <div className="flex-1 min-h-0 flex overflow-hidden">
           <MemoTranscript
             transcript={transcript}
+            lessonId={lessonId}
+            mediaStoragePath={mediaStoragePath}
             currentTime={currentTime}
             appMode={mode}
             hideCaptions={hideCaptions}
