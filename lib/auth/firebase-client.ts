@@ -9,6 +9,7 @@ import {
   getFirestore,
 } from "firebase/firestore";
 import { FirebaseStorage, getStorage } from "firebase/storage";
+import { Functions, getFunctions } from "firebase/functions";
 
 function readFirebaseConfig(): FirebaseOptions {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
@@ -38,6 +39,7 @@ let cachedApp: FirebaseApp | null = null;
 let cachedAuth: Auth | null = null;
 let cachedFirestore: Firestore | null = null;
 let cachedStorage: FirebaseStorage | null = null;
+let cachedFunctions: Functions | null = null;
 let persistenceInitPromise: Promise<void> | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
@@ -94,4 +96,11 @@ export function getFirebaseStorage(): FirebaseStorage {
   if (cachedStorage) return cachedStorage;
   cachedStorage = getStorage(getFirebaseApp());
   return cachedStorage;
+}
+
+/** Default region (us-central1) — must match the Cloud Functions deploy region. */
+export function getFirebaseFunctions(): Functions {
+  if (cachedFunctions) return cachedFunctions;
+  cachedFunctions = getFunctions(getFirebaseApp());
+  return cachedFunctions;
 }

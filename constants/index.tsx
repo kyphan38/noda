@@ -32,3 +32,6 @@ export const SENTENCE_PRE_ROLL_SECONDS = 0.1;
 /** Seconds to skip when pressing the Left/Right arrow keys. Change this number to adjust the skip amount. */
 export const ARROW_SKIP_SECONDS = 5;
 
+// Shadowing pattern explanation (Cloud Function name; must match functions/src/index.ts export)
+export const SHADOWING_ANALYSIS_FUNCTION_NAME = 'analyzeShadowingPattern';
+

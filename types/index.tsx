@@ -113,3 +113,45 @@ export type SidebarFolder = {
   createdAt: number;
   updatedAt: number;
 };
+
+// Shadowing pattern explanation (Gemini analysis, cached in Firestore per sentence)
+export type ConnectedSpeechFeature = {
+  type: 'linking' | 'reduction' | 'elision' | 'assimilation';
+  example: string;
+  explanation: string;
+};
+
+export type ShadowingPatternAnalysis = {
+  stressRhythm: {
+    summary: string;
+    stressedWords: string[];
+    notes?: string;
+  };
+  intonationPitch: {
+    summary: string;
+    pattern: 'rising' | 'falling' | 'fall-rise' | 'rise-fall' | 'flat';
+    notes?: string;
+  };
+  connectedSpeech: {
+    summary: string;
+    features: ConnectedSpeechFeature[];
+  };
+  chunking: {
+    summary: string;
+    groups: string[];
+    pauseNotes?: string;
+  };
+};
+
+/** Cached doc at `users/{userId}/lessons/{lessonId}/shadowingAnalysis/{sentenceId}`. */
+export type ShadowingPatternDoc = {
+  sentenceId: number;
+  startSec: number;
+  endSec: number;
+  sourceText: string;
+  model: string;
+  analysis: ShadowingPatternAnalysis;
+  /** Firestore Timestamp on the wire; serialized to millis by the client read helper. */
+  createdAt: number;
+  generatedBy: string;
+};

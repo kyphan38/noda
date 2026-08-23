@@ -9,11 +9,13 @@ import {
   orderBy,
   query,
   setDoc,
+  Timestamp,
   Unsubscribe,
   updateDoc,
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
+import type { ShadowingPatternDoc } from '@/types';
 
 export interface FlashcardData {
   lines: string[];
@@ -102,6 +104,22 @@ const getLessonDocRef = (uid: string, lessonId: string) =>
 
 const getSidebarFolderDocRef = (uid: string, folderId: string) =>
   doc(getFirebaseFirestore(), getUserSidebarFoldersCollectionPath(uid), folderId);
+
+/** Path to the cached shadowing-pattern analysis doc (written only by the Cloud Function). */
+export const getShadowingAnalysisDocPath = (
+  uid: string,
+  lessonId: string,
+  sentenceId: number
+): string => `${getUserLessonsCollectionPath(uid)}/${lessonId}/shadowingAnalysis/${sentenceId}`;
+
+const getShadowingAnalysisDocRef = (uid: string, lessonId: string, sentenceId: number) =>
+  doc(
+    getFirebaseFirestore(),
+    getUserLessonsCollectionPath(uid),
+    lessonId,
+    'shadowingAnalysis',
+    String(sentenceId)
+  );
 
 /** Firestore rejects `undefined` anywhere in document data (e.g. `trashedAt: undefined`). */
 function stripUndefinedForFirestore<T>(input: T): T {
@@ -238,6 +256,27 @@ export const getLessonFirestore = async (id: string): Promise<LessonRecord | nul
   const snapshot = await getDoc(getLessonDocRef(uid, id));
   if (!snapshot.exists()) return null;
   return fromFirestoreLessonRecord(snapshot.id, snapshot.data() as FirestoreLessonRecord);
+};
+
+/**
+ * Reads the cached shadowing-pattern analysis for one sentence directly via the client SDK
+ * (cache-only; call `requestShadowingAnalysis` in `@/lib/shadowingAnalysis` to trigger analysis).
+ * Returns null on cache miss.
+ */
+export const getShadowingAnalysisFirestore = async (
+  lessonId: string,
+  sentenceId: number
+): Promise<ShadowingPatternDoc | null> => {
+  const uid = getCurrentUidOrThrow();
+  const snapshot = await getDoc(getShadowingAnalysisDocRef(uid, lessonId, sentenceId));
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data() as Omit<ShadowingPatternDoc, 'createdAt'> & {
+    createdAt?: Timestamp;
+  };
+  return {
+    ...data,
+    createdAt: data.createdAt?.toMillis() ?? Date.now(),
+  };
 };
 
 export const getAllLessonsFirestore = async (): Promise<LessonRecord[]> => {
