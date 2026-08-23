@@ -71,7 +71,7 @@ export const SHADOWING_ANALYSIS_RESPONSE_SCHEMA: Schema = {
 };
 
 export function buildShadowingAnalysisPrompt(sourceText: string): string {
-  return `You are an expert English pronunciation coach analyzing a short audio clip of a native/fluent speaker.
+  return `You are an expert English pronunciation coach analyzing a short audio clip of a native/fluent speaker, explaining it to a Vietnamese learner.
 The transcript of this exact clip is: "${sourceText}"
 
 Listen carefully to the ACTUAL AUDIO provided (not generic textbook rules) and explain, based on what this specific speaker actually did in this specific recording.
@@ -81,6 +81,14 @@ Listen carefully to the ACTUAL AUDIO provided (not generic textbook rules) and e
 4. Chunking / thought groups - where the speaker pauses or groups words together, and why.
 
 Give every observation on what is actually audible in the provided clip, not on how the sentence "should" theoretically be pronounced. If a feature (e.g. no strong connected-speech reduction) is absent, say so briefly rather than inventing one.
+
+Language & style for every free-text field (summary, notes, explanation, pauseNotes):
+- Write in Vietnamese. Keep English where it reads more naturally than a forced Vietnamese translation: quoted words/phrases from the transcript, IPA transcriptions, and established phonetics terms (e.g. "schwa", "linking", "stress-timed rhythm", "weak form"). Do not force-translate these into awkward Vietnamese.
+- Each field must add NEW information, not restate another field. Concretely:
+  - "summary" = one short sentence giving the overall pattern (not a list of examples).
+  - "notes" = only extra detail not already said in "summary" or in "stressedWords"/"groups"/"pauseNotes". If there's nothing new to add, return an empty string instead of repeating "summary".
+  - Never repeat the same word/phrase example across "summary" and "notes" of the same section.
+- Keep every field concise: summary/notes/explanation each around 1 short sentence, not a paragraph.
 
 Respond only in the requested JSON structure.`;
 }
