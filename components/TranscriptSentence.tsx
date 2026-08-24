@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Play, CheckCircle2, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
 import { DictationControls } from './DictationControls';
-import { ShadowingPatternPanel } from './ShadowingPatternPanel';
-import { useShadowingPatternAnalysis } from '@/hooks/useShadowingPatternAnalysis';
+import { ShadowingConfirmPopover } from './ShadowingConfirmPopover';
+import type { ShadowingEntry } from '@/hooks/useShadowingPatternManager';
 
 interface TranscriptSentenceProps {
   sentence: Sentence;
@@ -11,9 +11,14 @@ interface TranscriptSentenceProps {
   isActive: boolean;
   isPast: boolean;
   appMode: AppMode;
-  /** For the shadowing-pattern explanation feature; icon is hidden when either is missing. */
-  lessonId: string | null;
-  mediaStoragePath: string | null;
+  /** Shadowing-pattern explanation feature (Stage 7: side panel / bottom sheet, not inline). */
+  shadowingEnabled: boolean;
+  shadowingEntry: ShadowingEntry;
+  isShadowingOpen: boolean;
+  isConfirmingShadowing: boolean;
+  onSparkleClick: (sentence: Sentence) => void;
+  onConfirmShadowingGenerate: (sentence: Sentence) => void;
+  onCancelShadowingConfirm: () => void;
   /** When true (normal mode only), caption text is visually hidden but layout stays. */
   hideCaptions?: boolean;
   dictationInput: string;
@@ -31,8 +36,13 @@ export function TranscriptSentence({
   isActive,
   isPast,
   appMode,
-  lessonId,
-  mediaStoragePath,
+  shadowingEnabled,
+  shadowingEntry,
+  isShadowingOpen,
+  isConfirmingShadowing,
+  onSparkleClick,
+  onConfirmShadowingGenerate,
+  onCancelShadowingConfirm,
   hideCaptions,
   dictationInput,
   isCompleted,
@@ -43,18 +53,7 @@ export function TranscriptSentence({
   isMobile = false,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
-  // Hidden during dictation and caption-hidden (blind listening) modes — the analysis text
-  // would reveal the answer/transcript those modes are trying to keep hidden.
-  const shadowingEnabled =
-    appMode !== 'dictation' && !hideCaptions && !!lessonId && !!mediaStoragePath;
-  const shadowing = useShadowingPatternAnalysis(
-    lessonId,
-    sentence.id,
-    sentence.start,
-    sentence.end,
-    mediaStoragePath,
-    sentence.text
-  );
+  const sparkleRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div
@@ -67,6 +66,7 @@ export function TranscriptSentence({
             ? 'border border-emerald-400/30 bg-emerald-400/10 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]'
             : 'hover:bg-gray-800 active:bg-gray-800 border border-transparent'
         }
+        ${isShadowingOpen ? 'ring-1 ring-emerald-500/50 bg-emerald-500/5' : ''}
       `}
     >
       <span
@@ -91,45 +91,47 @@ export function TranscriptSentence({
             isMobile={isMobile}
           />
         ) : (
-          <>
-            <p
-              className={`
-                font-sans text-base sm:text-lg leading-relaxed
-                ${isActive ? 'text-emerald-400 font-medium sm:text-xl' : isPast ? 'text-gray-300' : 'text-gray-100'}
-                ${hideCaptions ? 'invisible select-none' : ''}
-              `}
-            >
-              {sentence.text}
-            </p>
-            {shadowingEnabled && shadowing.status !== 'idle' && (
-              <ShadowingPatternPanel
-                status={shadowing.status}
-                analysis={shadowing.analysis}
-                error={shadowing.error}
-                onRetry={shadowing.trigger}
-              />
-            )}
-          </>
+          <p
+            className={`
+              font-sans text-base sm:text-lg leading-relaxed
+              ${isActive ? 'text-emerald-400 font-medium sm:text-xl' : isPast ? 'text-gray-300' : 'text-gray-100'}
+              ${hideCaptions ? 'invisible select-none' : ''}
+            `}
+          >
+            {sentence.text}
+          </p>
         )}
       </div>
 
       <div className="shrink-0 flex flex-row items-center justify-end gap-1 self-center">
         {shadowingEnabled && (
           <button
+            ref={sparkleRef}
             type="button"
             title="Explain shadowing pattern"
             onClick={(e) => {
               e.stopPropagation();
-              shadowing.trigger();
+              onSparkleClick(sentence);
             }}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-transparent text-emerald-500/90 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 active:bg-emerald-500/20"
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+              isShadowingOpen
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                : 'border-transparent text-emerald-500/90 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 active:bg-emerald-500/20'
+            }`}
           >
-            {shadowing.status === 'loading' ? (
+            {shadowingEntry.status === 'loading' ? (
               <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" aria-hidden />
             ) : (
               <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
             )}
           </button>
+        )}
+        {isConfirmingShadowing && (
+          <ShadowingConfirmPopover
+            triggerRef={sparkleRef}
+            onConfirm={() => onConfirmShadowingGenerate(sentence)}
+            onClose={onCancelShadowingConfirm}
+          />
         )}
         {showDictationActions && (
           <div

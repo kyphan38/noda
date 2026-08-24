@@ -77,6 +77,11 @@ export default function NodaApp() {
   // True while LessonView's Focus Mode (expanded single-line video view) is active.
   // Lets the page shell drop its max-w-4xl cap so the video can use the full width/height.
   const [pageFocusActive, setPageFocusActive] = useState(false);
+  // True while the Shadowing Pattern side panel / bottom sheet is open (see
+  // `useShadowingPatternManager` inside LessonView). Widens the page shell a bit so the
+  // 60/40 transcript/panel split isn't cramped — not unbounded like Focus Mode, since we
+  // still want a readable max width for the transcript column.
+  const [shadowingPanelWide, setShadowingPanelWide] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
@@ -901,7 +906,7 @@ export default function NodaApp() {
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         <div
           className={`mx-auto w-full p-3 md:p-4 flex flex-col h-full min-h-0 transition-[max-width] duration-300 ${
-            pageFocusActive ? 'max-w-none' : 'max-w-4xl'
+            pageFocusActive ? 'max-w-none' : shadowingPanelWide ? 'max-w-6xl' : 'max-w-4xl'
           }`}
         >
           <AppHeader
@@ -986,6 +991,7 @@ export default function NodaApp() {
                   onFocusModeChange={setPageFocusActive}
                   shadowingActive={shadowingActive}
                   onToggleShadowing={toggleShadowing}
+                  onShadowingPanelOpenChange={setShadowingPanelWide}
                 />
               </div>
             )}

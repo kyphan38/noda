@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Player } from './Player';
 import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
+import { ShadowingPatternDock } from './ShadowingPatternDock';
 import {
   LessonItem,
   AppMode,
@@ -13,6 +14,8 @@ import {
   CompletedSentences,
 } from '@/types';
 import { findActiveTranscriptIndex } from '@/lib/transcript-scroll';
+import { useShadowingPatternManager } from '@/hooks/useShadowingPatternManager';
+import { cn } from '@/lib/utils';
 
 const MemoPlayer = React.memo(Player);
 const MemoTranscript = React.memo(Transcript);
@@ -54,6 +57,8 @@ interface LessonViewProps {
   /** Shadowing practice (Normal mode only): pauses after each line; Enter = next line, Control = replay line. */
   shadowingActive?: boolean;
   onToggleShadowing?: () => void;
+  /** Notified whenever the Shadowing Pattern analysis panel (side panel / bottom sheet) opens/closes, so the page shell can widen a bit to make room for the split. Distinct from `shadowingActive` above. */
+  onShadowingPanelOpenChange?: (open: boolean) => void;
 }
 
 export function LessonView({
@@ -90,6 +95,7 @@ export function LessonView({
   onFocusModeChange,
   shadowingActive,
   onToggleShadowing,
+  onShadowingPanelOpenChange,
 }: LessonViewProps) {
   const [seekDisabled, setSeekDisabled] = useState(false);
   const [videoHidden, setVideoHidden] = useState(false);
@@ -141,6 +147,42 @@ export function LessonView({
   );
   const activeSentence =
     activeTranscriptIndex >= 0 ? transcript[activeTranscriptIndex] : undefined;
+
+  // Shadowing-pattern explanation feature (Stage 7: centralized manager, side panel / bottom
+  // sheet). Named distinctly from `shadowingActive`/`onToggleShadowing` above, which control
+  // the unrelated Player "shadowing mode" playback loop (auto-pause per line).
+  const {
+    activeSentenceId: activeShadowingSentenceId,
+    isPanelOpen: isShadowingPanelOpen,
+    confirmingSentenceId: confirmingShadowingSentenceId,
+    getEntry: getShadowingEntry,
+    handleSparkleClick: onSparkleClick,
+    confirmGenerate: onConfirmShadowingGenerate,
+    cancelConfirm: onCancelShadowingConfirm,
+    close: closeShadowingPanel,
+    retry: retryShadowingAnalysis,
+  } = useShadowingPatternManager(lessonId, mediaStoragePath);
+  const activeShadowingSentence =
+    activeShadowingSentenceId != null
+      ? transcript.find((s) => s.id === activeShadowingSentenceId)
+      : undefined;
+  const onRetryShadowingAnalysis = useCallback(() => {
+    if (activeShadowingSentence) retryShadowingAnalysis(activeShadowingSentence);
+  }, [activeShadowingSentence, retryShadowingAnalysis]);
+
+  // Tell the page shell to widen a bit while the panel is open, so the 60/40 split isn't
+  // cramped. Mirrors the `onFocusModeChange` ref pattern above.
+  const onShadowingPanelOpenChangeRef = React.useRef(onShadowingPanelOpenChange);
+  useEffect(() => {
+    onShadowingPanelOpenChangeRef.current = onShadowingPanelOpenChange;
+  }, [onShadowingPanelOpenChange]);
+  useEffect(() => {
+    onShadowingPanelOpenChangeRef.current?.(isShadowingPanelOpen);
+  }, [isShadowingPanelOpen]);
+  // Make sure the page shell is told to shrink back down if this view unmounts while still open.
+  useEffect(() => {
+    return () => onShadowingPanelOpenChangeRef.current?.(false);
+  }, []);
 
   useEffect(() => {
     setVideoHidden(false);
@@ -314,23 +356,89 @@ export function LessonView({
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 flex overflow-hidden">
-          <MemoTranscript
-            transcript={transcript}
-            lessonId={lessonId}
-            mediaStoragePath={mediaStoragePath}
-            currentTime={currentTime}
-            appMode={mode}
-            hideCaptions={hideCaptions}
-            dictationInputs={dictationInputs}
-            completedSentences={completedSentences}
-            scrollContainerRef={scrollContainerRef}
-            onSentenceClick={onSentenceClick}
-            onDictationChange={onDictationChange}
-            onDictationKeyDown={onDictationKeyDown}
-            onDictationRetry={onDictationRetry}
-            isMobile={isMobile}
+        <div className={cn('flex-1 min-h-0 flex overflow-hidden', isShadowingPanelOpen && 'gap-3')}>
+          <div
+            className={cn(
+              'h-full min-w-0 transition-[width] duration-300 ease-in-out',
+              isShadowingPanelOpen ? 'flex-1' : 'w-full'
+            )}
+          >
+            <MemoTranscript
+              transcript={transcript}
+              lessonId={lessonId}
+              mediaStoragePath={mediaStoragePath}
+              currentTime={currentTime}
+              appMode={mode}
+              hideCaptions={hideCaptions}
+              dictationInputs={dictationInputs}
+              completedSentences={completedSentences}
+              scrollContainerRef={scrollContainerRef}
+              onSentenceClick={onSentenceClick}
+              onDictationChange={onDictationChange}
+              onDictationKeyDown={onDictationKeyDown}
+              onDictationRetry={onDictationRetry}
+              isMobile={isMobile}
+              activeShadowingSentenceId={activeShadowingSentenceId}
+              isShadowingPanelOpen={isShadowingPanelOpen}
+              confirmingShadowingSentenceId={confirmingShadowingSentenceId}
+              getShadowingEntry={getShadowingEntry}
+              onSparkleClick={onSparkleClick}
+              onConfirmShadowingGenerate={onConfirmShadowingGenerate}
+              onCancelShadowingConfirm={onCancelShadowingConfirm}
+            />
+          </div>
+          {!isMobile && (
+            <div
+              className={cn(
+                'h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out',
+                isShadowingPanelOpen ? 'w-[30%] max-w-[320px] min-w-[240px]' : 'w-0'
+              )}
+            >
+              {isShadowingPanelOpen && activeShadowingSentenceId != null && (
+                <ShadowingPatternDock
+                  key={activeShadowingSentenceId}
+                  isMobile={false}
+                  entry={getShadowingEntry(activeShadowingSentenceId)}
+                  onClose={closeShadowingPanel}
+                  onRetry={onRetryShadowingAnalysis}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isMobile && (
+        <div
+          className={cn(
+            'fixed inset-0 z-[215] flex items-end',
+            isShadowingPanelOpen ? '' : 'pointer-events-none'
+          )}
+        >
+          <div
+            className={cn(
+              'absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300',
+              isShadowingPanelOpen ? 'opacity-100' : 'opacity-0'
+            )}
+            onClick={closeShadowingPanel}
           />
+          <div
+            className={cn(
+              'relative w-full max-h-[70vh] bg-gray-900 border-t border-gray-800 rounded-t-2xl shadow-xl flex flex-col transition-transform duration-300 ease-in-out',
+              isShadowingPanelOpen ? 'translate-y-0' : 'translate-y-full'
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isShadowingPanelOpen && activeShadowingSentenceId != null && (
+              <ShadowingPatternDock
+                key={activeShadowingSentenceId}
+                isMobile
+                entry={getShadowingEntry(activeShadowingSentenceId)}
+                onClose={closeShadowingPanel}
+                onRetry={onRetryShadowingAnalysis}
+              />
+            )}
+          </div>
         </div>
       )}
 
