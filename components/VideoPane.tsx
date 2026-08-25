@@ -33,7 +33,7 @@ export const VideoPane = forwardRef<HTMLVideoElement, VideoPaneProps>(function V
         ref={ref}
         src={src}
         playsInline
-        preload="metadata"
+        preload="auto"
         className={
           videoHidden
             ? 'fixed top-0 left-0 w-px h-px max-w-[1px] max-h-[1px] opacity-[0.03] pointer-events-none'

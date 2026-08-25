@@ -297,7 +297,7 @@ export function LessonView({
           ref={mediaRef as React.RefObject<HTMLVideoElement>}
           src={mediaURL}
           playsInline
-          preload="metadata"
+          preload="auto"
           className="fixed w-px h-px opacity-0 -left-[9999px] pointer-events-none"
           {...mediaEvents}
         />
@@ -308,7 +308,7 @@ export function LessonView({
           ref={mediaRef as React.RefObject<HTMLVideoElement>}
           src={mediaURL}
           playsInline
-          preload="metadata"
+          preload="auto"
           className="fixed w-px h-px opacity-0 -left-[9999px] pointer-events-none"
           {...mediaEvents}
         />
@@ -339,7 +339,7 @@ export function LessonView({
       )}
 
       {mediaURL && !isVideoLesson && (
-        <audio ref={mediaRef} src={mediaURL} preload="metadata" className="hidden" {...mediaEvents} loop={false} />
+        <audio ref={mediaRef} src={mediaURL} preload="auto" className="hidden" {...mediaEvents} loop={false} />
       )}
 
       {focusActive ? (
