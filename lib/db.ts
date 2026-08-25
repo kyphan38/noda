@@ -191,6 +191,34 @@ const sanitizeFileName = (name: string): string => {
   return name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
 };
 
+/** Extension → MIME map. Mobile browsers (esp. Android "content://" pickers) often report
+ *  `file.type` as `''` or `'application/octet-stream'` for camera-roll videos/audio, even
+ *  though the file itself is playable. If we upload with that unreliable type, Firebase
+ *  Storage serves the same bad Content-Type header, and <video>/<audio> playback then fails
+ *  on mobile with "Could not load media file" (desktop browsers are more lenient and sniff
+ *  the file instead). Fall back to guessing from the file extension in that case. */
+const EXTENSION_MIME_MAP: Record<string, string> = {
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  wav: 'audio/wav',
+  aac: 'audio/aac',
+  ogg: 'audio/ogg',
+  flac: 'audio/flac',
+};
+
+const resolveUploadContentType = (file: File): string | undefined => {
+  const reportedType = file.type;
+  const isUnreliable = !reportedType || reportedType === 'application/octet-stream';
+  if (!isUnreliable) return reportedType;
+
+  const ext = (file.name || '').toLowerCase().split('.').pop() ?? '';
+  return EXTENSION_MIME_MAP[ext] ?? reportedType ?? undefined;
+};
+
 /**
  * Upload lesson media to Firebase Storage under users/{uid}/media.
  * Returns remote path + public download URL for Firestore persistence.
@@ -204,7 +232,7 @@ export const uploadLessonMediaToFirebase = async (
   const objectPath = `${getUserMediaCollectionPath(uid)}/${lessonId}-${Date.now()}-${safeName}`;
   const objectRef = ref(getFirebaseStorage(), objectPath);
   const snapshot = await uploadBytes(objectRef, file, {
-    contentType: file.type || undefined,
+    contentType: resolveUploadContentType(file),
   });
   const downloadURL = await getDownloadURL(snapshot.ref);
   return {
