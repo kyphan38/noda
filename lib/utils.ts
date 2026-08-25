@@ -159,6 +159,19 @@ export const parseTranscript = (text: string): Sentence[] => {
       }
     }
   }
+
+  // Guard against overlapping cues (imperfect SRT/ASR timing): an earlier
+  // sentence's `end` must never reach into the next sentence's `start`.
+  // Otherwise, the playback loop's Array.find() (first-match-wins) keeps
+  // resolving "active sentence" to the earlier one even after the next
+  // sentence has already started, causing a click/seek to visually snap
+  // back to the previous line.
+  for (let i = 0; i < sentences.length - 1; i++) {
+    if (sentences[i].end > sentences[i + 1].start) {
+      sentences[i].end = sentences[i + 1].start;
+    }
+  }
+
   return sentences;
 };
 

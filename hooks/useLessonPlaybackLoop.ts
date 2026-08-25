@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, LoopMode, RepeatCount, Sentence } from '@/types';
-import { REPEAT_PAUSE_MS } from '@/constants';
+import { REPEAT_PAUSE_MS, SEEK_SETTLE_TOLERANCE_S, SEEK_GUARD_TIMEOUT_MS } from '@/constants';
 import { shouldRepeatSentenceAtEnd } from '@/lib/repeat-count';
 
 type RefBool = MutableRefObject<boolean>;
@@ -29,6 +29,7 @@ export function useLessonPlaybackLoop(
     let animationFrameId: number;
     let lastActiveSentenceId: number | null = null;
     let lastSetTime: number | null = null;
+    let seekGuardStartedAt: number | null = null;
 
     const updateProgress = () => {
       if (audioRef.current) {
@@ -39,10 +40,51 @@ export function useLessonPlaybackLoop(
 
         let time = audioRef.current.currentTime;
 
+        // A user-initiated seek (click / Enter / Control replay in dictation) sets
+        // `userSeekTargetRef` to the sentence we're jumping to. On some setups —
+        // notably network-streamed media (Firebase Storage) rather than a local blob —
+        // `currentTime`/`seeking` can lag a few animation frames behind the seek
+        // assignment, so `time` here can still reflect the PRE-seek position for a
+        // moment. Trusting that stale value would resolve `currentSentence` to the
+        // sentence we just left, and the UI would flash back to it before snapping
+        // forward once the seek actually lands. Skip processing this frame entirely
+        // (without touching any state) until `time` catches up, bounded by a timeout
+        // so a failed/cancelled seek can't wedge the loop forever.
+        if (userSeekTargetRef.current !== null) {
+          const seekTargetSentence = transcript.find((s) => s.id === userSeekTargetRef.current);
+          if (seekTargetSentence && time < seekTargetSentence.start - SEEK_SETTLE_TOLERANCE_S) {
+            if (seekGuardStartedAt === null) {
+              seekGuardStartedAt = performance.now();
+            }
+            if (performance.now() - seekGuardStartedAt < SEEK_GUARD_TIMEOUT_MS) {
+              animationFrameId = requestAnimationFrame(updateProgress);
+              return;
+            }
+          } else if (seekGuardStartedAt !== null) {
+            seekGuardStartedAt = null;
+          }
+        }
+
+        // Right after a deliberate seek to a specific sentence (click / Enter / Control
+        // replay in dictation), tiny seek inaccuracy — e.g. VBR MP3, or two sentences
+        // sitting very close together — can land `time` slightly BEFORE the target's
+        // start. Left as-is, the boundary scan below would then match the PREVIOUS
+        // sentence and the UI would appear to snap back to it. Nudge `time` forward to
+        // the intended start when it's within a small settle window.
+        if (replayOnceRef.current) {
+          const target = transcript.find((s) => s.id === replayOnceRef.current!.sentenceId);
+          if (target && time < target.start && time >= target.start - SEEK_SETTLE_TOLERANCE_S) {
+            time = target.start;
+          }
+        }
+
         const prevActiveSentenceId = lastActiveSentenceId;
         const currentSentence = transcript.find((s) => time >= s.start && time < s.end);
         activeSentenceRef.current = currentSentence ?? null;
         lastActiveSentenceId = currentSentence?.id ?? null;
+
+        if (currentSentence?.id !== prevActiveSentenceId) {
+        }
 
         // Reset play count when active sentence changes
         if (currentSentence && prevActiveSentenceId !== null && currentSentence.id !== prevActiveSentenceId) {

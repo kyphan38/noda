@@ -17,7 +17,9 @@ export function useGlobalPlaybackShortcuts(
   activeSentenceRef: MutableRefObject<Sentence | null>,
   replayOnceRef: MutableRefObject<{ sentenceId: number; end: number } | null>,
   shadowingActiveRef: MutableRefObject<boolean>,
-  onShadowingNext: () => void
+  onShadowingNext: () => void,
+  transcriptRef: MutableRefObject<Sentence[]>,
+  userSeekTargetRef: MutableRefObject<number | null>
 ) {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -94,7 +96,16 @@ export function useGlobalPlaybackShortcuts(
             replayOnceRef.current = { sentenceId: activeSentenceRef.current.id, end: activeSentenceRef.current.end };
           }
           const preRoll = appMode === 'dictation' ? 0 : SENTENCE_PRE_ROLL_SECONDS;
-          const seekTarget = Math.max(0, activeSentenceRef.current.start - preRoll);
+          // Same clamp as handleSentenceClick in page.tsx: the pre-roll lead-in
+          // must never land inside the PREVIOUS sentence's own cue window, or the
+          // playback loop will resolve "current sentence" as the previous one and
+          // immediately re-trigger its pause-at-end behavior.
+          const tr = transcriptRef.current;
+          const idx = tr.findIndex((s) => s.id === activeSentenceRef.current!.id);
+          const prevSentence = idx > 0 ? tr[idx - 1] : null;
+          const minSeekTarget = prevSentence ? prevSentence.end : 0;
+          const seekTarget = Math.max(minSeekTarget, activeSentenceRef.current.start - preRoll);
+          userSeekTargetRef.current = activeSentenceRef.current.id;
           audioRef.current.currentTime = seekTarget;
           audioRef.current.play().catch(() => {});
         }
@@ -117,5 +128,7 @@ export function useGlobalPlaybackShortcuts(
     replayOnceRef,
     shadowingActiveRef,
     onShadowingNext,
+    transcriptRef,
+    userSeekTargetRef,
   ]);
 }

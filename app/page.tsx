@@ -515,6 +515,7 @@ export default function NodaApp() {
         if (media.currentTime >= s.end - 0.08) {
           media.currentTime = s.start;
           setCurrentTime(s.start);
+          userSeekTargetRef.current = s.id;
           lastScrolledIndexRef.current = -1;
           if (loopTimeoutRef.current) {
             clearTimeout(loopTimeoutRef.current);
@@ -530,12 +531,13 @@ export default function NodaApp() {
         if (next) {
           media.currentTime = next.start;
           setCurrentTime(next.start);
+          userSeekTargetRef.current = next.id;
           dictationReplayOnceRef.current = { sentenceId: next.id, end: next.end };
         }
       }
     }
     togglePlayPause();
-  }, [togglePlayPause, setCurrentTime, mediaRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef]);
+  }, [togglePlayPause, setCurrentTime, mediaRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, userSeekTargetRef]);
 
   const {
     showCleanupModal,
@@ -633,10 +635,11 @@ export default function NodaApp() {
       ? tr.find((s) => s.start > current.start)
       : tr.find((s) => s.start > media.currentTime);
     if (!next) return;
+    userSeekTargetRef.current = next.id;
     media.currentTime = next.start;
     setCurrentTime(next.start);
     media.play().catch(() => {});
-  }, [mediaRef, activeSentenceRef, transcriptRef, setCurrentTime]);
+  }, [mediaRef, activeSentenceRef, transcriptRef, setCurrentTime, userSeekTargetRef]);
 
   useGlobalPlaybackShortcuts(
     selectedItem?.type,
@@ -651,7 +654,9 @@ export default function NodaApp() {
     activeSentenceRef,
     dictationReplayOnceRef,
     shadowingActiveRef,
-    handleShadowingNext
+    handleShadowingNext,
+    transcriptRef,
+    userSeekTargetRef
   );
 
   useLessonPlaybackLoop(
@@ -719,9 +724,22 @@ export default function NodaApp() {
   const handleSentenceClick = useCallback((sentence: Sentence) => {
     if (mediaRef.current) {
       const inDictation = appModeRef.current === 'dictation';
+      // The "pre-roll" (a fraction of a second of lead-in before the clicked
+      // sentence) must never land inside the PREVIOUS sentence's own [start, end)
+      // cue window. When two cues sit back-to-back with a gap smaller than
+      // SENTENCE_PRE_ROLL_SECONDS (including exactly 0, the normal case after the
+      // overlap-clamp in parseTranscript), subtracting the pre-roll can seek to a
+      // time that the playback loop resolves as "still the previous sentence" —
+      // which then immediately re-triggers that previous sentence's own
+      // pause-at-end / auto-rewind behavior and the UI snaps back to it instead
+      // of landing on the sentence the user clicked. Clamp the lower bound to the
+      // previous sentence's end so the pre-roll can never cross into it.
+      const clickedIdx = transcriptRef.current.findIndex((s) => s.id === sentence.id);
+      const prevSentence = clickedIdx > 0 ? transcriptRef.current[clickedIdx - 1] : null;
+      const minSeekTarget = prevSentence ? prevSentence.end : 0;
       const seekTarget = inDictation
         ? sentence.start
-        : Math.max(0, sentence.start - SENTENCE_PRE_ROLL_SECONDS);
+        : Math.max(minSeekTarget, sentence.start - SENTENCE_PRE_ROLL_SECONDS);
       mediaRef.current.currentTime = seekTarget;
       setCurrentTime(sentence.start);
       lastScrolledIndexRef.current = -1;
@@ -731,10 +749,9 @@ export default function NodaApp() {
       isLoopDelayingRef.current = false;
       if (inDictation) {
         dictationReplayOnceRef.current = { sentenceId: sentence.id, end: sentence.end };
-        const idx = transcriptRef.current.findIndex((s) => s.id === sentence.id);
         const container = scrollContainerRef.current;
-        if (idx >= 0 && container && scrollTranscriptRowIntoView(container, idx, 'smooth')) {
-          lastScrolledIndexRef.current = idx;
+        if (clickedIdx >= 0 && container && scrollTranscriptRowIntoView(container, clickedIdx, 'smooth')) {
+          lastScrolledIndexRef.current = clickedIdx;
         }
       }
       if (mediaRef.current.paused) {
@@ -796,6 +813,7 @@ export default function NodaApp() {
 
         if (nextSentence) {
           dictationReplayOnceRef.current = { sentenceId: nextSentence.id, end: nextSentence.end };
+          userSeekTargetRef.current = nextSentence.id;
           mediaRef.current.currentTime = nextSentence.start;
           setCurrentTime(nextSentence.start);
           lastScrolledIndexRef.current = -1;
@@ -829,12 +847,13 @@ export default function NodaApp() {
       }
       if (mediaRef.current) {
         dictationReplayOnceRef.current = { sentenceId: sentence.id, end: sentence.end };
+        userSeekTargetRef.current = sentence.id;
         mediaRef.current.currentTime = sentence.start;
         setCurrentTime(sentence.start);
         mediaRef.current.play().catch(() => {});
       }
     }
-  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange, sentencePlayCountRef]);
+  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange, sentencePlayCountRef, userSeekTargetRef]);
 
   const handleDictationRetry = useCallback((sentence: Sentence) => {
     setCompletedSentences((prev) => {
@@ -987,7 +1006,22 @@ export default function NodaApp() {
                   isMobile={viewport.isMobile}
                   setDuration={setDuration}
                   setIsPlaying={setIsPlaying}
-                  onMediaError={() => setToast({ message: 'Could not load media file.', type: 'error' })}
+                  onMediaError={(e) => {
+                    const mediaError = e.currentTarget.error;
+                    console.error('[media] load error', {
+                      code: mediaError?.code,
+                      message: mediaError?.message,
+                      src: e.currentTarget.currentSrc,
+                    });
+                    // code 4 = MEDIA_ERR_SRC_NOT_SUPPORTED: the browser/device can't decode this
+                    // file (e.g. HEVC/H.265 video, which many non-Apple browsers reject even
+                    // though it plays fine on the Mac/Safari that uploaded it).
+                    const message =
+                      mediaError?.code === 4
+                        ? 'This video format is not supported on this device. Try re-encoding it to H.264 MP4.'
+                        : 'Could not load media file.';
+                    setToast({ message, type: 'error' });
+                  }}
                   onFocusModeChange={setPageFocusActive}
                   shadowingActive={shadowingActive}
                   onToggleShadowing={toggleShadowing}
