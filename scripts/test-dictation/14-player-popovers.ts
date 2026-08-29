@@ -1,5 +1,5 @@
 /**
- * Group 14: Player Popovers — speed slider & repeat count selector.
+ * Group 14: Player Popovers - speed slider & repeat count selector.
  *
  * Tests:
  * - Speed popover opens on click, slider changes playback rate, closes on outside click

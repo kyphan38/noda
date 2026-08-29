@@ -1,14 +1,14 @@
 /**
  * Shared config, constants, helpers, and report system for dictation E2E tests.
  *
- * Each test group imports from here — no test logic lives in this file.
+ * Each test group imports from here - no test logic lives in this file.
  */
 import { Page, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-/** Dedicated E2E port — avoids clashing with a normal `npm run dev` on 3000. */
+/** Dedicated E2E port - avoids clashing with a normal `npm run dev` on 3000. */
 export const E2E_PORT = Number(process.env.E2E_PORT ?? 3010);
 export const APP_URL = process.env.APP_URL ?? `http://localhost:${E2E_PORT}`;
 export const SLOW_THRESHOLD_MS = 3000;
@@ -26,7 +26,7 @@ export const LESSON_SENTENCES = [
   'we eat lunch at noon',         // 7  (20 chars)
   'they walk to the store',       // 8  (22 chars)
   'rain falls from the clouds',   // 9  (26 chars)
-  'who run switzerlands trains',  // 10 (27 chars) — SRT has U+02BC modifier apostrophe
+  'who run switzerlands trains',  // 10 (27 chars) - SRT has U+02BC modifier apostrophe
 ];
 
 // Start / end timestamps in seconds, from test-lesson.srt
@@ -91,7 +91,7 @@ export async function check(
   const ms = Date.now() - t0;
   report.push({ label, passed, durationMs: ms, detail });
   const slow = ms >= SLOW_THRESHOLD_MS;
-  console.log(`  ${passed ? (slow ? '⚠ ' : '✓ ') : '✗ '}${label}${!passed ? ` — FAILED (${ms}ms)` : slow ? ` (${ms}ms slow)` : ''}`);
+  console.log(`  ${passed ? (slow ? '⚠ ' : '✓ ') : '✗ '}${label}${!passed ? ` - FAILED (${ms}ms)` : slow ? ` (${ms}ms slow)` : ''}`);
   if (!passed && detail) console.log(`      ${detail.slice(0, 200)}`);
   return passed;
 }

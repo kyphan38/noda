@@ -1,5 +1,5 @@
 /**
- * Group 2: Input Contract — typing, display, normalization.
+ * Group 2: Input Contract - typing, display, normalization.
  * Uses sentence 0 ("the cat sat on the mat", 22 chars).
  */
 import { Page } from '@playwright/test';
@@ -61,7 +61,7 @@ export async function run(page: Page, report: ReportEntry[]) {
 
   await check(report, '2e. Spaces auto-inserted from target layout', async () => {
     const ta = page.locator('[data-dictation-input]');
-    // Type "thec" — letters map to "the c" (auto-space at position 3)
+    // Type "thec" - letters map to "the c" (auto-space at position 3)
     await ta.pressSequentially('thec', { delay: CHAR_DELAY_MS });
     const green = await countSpans(page, idx, 'text-emerald-500');
     return green === 5; // t,h,e,(space),c

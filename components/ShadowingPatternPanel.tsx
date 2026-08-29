@@ -53,7 +53,7 @@ function TabBody({ tab, analysis }: { tab: TabKey; analysis: ShadowingPatternAna
           <ul className="mt-1 flex flex-col gap-1 text-xs text-gray-400">
             {features.map((f, i) => (
               <li key={i}>
-                <span className="font-medium text-gray-300">{f.type}</span> — {f.example}: {f.explanation}
+                <span className="font-medium text-gray-300">{f.type}</span> - {f.example}: {f.explanation}
               </li>
             ))}
           </ul>

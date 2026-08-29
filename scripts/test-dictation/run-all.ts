@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Playwright dictation E2E — baseline regression suite (runner).
+ * Playwright dictation E2E - baseline regression suite (runner).
  *
  * Prerequisites:  E2E dev server (port 3010, not 3000):
  *   npm run dev:e2e
@@ -55,7 +55,7 @@ const groups = [
 ];
 
 async function main() {
-  console.log('\n🎯  noda dictation E2E — baseline suite\n');
+  console.log('\n🎯  noda dictation E2E - baseline suite\n');
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });

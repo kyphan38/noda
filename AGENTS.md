@@ -2,7 +2,7 @@
 
 ## Git commits
 
-Follow `.cursor/rules/git-commits.mdc` — loaded automatically in this workspace.
+Follow `.cursor/rules/git-commits.mdc` - loaded automatically in this workspace.
 
 Format: `<type>(<scope>): <summary>`
 

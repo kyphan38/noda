@@ -1,5 +1,5 @@
 /**
- * Group 9: State Lifecycle — retry, reset progress, mode switch.
+ * Group 9: State Lifecycle - retry, reset progress, mode switch.
  */
 import { Page } from '@playwright/test';
 import {

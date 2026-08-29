@@ -1,5 +1,5 @@
 /**
- * Group 16: Dictation UI — rewrite icon layout, auto-scroll, continue affordance.
+ * Group 16: Dictation UI - rewrite icon layout, auto-scroll, continue affordance.
  */
 import { Page } from '@playwright/test';
 import {

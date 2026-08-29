@@ -53,7 +53,7 @@ export function Transcript({
   onConfirmShadowingGenerate,
   onCancelShadowingConfirm,
 }: TranscriptProps) {
-  // Hidden during dictation and caption-hidden (blind listening) modes — the analysis text
+  // Hidden during dictation and caption-hidden (blind listening) modes - the analysis text
   // would reveal the answer/transcript those modes are trying to keep hidden.
   const shadowingAvailable = appMode !== 'dictation' && !hideCaptions && !!lessonId && !!mediaStoragePath;
 

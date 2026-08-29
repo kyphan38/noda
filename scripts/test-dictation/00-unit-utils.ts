@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Group 0: Unit Tests — normalizeDictationTarget, alignDictationInput.
+ * Group 0: Unit Tests - normalizeDictationTarget, alignDictationInput.
  *
  * No browser required. Runs in < 1 second.
  * These catch the exact class of bug that breaks dictation:
@@ -33,7 +33,7 @@ function unitCheck(
   const ms = Date.now() - t0;
   report.push({ label, passed, durationMs: ms, detail });
   console.log(
-    `  ${passed ? '✓ ' : '✗ '}${label}${!passed ? ` — FAILED` : ''}`,
+    `  ${passed ? '✓ ' : '✗ '}${label}${!passed ? ` - FAILED` : ''}`,
   );
   if (!passed && detail) console.log(`      ${detail.slice(0, 200)}`);
   return passed;

@@ -1,5 +1,5 @@
 /**
- * Group 8: Navigation — click row seek, auto-scroll.
+ * Group 8: Navigation - click row seek, auto-scroll.
  * Uses sentences 7, 8, 0, 1.
  */
 import { Page } from '@playwright/test';

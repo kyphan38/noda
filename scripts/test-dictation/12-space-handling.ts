@@ -1,5 +1,5 @@
 /**
- * Group 12: Space Handling — typing spaces, cursor position at boundaries,
+ * Group 12: Space Handling - typing spaces, cursor position at boundaries,
  * backspace across spaces, display after auto-insert.
  *
  * Regression guard for: auto-spacing feature eating typed spaces, causing
@@ -59,7 +59,7 @@ export async function run(page: Page, report: ReportEntry[]) {
       const feedback = row.querySelector('[aria-hidden]');
       if (!feedback) return false;
       const spans = feedback.querySelectorAll(':scope > span, :scope > :not(span) > span');
-      // Position 3 is the space — check it's green, not gray
+      // Position 3 is the space - check it's green, not gray
       const allGreen = feedback.querySelectorAll('span.text-emerald-500');
       const allGray = feedback.querySelectorAll('span.text-gray-500');
       // We should have 4 green (t, h, e, space) and the rest gray
@@ -73,7 +73,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
-    // Type "thec" — no space, but display should show "the c" with auto-space
+    // Type "thec" - no space, but display should show "the c" with auto-space
     await ta.pressSequentially('thec', { delay: CHAR_DELAY_MS });
     const green = await countSpans(page, idx, 'text-emerald-500');
     // Should be 5 green: t, h, e, (auto-space), c

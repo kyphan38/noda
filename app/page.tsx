@@ -79,7 +79,7 @@ export default function NodaApp() {
   const [pageFocusActive, setPageFocusActive] = useState(false);
   // True while the Shadowing Pattern side panel / bottom sheet is open (see
   // `useShadowingPatternManager` inside LessonView). Widens the page shell a bit so the
-  // 60/40 transcript/panel split isn't cramped — not unbounded like Focus Mode, since we
+  // 60/40 transcript/panel split isn't cramped - not unbounded like Focus Mode, since we
   // still want a readable max width for the transcript column.
   const [shadowingPanelWide, setShadowingPanelWide] = useState(false);
 
@@ -525,7 +525,7 @@ export default function NodaApp() {
         }
         dictationReplayOnceRef.current = { sentenceId: s.id, end: s.end };
       } else {
-        // Audio is parked in a gap — seek to the next sentence's start
+        // Audio is parked in a gap - seek to the next sentence's start
         const tr = transcriptRef.current;
         const next = tr.find((sent) => sent.start > media.currentTime);
         if (next) {
@@ -729,7 +729,7 @@ export default function NodaApp() {
       // cue window. When two cues sit back-to-back with a gap smaller than
       // SENTENCE_PRE_ROLL_SECONDS (including exactly 0, the normal case after the
       // overlap-clamp in parseTranscript), subtracting the pre-roll can seek to a
-      // time that the playback loop resolves as "still the previous sentence" —
+      // time that the playback loop resolves as "still the previous sentence" -
       // which then immediately re-triggers that previous sentence's own
       // pause-at-end / auto-rewind behavior and the UI snaps back to it instead
       // of landing on the sentence the user clicked. Clamp the lower bound to the

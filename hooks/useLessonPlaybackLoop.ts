@@ -41,8 +41,8 @@ export function useLessonPlaybackLoop(
         let time = audioRef.current.currentTime;
 
         // A user-initiated seek (click / Enter / Control replay in dictation) sets
-        // `userSeekTargetRef` to the sentence we're jumping to. On some setups —
-        // notably network-streamed media (Firebase Storage) rather than a local blob —
+        // `userSeekTargetRef` to the sentence we're jumping to. On some setups -
+        // notably network-streamed media (Firebase Storage) rather than a local blob -
         // `currentTime`/`seeking` can lag a few animation frames behind the seek
         // assignment, so `time` here can still reflect the PRE-seek position for a
         // moment. Trusting that stale value would resolve `currentSentence` to the
@@ -66,8 +66,8 @@ export function useLessonPlaybackLoop(
         }
 
         // Right after a deliberate seek to a specific sentence (click / Enter / Control
-        // replay in dictation), tiny seek inaccuracy — e.g. VBR MP3, or two sentences
-        // sitting very close together — can land `time` slightly BEFORE the target's
+        // replay in dictation), tiny seek inaccuracy - e.g. VBR MP3, or two sentences
+        // sitting very close together - can land `time` slightly BEFORE the target's
         // start. Left as-is, the boundary scan below would then match the PREVIOUS
         // sentence and the UI would appear to snap back to it. Nudge `time` forward to
         // the intended start when it's within a small settle window.

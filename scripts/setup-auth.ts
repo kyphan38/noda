@@ -55,11 +55,11 @@ async function main() {
 
   console.log('Waiting for you to log in and for the app sidebar to appear…');
 
-  // Poll until either the sidebar or the upload panel is visible — this indicates
+  // Poll until either the sidebar or the upload panel is visible - this indicates
   // auth completed and the main app has loaded.
   await page.waitForFunction(
     () => {
-      // Sidebar toggle button or lesson list or upload panel — any of these
+      // Sidebar toggle button or lesson list or upload panel - any of these
       // means we are past the login screen.
       return (
         document.querySelector('[class*="sidebar"]') !== null ||
@@ -81,7 +81,7 @@ async function main() {
   if (idbData.length > 0) {
     console.log(`✓ Captured ${idbData.length} IndexedDB auth entry/entries.`);
   } else {
-    console.log('⚠  No IDB auth entries (Firebase may be using localStorage — that is fine).');
+    console.log('⚠  No IDB auth entries (Firebase may be using localStorage - that is fine).');
   }
 
   fs.writeFileSync(AUTH_FILE, JSON.stringify({ storageState, idbData }, null, 2));

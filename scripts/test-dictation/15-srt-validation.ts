@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Group 15: SRT Timing Validation — detect subtitle/audio timestamp misalignment.
+ * Group 15: SRT Timing Validation - detect subtitle/audio timestamp misalignment.
  *
  * No browser required. Tests parseTranscript correctness and SRT timing
  * consistency. Catches the class of bug where SRT timestamps don't match
@@ -33,7 +33,7 @@ function unitCheck(
   const ms = Date.now() - t0;
   report.push({ label, passed, durationMs: ms, detail });
   console.log(
-    `  ${passed ? '✓ ' : '✗ '}${label}${!passed ? ` — FAILED` : ''}`,
+    `  ${passed ? '✓ ' : '✗ '}${label}${!passed ? ` - FAILED` : ''}`,
   );
   if (!passed && detail) console.log(`      ${detail.slice(0, 400)}`);
   return passed;
@@ -79,7 +79,7 @@ function findTimingIssues(sentences: Sentence[]): TimingIssue[] {
       issues.push({
         lineId: s.id,
         type: 'speaking-rate-high',
-        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) — exceeds 9 wps threshold`,
+        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) - exceeds 9 wps threshold`,
       });
     }
 
@@ -87,7 +87,7 @@ function findTimingIssues(sentences: Sentence[]): TimingIssue[] {
       issues.push({
         lineId: s.id,
         type: 'speaking-rate-low',
-        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) — below 0.8 wps threshold`,
+        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) - below 0.8 wps threshold`,
       });
     }
   }
@@ -146,7 +146,7 @@ function findRelativeTimingAnomalies(
         wps,
         neighborAvgWps: avgNeighbor,
         ratio: Math.max(ratio, invRatio),
-        message: `Line ${s.id}: ${wps.toFixed(1)} wps vs neighbor avg ${avgNeighbor.toFixed(1)} wps (${Math.max(ratio, invRatio).toFixed(1)}x ${ratio >= ratioThreshold ? 'faster' : 'slower'}) — "${s.text.slice(0, 50)}"`,
+        message: `Line ${s.id}: ${wps.toFixed(1)} wps vs neighbor avg ${avgNeighbor.toFixed(1)} wps (${Math.max(ratio, invRatio).toFixed(1)}x ${ratio >= ratioThreshold ? 'faster' : 'slower'}) - "${s.text.slice(0, 50)}"`,
       });
     }
   }
@@ -471,7 +471,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       const words = line22.text.split(/\s+/).filter(w => w).length;
       const wps = words / duration;
       if (wps < 0.8)
-        throw new Error(`Line 22 ("${line22.text}"): ${wps.toFixed(2)} wps — below 0.8 threshold`);
+        throw new Error(`Line 22 ("${line22.text}"): ${wps.toFixed(2)} wps - below 0.8 threshold`);
       const issues = findTimingIssues([line22]);
       const rateIssues = issues.filter(i => i.type === 'speaking-rate-low');
       if (rateIssues.length > 0)
@@ -512,15 +512,15 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       const gap22to23 = line23.start - line22.end;
       const gap23to24 = line24.start - line23.end;
       if (gap21to22 > 9.0)
-        throw new Error(`Gap between line 21 and 22: ${gap21to22.toFixed(3)}s — may indicate missing content`);
+        throw new Error(`Gap between line 21 and 22: ${gap21to22.toFixed(3)}s - may indicate missing content`);
       if (gap22to23 > 0.5)
-        throw new Error(`Gap between line 22 and 23: ${gap22to23.toFixed(3)}s — may indicate missing content`);
+        throw new Error(`Gap between line 22 and 23: ${gap22to23.toFixed(3)}s - may indicate missing content`);
       if (gap23to24 > 0.5)
-        throw new Error(`Gap between line 23 and 24: ${gap23to24.toFixed(3)}s — may indicate missing content`);
+        throw new Error(`Gap between line 23 and 24: ${gap23to24.toFixed(3)}s - may indicate missing content`);
       return true;
     });
   } else {
-    console.log('  ⊘ Real SRT file not found — skipping real-file tests');
+    console.log('  ⊘ Real SRT file not found - skipping real-file tests');
   }
 
   // ── Relative timing anomaly detection ──────────────────────────────────────
@@ -770,7 +770,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
       const mask22 = maskPattern(line22.text);
       const mask23 = maskPattern(line23.text);
       if (mask22 === mask23)
-        throw new Error(`Lines 22 and 23 have identical mask "${mask22}" — user cannot tell them apart in dictation mode`);
+        throw new Error(`Lines 22 and 23 have identical mask "${mask22}" - user cannot tell them apart in dictation mode`);
       return true;
     });
 
@@ -822,7 +822,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     const withModifier = maskPattern('Switzerlandʼs trains');
     const expected = maskPattern('switzerlands trains');
     if (withModifier !== expected)
-      throw new Error(`Modifier letter mask "${withModifier}" differs from plain "${expected}" — maskPattern and normalizeDictationTarget disagree`);
+      throw new Error(`Modifier letter mask "${withModifier}" differs from plain "${expected}" - maskPattern and normalizeDictationTarget disagree`);
     if (withModifier !== '************ ******')
       throw new Error(`Expected "************ ******", got "${withModifier}"`);
     return true;
@@ -872,7 +872,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
     ];
     const missing = required.filter(([phrase]) => !excerptText.includes(phrase));
     if (missing.length > 0)
-      throw new Error(`${missing.length} known short words missing from excerpt:\n${missing.map(([p, reason]) => `  "${p}" — ${reason}`).join('\n')}`);
+      throw new Error(`${missing.length} known short words missing from excerpt:\n${missing.map(([p, reason]) => `  "${p}" - ${reason}`).join('\n')}`);
     return true;
   });
 
@@ -918,7 +918,7 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
         (sum, s) => sum + s.text.split(/\s+/).filter(w => w).length, 0,
       );
       if (totalWords < 5900)
-        throw new Error(`Total word count ${totalWords} is below 5900 — pipeline may be dropping words`);
+        throw new Error(`Total word count ${totalWords} is below 5900 - pipeline may be dropping words`);
       return true;
     });
   }

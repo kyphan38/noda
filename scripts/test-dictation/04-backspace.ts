@@ -1,5 +1,5 @@
 /**
- * Group 4: Backspace Contract — wrong chars, overflow, invisible chars.
+ * Group 4: Backspace Contract - wrong chars, overflow, invisible chars.
  * Uses sentence 5 ("birds sing in the morning", 25 chars).
  */
 import { Page } from '@playwright/test';

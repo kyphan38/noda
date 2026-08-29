@@ -14,7 +14,7 @@ interface ShadowingPatternDockProps {
 /**
  * Presentational shell around `<ShadowingPatternPanel>` (Stage 7 redesign). The outer
  * positioned/animated container is owned by `LessonView.tsx` (a 40%-width split column on
- * desktop, a fixed bottom sheet on mobile) — this just normalizes the padding + scroll
+ * desktop, a fixed bottom sheet on mobile) - this just normalizes the padding + scroll
  * behavior for either host, so tall analysis content scrolls inside instead of pushing the
  * host container taller.
  */

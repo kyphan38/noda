@@ -52,7 +52,7 @@ export function normalizeDictationTarget(
     if (/\s/u.test(c)) {
       if (out.length > 0) lastWasSpace = true;
     } else if (/[\p{Lm}]/u.test(c)) {
-      // Strip modifier letters (e.g. U+02BC ʼ) — they look like apostrophes
+      // Strip modifier letters (e.g. U+02BC ʼ) - they look like apostrophes
       // but are classified as Unicode letters; users can't type them.
     } else if (/[\p{L}\p{N}]/u.test(c)) {
       if (lastWasSpace) {
@@ -72,7 +72,7 @@ export function normalizeDictationTarget(
  * Align user input with the target sentence layout.
  * Extracts only letters/numbers from the input (ignoring spaces and
  * punctuation), clamps to the target's letter count, then maps those
- * letters onto the target's character positions — auto-inserting spaces
+ * letters onto the target's character positions - auto-inserting spaces
  * wherever the target has them.  This means users never need to manually
  * type spaces; they just type the letters they hear.
  */

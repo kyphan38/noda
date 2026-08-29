@@ -39,7 +39,7 @@ export function findTimingIssues(sentences: Sentence[]): TimingIssue[] {
       issues.push({
         lineId: s.id,
         type: 'speaking-rate-high',
-        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) — exceeds 9 wps threshold`,
+        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) - exceeds 9 wps threshold`,
       });
     }
 
@@ -47,7 +47,7 @@ export function findTimingIssues(sentences: Sentence[]): TimingIssue[] {
       issues.push({
         lineId: s.id,
         type: 'speaking-rate-low',
-        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) — below 0.8 wps threshold`,
+        message: `Line ${s.id}: ${wps.toFixed(1)} words/sec (${words} words in ${duration.toFixed(2)}s) - below 0.8 wps threshold`,
       });
     }
   }
@@ -106,7 +106,7 @@ export function findRelativeTimingAnomalies(
         wps,
         neighborAvgWps: avgNeighbor,
         ratio: Math.max(ratio, invRatio),
-        message: `Line ${s.id}: ${wps.toFixed(1)} wps vs neighbor avg ${avgNeighbor.toFixed(1)} wps (${Math.max(ratio, invRatio).toFixed(1)}x ${ratio >= ratioThreshold ? 'faster' : 'slower'}) — "${s.text.slice(0, 50)}"`,
+        message: `Line ${s.id}: ${wps.toFixed(1)} wps vs neighbor avg ${avgNeighbor.toFixed(1)} wps (${Math.max(ratio, invRatio).toFixed(1)}x ${ratio >= ratioThreshold ? 'faster' : 'slower'}) - "${s.text.slice(0, 50)}"`,
       });
     }
   }

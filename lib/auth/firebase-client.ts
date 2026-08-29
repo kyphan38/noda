@@ -98,7 +98,7 @@ export function getFirebaseStorage(): FirebaseStorage {
   return cachedStorage;
 }
 
-/** Default region (us-central1) — must match the Cloud Functions deploy region. */
+/** Default region (us-central1) - must match the Cloud Functions deploy region. */
 export function getFirebaseFunctions(): Functions {
   if (cachedFunctions) return cachedFunctions;
   cachedFunctions = getFunctions(getFirebaseApp());

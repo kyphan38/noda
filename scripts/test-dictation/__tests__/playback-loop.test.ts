@@ -28,7 +28,7 @@ type LoopAction =
 
 /**
  * Mirrors the decision the playback loop makes when the active sentence ends.
- * The seek target for repeats uses sentence.start directly (no pre-roll) —
+ * The seek target for repeats uses sentence.start directly (no pre-roll) -
  * this is the fix under test.
  */
 function decideAtSentenceEnd(
@@ -52,7 +52,7 @@ function decideAtSentenceEnd(
 }
 
 // ---------------------------------------------------------------------------
-// Fixtures — back-to-back sentences (common in real SRT data).
+// Fixtures - back-to-back sentences (common in real SRT data).
 // ---------------------------------------------------------------------------
 
 const backToBack: Sentence[] = [
@@ -67,7 +67,7 @@ const threeBackToBack: Sentence[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Bug 1 — Click navigation with infinite repeat gets stuck on active line.
+// Bug 1 - Click navigation with infinite repeat gets stuck on active line.
 //
 // Repro: Line 4 active, user clicks Line 5 in Normal mode with infinite
 // repeat. Pre-roll seeks to Line5.start − 0.1, which lands inside Line 4.
@@ -83,7 +83,7 @@ describe('click navigation with infinite repeat (back-to-back sentences)', () =>
     expect(seekPos).toBe(line5.start - SENTENCE_PRE_ROLL_SECONDS);
 
     const found = findActiveSentence(backToBack, seekPos);
-    // The seek position falls within Line 4 — this is the root cause of the bug.
+    // The seek position falls within Line 4 - this is the root cause of the bug.
     expect(found).not.toBeNull();
     expect(found!.id).toBe(line4.id);
   });
@@ -125,11 +125,11 @@ describe('click navigation with infinite repeat (back-to-back sentences)', () =>
 });
 
 // ---------------------------------------------------------------------------
-// Bug 2 — Repeat seek drifts backward through consecutive sentences.
+// Bug 2 - Repeat seek drifts backward through consecutive sentences.
 //
 // Repro: Line 8 finishes with infinite repeat. Old code seeked to
 // Line8.start − preRoll, landing inside Line 7. Line 7 plays briefly,
-// repeats, drifts to Line 7 — and from Line 9 the cascade goes 9→8→7.
+// repeats, drifts to Line 7 - and from Line 9 the cascade goes 9→8→7.
 // ---------------------------------------------------------------------------
 
 describe('repeat seek must not drift into the previous sentence', () => {
@@ -180,7 +180,7 @@ describe('repeat seek must not drift into the previous sentence', () => {
 
 // ---------------------------------------------------------------------------
 // Forward-merge: advancing from one sentence to the next with finite repeat
-// counts must still work — ensure the userSeekTarget guard doesn't block
+// counts must still work - ensure the userSeekTarget guard doesn't block
 // normal (non-infinite) repeat exhaustion.
 // ---------------------------------------------------------------------------
 
@@ -214,7 +214,7 @@ describe('finite repeat count exhaustion still advances', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Bug 3 — Dictation Enter-advance: completing line N and pressing Enter jumps
+// Bug 3 - Dictation Enter-advance: completing line N and pressing Enter jumps
 // to line N+1 but then snaps back to line N after 0-2 seconds.
 //
 // Repro: Line 103 ("and a name") is short. User completes it, presses Enter.
@@ -225,7 +225,7 @@ describe('finite repeat count exhaustion still advances', () => {
 //
 // Additionally, the "sentence change" guard in the playback loop (lines 55-69
 // of useLessonPlaybackLoop.ts) must NOT fire when replayOnceRef is set for
-// the target sentence — it should only fire for unexpected drift.
+// the target sentence - it should only fire for unexpected drift.
 // ---------------------------------------------------------------------------
 
 const shortThenLong: Sentence[] = [

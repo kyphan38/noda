@@ -1,5 +1,5 @@
 /**
- * Group 10: Mobile Viewport — verify the app works on a phone-sized screen.
+ * Group 10: Mobile Viewport - verify the app works on a phone-sized screen.
  *
  * Runs in a separate browser context with a 375×812 viewport (iPhone-class).
  * Tests: mode tabs visible, dictation input works, hint button, next button,

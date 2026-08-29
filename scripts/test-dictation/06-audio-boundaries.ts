@@ -1,5 +1,5 @@
 /**
- * Group 6: Audio Boundaries — pause at end, gap parking, replay-once.
+ * Group 6: Audio Boundaries - pause at end, gap parking, replay-once.
  */
 import { Page } from '@playwright/test';
 import {

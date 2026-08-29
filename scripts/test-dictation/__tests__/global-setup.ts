@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Vitest global setup — unzips audio SRT fixtures into audio/ before tests run.
+ * Vitest global setup - unzips audio SRT fixtures into audio/ before tests run.
  * The audio/ directory is gitignored; the zip is tracked in git for portability.
  */
 export function setup() {

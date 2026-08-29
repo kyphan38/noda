@@ -1,5 +1,5 @@
 /**
- * Group 11: Unicode Normalization — modifier letter apostrophe (U+02BC)
+ * Group 11: Unicode Normalization - modifier letter apostrophe (U+02BC)
  * and other edge cases in SRT text that could block completion.
  *
  * Regression test for: SRT containing "Switzerlandʼs" (U+02BC) caused
@@ -22,7 +22,7 @@ export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 11. Unicode Normalization ───');
   const idx = 10; // "Who run Switzerlandʼs trains?" in SRT
 
-  // Sentence 10 may already be completed by group 3e — retry to reset it
+  // Sentence 10 may already be completed by group 3e - retry to reset it
   await dismissModal(page);
 
   await check(report, '11a. Activate apostrophe sentence', async () => {
@@ -73,7 +73,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
-    // Type correct letters WITHOUT any spaces — auto-spacing should complete it
+    // Type correct letters WITHOUT any spaces - auto-spacing should complete it
     await ta.pressSequentially('whorunswitzerlandstrains', { delay: CHAR_DELAY_MS });
     return isRowCompleted(page, idx);
   }, 25_000);

@@ -36,17 +36,17 @@ export interface UseShadowingPatternManagerResult {
 /**
  * Centralized shadowing-pattern analysis state for a lesson's transcript.
  *
- * Only one sentence's analysis panel can be open at a time (Stage 7 redesign — the panel
+ * Only one sentence's analysis panel can be open at a time (Stage 7 redesign - the panel
  * moved out of each transcript row into a shared side panel / bottom sheet), so instead of
  * one `useState` per row, this hook owns a single `Record<sentenceId, entry>` cache plus one
- * "active" id. Switching the active sentence never cancels a previous in-flight fetch — it
+ * "active" id. Switching the active sentence never cancels a previous in-flight fetch - it
  * keeps running in the background and lands in the cache, so reopening an already-viewed
  * sentence later in the same session is instant (no refetch, no loading flicker).
  *
  * Cost guard: tapping the sparkle icon on a sentence that has never been analyzed does NOT
  * immediately call the (paid) Gemini analysis. It first does a cheap, silent Firestore cache
  * peek; a hit opens instantly at $0. A miss surfaces `confirmingSentenceId` so the caller can
- * show a confirmation popover — only `confirmGenerate` actually triggers the Cloud Function.
+ * show a confirmation popover - only `confirmGenerate` actually triggers the Cloud Function.
  */
 export function useShadowingPatternManager(
   lessonId: string | null,
@@ -85,7 +85,7 @@ export function useShadowingPatternManager(
         setEntry(sentence.id, {
           status: 'error',
           analysis: null,
-          error: 'Bạn đang offline — cần mạng để phân tích.',
+          error: 'Bạn đang offline - cần mạng để phân tích.',
         });
         return;
       }
@@ -158,7 +158,7 @@ export function useShadowingPatternManager(
         return;
       }
 
-      // Silent cache peek — never counts as the costly Gemini call.
+      // Silent cache peek - never counts as the costly Gemini call.
       loadingIdsRef.current.add(sentence.id);
       setEntry(sentence.id, { status: 'loading', analysis: null, error: null });
 

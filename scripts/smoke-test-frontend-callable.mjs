@@ -1,4 +1,4 @@
-// Stage 4 verify — exercises the exact client-SDK wiring added in
+// Stage 4 verify - exercises the exact client-SDK wiring added in
 // lib/auth/firebase-client.ts (getFirebaseFunctions) + lib/shadowingAnalysis.ts
 // (requestShadowingAnalysis / httpsCallable), against local emulators.
 // Requires: firebase emulators:start --only functions,firestore,auth,storage

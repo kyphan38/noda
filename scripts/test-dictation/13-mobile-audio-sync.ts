@@ -1,5 +1,5 @@
 /**
- * Group 13: Mobile Audio Sync — timeline ↔ active sentence alignment.
+ * Group 13: Mobile Audio Sync - timeline ↔ active sentence alignment.
  *
  * Regression guard for: on mobile, seeking from a gap (e.g. before the first
  * sentence) causes the RAF playback loop to read stale currentTime during the
@@ -142,7 +142,7 @@ export async function run(_desktopPage: Page, report: ReportEntry[]) {
     await seekToSentence(page, 6);
     await waitForActive(page, 6, 4_000);
     await sleep(200);
-    // Read the slider value and the audio time — they should agree
+    // Read the slider value and the audio time - they should agree
     const [sliderVal, audioTime] = await page.evaluate(() => {
       const slider = document.querySelector('input[aria-label="Seek"]') as HTMLInputElement | null;
       const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;

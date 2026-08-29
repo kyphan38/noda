@@ -1,5 +1,5 @@
 /**
- * Group 5: Keyboard Shortcuts — Tab hint, Ctrl replay, Enter on incomplete.
+ * Group 5: Keyboard Shortcuts - Tab hint, Ctrl replay, Enter on incomplete.
  * Uses sentence 6 ("the sky is very blue", 20 chars).
  */
 import { Page } from '@playwright/test';

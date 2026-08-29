@@ -233,7 +233,7 @@ export function DictationControls({
           <button
             type="button"
             data-dictation-hint
-            title="Hint — fill next character"
+            title="Hint - fill next character"
             onClick={handleHint}
             className="shrink-0 h-10 w-10 flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800/60 text-amber-400 active:bg-gray-700"
           >

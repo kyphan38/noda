@@ -1,5 +1,5 @@
 /**
- * Stage 3 — callable Cloud Function with Firestore cache: reads
+ * Stage 3 - callable Cloud Function with Firestore cache: reads
  * users/{uid}/lessons/{lessonId}/shadowingAnalysis/{sentenceId} first and
  * returns it as-is if present, skipping ffmpeg + Gemini entirely. Only on a
  * cache miss does it fall through to Stage 2's flow (download -> slice ->
@@ -17,7 +17,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 // NOTE: `admin.firestore.FieldValue` is undefined under the Functions
-// Emulator — the emulator wraps `admin.firestore` to auto-point at the
+// Emulator - the emulator wraps `admin.firestore` to auto-point at the
 // Firestore emulator host but does not copy the static FieldValue/Timestamp
 // members onto the wrapper. Import the modular API directly instead (works
 // in both the emulator and production).
@@ -32,13 +32,13 @@ import { getShadowingModel } from "./lib/geminiClient";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
 import type { GenerativeModel } from "@google/generative-ai";
 
-/** Stage 6: thrown when Gemini's response text fails JSON.parse — caught by the
+/** Stage 6: thrown when Gemini's response text fails JSON.parse - caught by the
  * caller to trigger a single automatic retry before giving up. */
 class GeminiJsonParseError extends Error {}
 
 /** Stage 6: the SDK's `requestOptions.timeout` (25000ms) aborts the underlying
  * fetch on timeout, surfacing as an AbortError (or a message mentioning
- * timeout/aborted depending on the runtime) — detect both. */
+ * timeout/aborted depending on the runtime) - detect both. */
 function isGeminiTimeoutError(e: unknown): boolean {
   if (!(e instanceof Error)) return false;
   const name = e.name?.toLowerCase() ?? "";
@@ -82,7 +82,7 @@ async function callGeminiOnce(
 }
 
 /** Stage 6: one call, with a single automatic retry on malformed JSON
- * (timeouts are not retried — they already ate the full 25s budget). */
+ * (timeouts are not retried - they already ate the full 25s budget). */
 async function callGeminiWithRetry(
   model: GenerativeModel,
   sourceText: string,
@@ -96,7 +96,7 @@ async function callGeminiWithRetry(
     }
     if (!(e instanceof GeminiJsonParseError)) throw e;
 
-    // Malformed JSON on attempt 1 — retry exactly once (đã chốt trong plan).
+    // Malformed JSON on attempt 1 - retry exactly once (đã chốt trong plan).
     try {
       return await callGeminiOnce(model, sourceText, base64ClipAudio);
     } catch (e2) {

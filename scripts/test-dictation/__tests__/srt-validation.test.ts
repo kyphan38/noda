@@ -193,7 +193,7 @@ describe.skipIf(!hasRealSrt)('real SRT validation', () => {
   });
 
   it('15n. no negative durations (excluding zero-duration alignment artifacts)', () => {
-    const knownZeroDuration = new Set([613]); // "Come on!" — stable-ts artifact
+    const knownZeroDuration = new Set([613]); // "Come on!" - stable-ts artifact
     const bad = sentences.filter(s => s.end < s.start || (s.end === s.start && !knownZeroDuration.has(s.id)));
     expect(bad).toHaveLength(0);
   });

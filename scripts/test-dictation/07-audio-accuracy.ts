@@ -1,5 +1,5 @@
 /**
- * Group 7: Audio Start Accuracy — no background audio, correct start position.
+ * Group 7: Audio Start Accuracy - no background audio, correct start position.
  * Uses sentences 3, 4, 8, 9.
  */
 import { Page } from '@playwright/test';

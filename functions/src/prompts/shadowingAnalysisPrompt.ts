@@ -1,7 +1,7 @@
 /**
  * Prompt + response-schema builder for the shadowing pattern analysis feature.
  *
- * Colocated on purpose (schema describes exactly what the prompt asks for) —
+ * Colocated on purpose (schema describes exactly what the prompt asks for) -
  * mirrors cogi's convention of one file per exercise type under
  * web/src/lib/ai/prompts/*.ts, and reuses the exact prompt text validated in
  * the Stage 1 spike (see /Users/kyphan/.claude/plans/ok-v-y-b-y-gi-delegated-garden.md).

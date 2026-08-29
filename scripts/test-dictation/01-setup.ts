@@ -1,5 +1,5 @@
 /**
- * Group 1: Setup — auth bypass, mode switch to Dictation.
+ * Group 1: Setup - auth bypass, mode switch to Dictation.
  */
 import { Page } from '@playwright/test';
 import { ReportEntry, check, sleep, APP_URL } from './helpers.js';

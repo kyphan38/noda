@@ -1,5 +1,5 @@
 /**
- * Group 17: Word Wrap — no word split across lines, correct vertical alignment.
+ * Group 17: Word Wrap - no word split across lines, correct vertical alignment.
  */
 import { Page } from '@playwright/test';
 import {
@@ -16,7 +16,7 @@ export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 17. Word Wrap ───');
   await dismissModal(page);
 
-  // Use sentence 9: "rain falls from the clouds" (26 chars) — wraps at narrow widths
+  // Use sentence 9: "rain falls from the clouds" (26 chars) - wraps at narrow widths
   const idx = 9;
 
   await check(report, '17a. No word split across two lines (narrow viewport)', async () => {

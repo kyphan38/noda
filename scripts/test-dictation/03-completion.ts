@@ -1,5 +1,5 @@
 /**
- * Group 3: Completion Contract — marking done, Enter advance, last sentence.
+ * Group 3: Completion Contract - marking done, Enter advance, last sentence.
  * Uses sentences 1, 2, 3, 4, 9.
  */
 import { Page } from '@playwright/test';
@@ -97,7 +97,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     const ta = page.locator('[data-dictation-input]');
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
-    // Type correct letters WITHOUT spaces — auto-spacing should complete it
+    // Type correct letters WITHOUT spaces - auto-spacing should complete it
     const target = LESSON_SENTENCES[8]; // "they walk to the store"
     const lettersOnly = target.replace(/ /g, '');
     await ta.pressSequentially(lettersOnly, { delay: CHAR_DELAY_MS });
