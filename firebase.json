@@ -1,15 +1,18 @@
 {
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
+  "firestore": [
+    {
+      "database": "noda-db",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
   "storage": {
     "rules": "storage.rules"
   },
   "functions": [
     {
       "source": "functions",
-      "codebase": "default",
+      "codebase": "noda",
       "ignore": [
         "node_modules",
         ".git",

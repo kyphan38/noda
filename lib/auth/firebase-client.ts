@@ -11,6 +11,8 @@ import {
 import { FirebaseStorage, getStorage } from "firebase/storage";
 import { Functions, getFunctions } from "firebase/functions";
 
+import { DB_ID } from "@/lib/firebase-db-id";
+
 function readFirebaseConfig(): FirebaseOptions {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
   const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim();
@@ -87,7 +89,10 @@ async function initFirestoreOfflinePersistence(db: Firestore): Promise<void> {
 
 export function getFirebaseFirestore(): Firestore {
   if (cachedFirestore) return cachedFirestore;
-  cachedFirestore = getFirestore(getFirebaseApp());
+  // Named database (not `(default)`) - see `lib/firebase-db-id.ts`. Offline
+  // cache is keyed by database id, so switching ids starts from an empty
+  // cache and refetches from the network on first load.
+  cachedFirestore = getFirestore(getFirebaseApp(), DB_ID);
   void initFirestoreOfflinePersistence(cachedFirestore);
   return cachedFirestore;
 }

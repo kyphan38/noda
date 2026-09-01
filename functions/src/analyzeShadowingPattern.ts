@@ -21,7 +21,7 @@ import * as admin from "firebase-admin";
 // Firestore emulator host but does not copy the static FieldValue/Timestamp
 // members onto the wrapper. Import the modular API directly instead (works
 // in both the emulator and production).
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { readFileSync, unlinkSync } from "fs";
 import { randomUUID } from "crypto";
 import * as os from "os";
@@ -31,6 +31,11 @@ import { sliceAudioClip } from "./lib/sliceAudio";
 import { getShadowingModel } from "./lib/geminiClient";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
 import type { GenerativeModel } from "@google/generative-ai";
+
+/** Firestore database id owned by noda. Hardcoded because `functions/` is a
+ * separate package and cannot import `lib/firebase-db-id.ts` - keep both in
+ * sync. See `PLAN-db-split.md`. */
+const NODA_DB_ID = "noda-db";
 
 /** Stage 6: thrown when Gemini's response text fails JSON.parse - caught by the
  * caller to trigger a single automatic retry before giving up. */
@@ -175,9 +180,11 @@ export const analyzeShadowingPattern = onCall(
       request.data
     );
 
-    const cacheDocRef = admin
-      .firestore()
-      .doc(`users/${request.auth.uid}/lessons/${lessonId}/shadowingAnalysis/${sentenceId}`);
+    // `admin.firestore()` always targets `(default)` and cannot take a database
+    // id - use the modular `getFirestore(app, dbId)` form instead.
+    const cacheDocRef = getFirestore(admin.app(), NODA_DB_ID).doc(
+      `users/${request.auth.uid}/lessons/${lessonId}/shadowingAnalysis/${sentenceId}`
+    );
 
     const cachedSnapshot = await cacheDocRef.get();
     if (cachedSnapshot.exists) {
