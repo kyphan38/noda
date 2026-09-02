@@ -12,3 +12,4 @@ audio/
 __pycache__/
 test-results/
 functions/lib/
+.vercel

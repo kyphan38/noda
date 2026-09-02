@@ -32,10 +32,12 @@ import { getShadowingModel } from "./lib/geminiClient";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
 import type { GenerativeModel } from "@google/generative-ai";
 
-/** Firestore database id owned by noda. Hardcoded because `functions/` is a
- * separate package and cannot import `lib/firebase-db-id.ts` - keep both in
- * sync. See `PLAN-db-split.md`. */
-const NODA_DB_ID = "noda-db";
+/** Firestore database id owned by noda. Now `(default)` again: noda has its own
+ * Firebase project (`kyphan38-noda-app`), so it no longer needs the named
+ * `noda-db` that the shared `kyphan38-apps` project forced on it. Hardcoded
+ * because `functions/` is a separate package and cannot import
+ * `lib/firebase-db-id.ts` - keep both in sync. See `PLAN-project-split.md`. */
+const NODA_DB_ID = "(default)";
 
 /** Stage 6: thrown when Gemini's response text fails JSON.parse - caught by the
  * caller to trigger a single automatic retry before giving up. */
@@ -162,6 +164,10 @@ function assertValidRequest(data: unknown): AnalyzeShadowingPatternRequest {
 
 export const analyzeShadowingPattern = onCall(
   {
+    // Must match the region the client calls with - see `FUNCTIONS_REGION` in
+    // `lib/auth/firebase-client.ts`. A mismatch is silent at build time and
+    // only shows up as a 404/CORS failure at call time, so change both together.
+    region: "asia-southeast1",
     secrets: ["GEMINI_API_KEY", "ALLOWED_USER_UID"],
     timeoutSeconds: 60,
     memory: "512MiB",

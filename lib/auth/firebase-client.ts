@@ -103,9 +103,19 @@ export function getFirebaseStorage(): FirebaseStorage {
   return cachedStorage;
 }
 
-/** Default region (us-central1) - must match the Cloud Functions deploy region. */
+/**
+ * Cloud Functions region. Must match the `region` option on every function in
+ * `functions/src/` - a mismatch is silent at build time and only surfaces as a
+ * 404/CORS failure when the callable is invoked, so change both together.
+ *
+ * `asia-southeast1` matches the Firestore and Storage location, so a call no
+ * longer round-trips to Iowa. (It defaulted to `us-central1` before noda moved
+ * to its own project.)
+ */
+const FUNCTIONS_REGION = "asia-southeast1";
+
 export function getFirebaseFunctions(): Functions {
   if (cachedFunctions) return cachedFunctions;
-  cachedFunctions = getFunctions(getFirebaseApp());
+  cachedFunctions = getFunctions(getFirebaseApp(), FUNCTIONS_REGION);
   return cachedFunctions;
 }

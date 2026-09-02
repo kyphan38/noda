@@ -243,6 +243,37 @@ export const uploadLessonMediaToFirebase = async (
   };
 };
 
+/**
+ * Resolve a playable URL for a lesson, preferring a freshly minted download URL
+ * over the `mediaUrl` frozen into the document at upload time.
+ *
+ * `mediaUrl` embeds both the bucket name and a download token, so it rots the
+ * moment either changes - moving to another Firebase project, rotating the
+ * token, or restoring media into a new bucket. `mediaPath` is relative and
+ * survives all of that, so re-deriving the URL from it keeps playback working.
+ * Falls back to the stored `mediaUrl` when the path is missing (older rows) or
+ * when Storage is unreachable, so this can only ever improve on the old
+ * behaviour, never regress it.
+ *
+ * See PLAN-project-split.md section 1 ("Cái bẫy lớn nhất: mediaUrl").
+ */
+export const resolveLessonMediaUrl = async (
+  lesson: Pick<LessonRecord, 'mediaPath' | 'mediaUrl'>
+): Promise<string | null> => {
+  if (lesson.mediaPath) {
+    try {
+      return await getDownloadURL(ref(getFirebaseStorage(), lesson.mediaPath));
+    } catch (error) {
+      console.warn(
+        `[noda] could not refresh media URL for ${lesson.mediaPath}; ` +
+          'falling back to the stored mediaUrl.',
+        error
+      );
+    }
+  }
+  return lesson.mediaUrl ?? null;
+};
+
 /** Firebase-first CRUD API (Phase 1) */
 export const saveLessonFirestore = async (lesson: LessonRecord): Promise<void> => {
   const uid = getCurrentUidOrThrow();

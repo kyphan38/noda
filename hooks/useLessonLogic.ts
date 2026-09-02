@@ -8,6 +8,7 @@ import {
   deleteLessonFirestore,
   getLessonFirestore,
   renameLessonFirestore,
+  resolveLessonMediaUrl,
   saveLessonFirestore,
   subscribeLessonsFirestore,
   touchLessonAccessedFirestore,
@@ -275,13 +276,15 @@ export function useLessonLogic(
         setCurrentLessonId(lesson.id);
         setMediaStoragePath(lesson.mediaPath ?? null);
         setLessonName(lesson.name);
-        if (lesson.mediaUrl) {
-          setMediaFile(null);
-          setMediaURL(lesson.mediaUrl);
-        } else {
-          setMediaFile(null);
-          setMediaURL(null);
-        }
+        // Re-derive the download URL from `mediaPath` instead of trusting the
+        // `mediaUrl` frozen in at upload time: that stored URL hardcodes the
+        // bucket name and download token, both of which change when the app
+        // moves to another Firebase project. See PLAN-project-split.md § 1.
+        const hasMedia = !!(lesson.mediaPath || lesson.mediaUrl);
+        const freshMediaUrl = hasMedia ? await resolveLessonMediaUrl(lesson) : null;
+        if (myGen !== lessonLoadGenerationRef.current) return;
+        setMediaFile(null);
+        setMediaURL(freshMediaUrl);
 
         setTranscriptText(lesson.transcriptText);
         setCompletedSentences(lesson.completedSentences || {});
@@ -292,7 +295,7 @@ export function useLessonLogic(
           ) as Record<number, string>
         );
         const hasTranscript = !!(lesson.transcriptText && lesson.transcriptText.trim());
-        setIsStarted(!!lesson.mediaUrl || hasTranscript);
+        setIsStarted(!!freshMediaUrl || hasTranscript);
         setAppMode('normal');
 
         await touchLessonAccessedFirestore(lesson.id);

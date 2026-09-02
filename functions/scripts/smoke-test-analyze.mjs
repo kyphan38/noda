@@ -11,10 +11,13 @@ import admin from 'firebase-admin';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const PROJECT_ID = 'kyphan38-apps';
-const BUCKET = 'kyphan38-apps.firebasestorage.app';
-const REGION = 'us-central1';
-const ALLOWED_UID = 'yjzds6g7Y6VjmwtgW4QTnUqaX0F2';
+const PROJECT_ID = process.env.FIREBASE_ADMIN_PROJECT_ID || 'kyphan38-noda-app';
+const BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${PROJECT_ID}.firebasestorage.app`;
+// Must match `region` in functions/src/analyzeShadowingPattern.ts.
+const REGION = 'asia-southeast1';
+// UID changed when noda moved to its own Firebase project - override with
+// ALLOWED_UID=... when the emulator is seeded for a different user.
+const ALLOWED_UID = process.env.ALLOWED_UID || process.env.NEXT_PUBLIC_ALLOWED_USER_UID || '';
 const FUNCTIONS_HOST = '127.0.0.1:5001';
 
 const AUDIO_PATH = '/Users/kyphan/ws/app/noda/audio/Test_How_Switzerland_Engineered_the_Perfect_Country_10.mp3';
