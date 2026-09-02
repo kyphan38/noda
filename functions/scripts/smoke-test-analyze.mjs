@@ -5,7 +5,8 @@
 process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
 process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
 process.env.FIREBASE_STORAGE_EMULATOR_HOST = '127.0.0.1:9199';
-process.env.GCLOUD_PROJECT = 'kyphan38-apps';
+process.env.GCLOUD_PROJECT =
+  process.env.FIREBASE_ADMIN_PROJECT_ID || 'kyphan38-noda-app';
 
 import admin from 'firebase-admin';
 import fs from 'node:fs';
