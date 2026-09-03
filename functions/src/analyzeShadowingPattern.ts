@@ -215,7 +215,7 @@ export const analyzeShadowingPattern = onCall(
         startSec,
         endSec,
         sourceText,
-        model: process.env.GEMINI_MODEL?.trim() || "gemini-3.7-flash",
+        model: process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash",
         analysis,
       };
 
