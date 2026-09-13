@@ -47,3 +47,21 @@ export const ARROW_SKIP_SECONDS = 5;
 // Shadowing pattern explanation (Cloud Function name; must match functions/src/index.ts export)
 export const SHADOWING_ANALYSIS_FUNCTION_NAME = 'analyzeShadowingPattern';
 
+
+/** Hard cap on notes the panel renders; the Cloud Function truncates anything longer.
+ *  Raised from 4 to 8: at 4 the prompt had to pick "the most important" junctions and
+ *  quietly dropped real ones (weak forms like "if you", "you know"), which is exactly the
+ *  detail an upper-intermediate learner is looking for. The notes area scrolls, so length
+ *  costs nothing as long as the annotated line above stays pinned. */
+export const SHADOWING_MAX_NOTES = 8;
+/** At most one `rhythm` note - the rest of the list is for audible sound changes. */
+export const SHADOWING_MAX_RHYTHM_NOTES = 1;
+
+/**
+ * How many following sentences to analyze in the background once the user opens a
+ * sentence's panel. Shadowing is practised in order, so the next sentence is nearly
+ * always the next thing opened - analyzing it during the ~20s the user spends
+ * imitating the current one turns the wait into nothing. Deliberately small: each
+ * prefetched sentence is a paid Gemini call for something the user might never open.
+ */
+export const SHADOWING_PREFETCH_COUNT = 2;

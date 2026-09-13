@@ -12,11 +12,10 @@ interface ShadowingPatternDockProps {
 }
 
 /**
- * Presentational shell around `<ShadowingPatternPanel>` (Stage 7 redesign). The outer
- * positioned/animated container is owned by `LessonView.tsx` (a 40%-width split column on
- * desktop, a fixed bottom sheet on mobile) - this just normalizes the padding + scroll
- * behavior for either host, so tall analysis content scrolls inside instead of pushing the
- * host container taller.
+ * Presentational shell around `<ShadowingPatternPanel>`. The outer positioned/animated
+ * container is owned by `LessonView.tsx` (a split column on desktop, a fixed bottom sheet
+ * on mobile) - this just normalizes the padding for either host. The panel itself keeps the
+ * annotated line pinned and scrolls only its notes, so this stays `overflow-hidden`.
  */
 export function ShadowingPatternDock({ isMobile, entry, onClose, onRetry }: ShadowingPatternDockProps) {
   return (

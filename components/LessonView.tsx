@@ -161,7 +161,7 @@ export function LessonView({
     cancelConfirm: onCancelShadowingConfirm,
     close: closeShadowingPanel,
     retry: retryShadowingAnalysis,
-  } = useShadowingPatternManager(lessonId, mediaStoragePath);
+  } = useShadowingPatternManager(lessonId, mediaStoragePath, transcript);
   const activeShadowingSentence =
     activeShadowingSentenceId != null
       ? transcript.find((s) => s.id === activeShadowingSentenceId)

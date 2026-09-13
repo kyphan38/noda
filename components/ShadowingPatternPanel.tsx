@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Loader2, RotateCcw, Sparkles, X } from 'lucide-react';
-import type { ShadowingPatternAnalysis } from '@/types';
+import { NOTE_LABEL, TONE_ARROW, isRenderableAnalysis, noteBadgeClass } from '@/lib/shadowingChunks';
+import type { ShadowingChunk, ShadowingNote, ShadowingPatternAnalysis } from '@/types';
 import type { ShadowingPatternStatus } from '@/hooks/useShadowingPatternAnalysis';
 
 interface ShadowingPatternPanelProps {
@@ -13,72 +14,97 @@ interface ShadowingPatternPanelProps {
   onClose: () => void;
 }
 
-const TABS = [
-  { key: 'stressRhythm', label: 'Trọng âm' },
-  { key: 'intonationPitch', label: 'Ngữ điệu' },
-  { key: 'connectedSpeech', label: 'Nối âm' },
-  { key: 'chunking', label: 'Ngắt cụm' },
-] as const;
-type TabKey = (typeof TABS)[number]['key'];
+const LEVEL_CLASS = {
+  strong: 'text-gray-100 font-medium',
+  normal: 'text-gray-300',
+  weak: 'text-gray-500',
+} as const;
 
-function TabBody({ tab, analysis }: { tab: TabKey; analysis: ShadowingPatternAnalysis }) {
-  if (tab === 'stressRhythm') {
-    const { summary, stressedWords, notes } = analysis.stressRhythm;
-    return (
-      <>
-        <p>{summary}</p>
-        {stressedWords.length > 0 && (
-          <p className="mt-1 text-xs text-gray-400">Nhấn: {stressedWords.join(', ')}</p>
-        )}
-        {notes && <p className="mt-1 text-xs text-gray-500">{notes}</p>}
-      </>
-    );
-  }
-  if (tab === 'intonationPitch') {
-    const { summary, pattern, notes } = analysis.intonationPitch;
-    return (
-      <>
-        <p>{summary}</p>
-        <p className="mt-1 text-xs text-gray-400">Pattern: {pattern}</p>
-        {notes && <p className="mt-1 text-xs text-gray-500">{notes}</p>}
-      </>
-    );
-  }
-  if (tab === 'connectedSpeech') {
-    const { summary, features } = analysis.connectedSpeech;
-    return (
-      <>
-        <p>{summary}</p>
-        {features.length > 0 && (
-          <ul className="mt-1 flex flex-col gap-1 text-xs text-gray-400">
-            {features.map((f, i) => (
-              <li key={i}>
-                <span className="font-medium text-gray-300">{f.type}</span> - {f.example}: {f.explanation}
-              </li>
-            ))}
-          </ul>
-        )}
-      </>
-    );
-  }
-  const { summary, groups, pauseNotes } = analysis.chunking;
+/**
+ * One thought group: the words with their stress marking, then the pitch arrow.
+ * Groups flow inline separated by a divider rather than sitting on their own rows,
+ * so a long sentence still reads as one sentence. The divider - not the line break -
+ * is what marks a boundary, which is all a confident reader needs to know where the
+ * speaker breathes.
+ */
+function Chunk({ chunk }: { chunk: ShadowingChunk }) {
+  const arrow = TONE_ARROW[chunk.tone];
   return (
-    <>
-      <p>{summary}</p>
-      {groups.length > 0 && <p className="mt-1 text-xs text-gray-400">{groups.join(' / ')}</p>}
-      {pauseNotes && <p className="mt-1 text-xs text-gray-500">{pauseNotes}</p>}
-    </>
+    <span>
+      {chunk.tokens.map((token, i) => (
+        <span
+          key={i}
+          className={`${LEVEL_CLASS[token.level]} ${
+            token.linked ? 'underline decoration-dotted decoration-gray-700 underline-offset-[6px]' : ''
+          }`}
+        >
+          {i > 0 ? ' ' : ''}
+          {token.display}
+        </span>
+      ))}
+      <span className={`ml-1 text-emerald-400 ${chunk.toneStrength === 'weak' ? 'opacity-50' : ''}`}>
+        {chunk.toneStrength === 'weak' ? `(${arrow})` : arrow}
+      </span>
+    </span>
   );
 }
 
-/** Card content for the shadowing-pattern explanation feature (Stage 7: tabbed, hosted in a side panel / bottom sheet). */
-export function ShadowingPatternPanel({ status, analysis, error, onRetry, onClose }: ShadowingPatternPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>('stressRhythm');
+function NoteRow({ note }: { note: ShadowingNote }) {
+  const hasExample = !!note.text;
+  return (
+    <div className="flex items-start gap-2">
+      <span
+        className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] whitespace-nowrap ${noteBadgeClass(
+          note.type
+        )}`}
+      >
+        {NOTE_LABEL[note.type] ?? note.type}
+      </span>
+      <div className="min-w-0 flex-1">
+        {hasExample && (
+          <div className="text-sm leading-snug text-gray-200">
+            <span className="font-medium">{note.text}</span>
+            {note.sounds && <span className="text-gray-400"> → </span>}
+            {note.sounds && <span>“{note.sounds}”</span>}
+            {note.ipa && <span className="ml-1 font-mono text-[11px] text-gray-500">{note.ipa}</span>}
+          </div>
+        )}
+        <div className="text-[13px] leading-snug text-gray-400">{note.why}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Shadowing pattern explanation (v2 - one annotated line, no tabs).
+ *
+ * v1 split the same sentence across four tabs (stress / intonation / connected
+ * speech / chunking), so reading it meant clicking three times and re-assembling
+ * the sentence mentally. Stress, pitch and grouping are now one line: CAPS marks
+ * the stressed syllable, dimmed words are the reduced ones, an arrow ends each
+ * thought group. Only the things that genuinely differ from careful word-by-word
+ * reading stay as prose, capped at `SHADOWING_MAX_NOTES` by the Cloud Function.
+ *
+ * The line is pinned (the notes scroll under it) because it is what the learner
+ * looks at while speaking - it must not scroll away while they read a note.
+ */
+export function ShadowingPatternPanel({
+  status,
+  analysis,
+  error,
+  onRetry,
+  onClose,
+}: ShadowingPatternPanelProps) {
   // Stop clicks inside the panel from bubbling to the sentence row's onSentenceClick.
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
+  // Last line of defence: the manager already rejects an unrenderable analysis, but the
+  // panel must not be the thing that throws if one ever reaches it - a crash here takes
+  // the whole lesson view down through the route error boundary.
+  const renderable = analysis !== null && isRenderableAnalysis(analysis);
+
   const Header = (
-    <div className="flex items-center gap-1 border-b border-gray-800 px-1 pb-1">
+    <div className="flex shrink-0 items-center gap-1 border-b border-gray-800 px-1 pb-1">
       <div className="flex items-center gap-1.5 pl-1 pr-2 text-xs font-medium text-emerald-400">
         <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
         <span className="hidden sm:inline">Shadowing pattern</span>
@@ -111,6 +137,15 @@ export function ShadowingPatternPanel({ status, analysis, error, onRetry, onClos
     );
   }
 
+  if (status === 'ready' && !renderable) {
+    return (
+      <div onClick={stop} className="flex flex-col gap-2">
+        {Header}
+        <div className="px-2 pb-2 text-sm text-red-400">Kết quả phân tích không đọc được.</div>
+      </div>
+    );
+  }
+
   if (status === 'error') {
     return (
       <div onClick={stop} className="flex flex-col gap-2">
@@ -133,29 +168,35 @@ export function ShadowingPatternPanel({ status, analysis, error, onRetry, onClos
     );
   }
 
-  if (status === 'ready' && analysis) {
+  if (status === 'ready' && analysis && renderable) {
     return (
-      <div onClick={stop} className="flex flex-col gap-2">
+      <div onClick={stop} className="flex h-full flex-col gap-2">
         {Header}
-        <div className="flex items-center gap-1 border-b border-gray-800 px-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setActiveTab(t.key)}
-              className={`px-2 py-1 text-xs whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                activeTab === t.key
-                  ? 'text-emerald-400 border-emerald-400'
-                  : 'text-gray-500 border-transparent hover:text-gray-300'
-              }`}
-            >
-              {t.label}
-            </button>
+
+        {/* Pinned: the line stays put while the notes below it scroll. */}
+        <div className="shrink-0 px-1 text-[17px] leading-loose">
+          {analysis.chunks.map((chunk, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="mx-1.5 text-gray-600">|</span>}
+              <Chunk chunk={chunk} />
+            </React.Fragment>
           ))}
         </div>
-        <div className="px-2 text-sm text-gray-300 leading-relaxed overflow-hidden">
-          <TabBody tab={activeTab} analysis={analysis} />
-        </div>
+
+        {analysis.notes.length > 0 && (
+          <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto border-t border-gray-800 px-1 pt-2.5 pb-1">
+            {analysis.notes.map((note, i) => (
+              <NoteRow key={i} note={note} />
+            ))}
+          </div>
+        )}
+
+        {/* A clean read is a real result, not an empty state - say so instead of showing nothing. */}
+        {analysis.notes.length === 0 && (
+          <div className="shrink-0 border-t border-gray-800 px-1 pt-2 text-[13px] text-gray-500">
+            Câu này người nói đọc rõ, không có chỗ nối hay nuốt âm đáng chú ý.
+          </div>
+        )}
       </div>
     );
   }
