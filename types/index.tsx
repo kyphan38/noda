@@ -114,33 +114,62 @@ export type SidebarFolder = {
   updatedAt: number;
 };
 
-// Shadowing pattern explanation (Gemini analysis, cached in Firestore per sentence)
-export type ConnectedSpeechFeature = {
-  type: 'linking' | 'reduction' | 'elision' | 'assimilation';
-  example: string;
-  explanation: string;
+// Shadowing pattern explanation (Gemini analysis, cached in Firestore per sentence).
+//
+// v2 replaced the original four independent sections (stress / intonation /
+// connected speech / chunking) with one chunk-and-token structure, because three
+// of those four described the same sentence from different angles and the panel
+// had to show them on one annotated line instead of four tabs. Analysis docs are
+// versioned (`SHADOWING_ANALYSIS_VERSION`) and v1 docs are not convertible - the
+// v1 cache was deleted rather than migrated.
+
+export const SHADOWING_ANALYSIS_VERSION = 2;
+
+/** How audibly a token is pronounced. `weak` is only ever a function word. */
+export type ShadowingStressLevel = 'strong' | 'normal' | 'weak';
+
+export type ShadowingTone = 'rise' | 'fall' | 'fall-rise' | 'rise-fall' | 'flat';
+
+export type ShadowingToken = {
+  /** The word exactly as it appears in the transcript, punctuation included. */
+  w: string;
+  /**
+   * Same characters as `w`; for `level: 'strong'` the stressed syllable is
+   * uppercased (`manager` -> `MANager`). Server-validated to differ from `w`
+   * by letter case only - a token whose letters drift is reset to `w`.
+   */
+  display: string;
+  level: ShadowingStressLevel;
+  /** True when this word takes part in one of the `notes` below. */
+  linked?: boolean;
+};
+
+export type ShadowingChunk = {
+  tokens: ShadowingToken[];
+  tone: ShadowingTone;
+  /** `weak` renders the arrow parenthesized - a slight continuation rise, not a committed move. */
+  toneStrength: 'strong' | 'weak';
+};
+
+export type ShadowingNoteType = 'linking' | 'reduction' | 'elision' | 'assimilation' | 'rhythm';
+
+export type ShadowingNote = {
+  type: ShadowingNoteType;
+  /** The words this note is about; empty for `rhythm` notes. */
+  text: string;
+  /** Plain-letter pseudo-spelling, e.g. `had-tuh`. Empty for `rhythm` notes. */
+  sounds: string;
+  /** Narrow IPA of what is actually heard. Empty for `rhythm` notes. */
+  ipa: string;
+  /** One short Vietnamese coaching instruction - what to do, not what the rule is. */
+  why: string;
 };
 
 export type ShadowingPatternAnalysis = {
-  stressRhythm: {
-    summary: string;
-    stressedWords: string[];
-    notes?: string;
-  };
-  intonationPitch: {
-    summary: string;
-    pattern: 'rising' | 'falling' | 'fall-rise' | 'rise-fall' | 'flat';
-    notes?: string;
-  };
-  connectedSpeech: {
-    summary: string;
-    features: ConnectedSpeechFeature[];
-  };
-  chunking: {
-    summary: string;
-    groups: string[];
-    pauseNotes?: string;
-  };
+  /** Thought groups in transcript order; every transcript word appears exactly once. */
+  chunks: ShadowingChunk[];
+  /** At most `SHADOWING_MAX_NOTES`, most important first; may be empty. */
+  notes: ShadowingNote[];
 };
 
 /** Cached doc at `users/{userId}/lessons/{lessonId}/shadowingAnalysis/{sentenceId}`. */
@@ -150,6 +179,8 @@ export type ShadowingPatternDoc = {
   endSec: number;
   sourceText: string;
   model: string;
+  /** Always `SHADOWING_ANALYSIS_VERSION`; readers treat any other value as a cache miss. */
+  version: number;
   analysis: ShadowingPatternAnalysis;
   /** Firestore Timestamp on the wire; serialized to millis by the client read helper. */
   createdAt: number;

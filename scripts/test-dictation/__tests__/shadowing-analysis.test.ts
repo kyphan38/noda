@@ -1,0 +1,226 @@
+import { describe, it, expect } from 'vitest';
+import {
+  normalizeShadowingAnalysis,
+  ShadowingShapeError,
+} from '../../../functions/src/lib/normalizeShadowingAnalysis';
+import { isRenderableAnalysis } from '@/lib/shadowingChunks';
+import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
+import { SHADOWING_PREFETCH_COUNT } from '@/constants';
+import type { Sentence } from '@/types';
+
+const token = (w: string, level = 'normal', display?: string) => ({
+  w,
+  display: display ?? w,
+  level,
+});
+
+/** "the manager had to stop" split as "the manager had to" + "stop". */
+const twoChunks = (overrides: Record<string, unknown> = {}) => ({
+  chunks: [
+    {
+      tokens: [token('the', 'weak'), token('manager', 'strong', 'MANager'), token('had', 'weak'), token('to', 'weak')],
+      tone: 'rise',
+      toneStrength: 'weak',
+    },
+    {
+      tokens: [token('stop', 'strong', 'STOP')],
+      tone: 'fall',
+      toneStrength: 'strong',
+    },
+  ],
+  notes: [],
+  ...overrides,
+});
+const SOURCE = 'the manager had to stop';
+
+describe('normalizeShadowingAnalysis', () => {
+  it('keeps a well-formed response', () => {
+    const out = normalizeShadowingAnalysis(twoChunks(), SOURCE);
+    expect(out.chunks).toHaveLength(2);
+    expect(out.chunks[0].tokens[1].display).toBe('MANager');
+    expect(out.chunks[0].tone).toBe('rise');
+    expect(out.chunks[0].toneStrength).toBe('weak');
+  });
+
+  it('throws when the tokens no longer spell the transcript', () => {
+    const raw = twoChunks();
+    raw.chunks[1].tokens = [token('stopped', 'strong', 'STOPPED')];
+    expect(() => normalizeShadowingAnalysis(raw, SOURCE)).toThrow(ShadowingShapeError);
+  });
+
+  it('throws when a word is dropped entirely', () => {
+    const raw = twoChunks();
+    raw.chunks[0].tokens = raw.chunks[0].tokens.slice(0, 3);
+    expect(() => normalizeShadowingAnalysis(raw, SOURCE)).toThrow(ShadowingShapeError);
+  });
+
+  it('throws on an empty or unusable chunk list', () => {
+    expect(() => normalizeShadowingAnalysis({ chunks: [], notes: [] }, SOURCE)).toThrow(ShadowingShapeError);
+    expect(() => normalizeShadowingAnalysis(null, SOURCE)).toThrow(ShadowingShapeError);
+  });
+
+  it('resets a display whose letters drifted, keeping the transcript word', () => {
+    const raw = twoChunks();
+    raw.chunks[0].tokens[1] = token('manager', 'strong', 'MANAGERS');
+    const out = normalizeShadowingAnalysis(raw, SOURCE);
+    expect(out.chunks[0].tokens[1].display).toBe('manager');
+  });
+
+  it('rejects a display that adds punctuation the transcript never had', () => {
+    const raw = twoChunks();
+    // Seen in the wild: Gemini returned "HALF-way" for the word "halfway".
+    raw.chunks[0].tokens[1] = token('manager', 'strong', 'MAN-ager');
+    const out = normalizeShadowingAnalysis(raw, SOURCE);
+    expect(out.chunks[0].tokens[1].display).toBe('manager');
+  });
+
+  it('keeps punctuation that is genuinely part of the word', () => {
+    const raw = twoChunks();
+    raw.chunks[1].tokens = [token('stop', 'strong', 'STOP')];
+    expect(normalizeShadowingAnalysis(raw, SOURCE).chunks[1].tokens[0].display).toBe('STOP');
+  });
+
+  it('ignores a recased display on a token that is not stressed', () => {
+    const raw = twoChunks();
+    raw.chunks[0].tokens[0] = token('the', 'weak', 'THE');
+    const out = normalizeShadowingAnalysis(raw, SOURCE);
+    expect(out.chunks[0].tokens[0].display).toBe('the');
+  });
+
+  it('promotes a content word marked weak, but leaves function words weak', () => {
+    const raw = twoChunks();
+    raw.chunks[1].tokens = [token('stop', 'weak')];
+    const out = normalizeShadowingAnalysis(raw, SOURCE);
+    expect(out.chunks[1].tokens[0].level).toBe('normal');
+    expect(out.chunks[0].tokens[0].level).toBe('weak');
+    expect(out.chunks[0].tokens[2].level).toBe('weak');
+  });
+
+  it('falls back to a flat tone on an unknown tone value', () => {
+    const raw = twoChunks();
+    (raw.chunks[0] as { tone: string }).tone = 'swoop';
+    expect(normalizeShadowingAnalysis(raw, SOURCE).chunks[0].tone).toBe('flat');
+  });
+
+  describe('notes', () => {
+    const note = (extra: Record<string, unknown> = {}) => ({
+      type: 'linking',
+      text: 'had to',
+      sounds: 'had-tuh',
+      ipa: '/hæd tə/',
+      why: 'Đừng bật /d/.',
+      ...extra,
+    });
+
+    it('truncates to the eight-note cap', () => {
+      const out = normalizeShadowingAnalysis(twoChunks({ notes: Array.from({ length: 12 }, () => note()) }), SOURCE);
+      expect(out.notes).toHaveLength(8);
+    });
+
+    it('keeps only one rhythm note, blanks its example fields, and moves it last', () => {
+      const raw = twoChunks({
+        notes: [
+          note({ type: 'rhythm', why: 'Cụm cuối hạ giọng dứt khoát.' }),
+          note({ type: 'rhythm', why: 'Nói cụm giữa nhanh hơn.' }),
+          note(),
+        ],
+      });
+      const out = normalizeShadowingAnalysis(raw, SOURCE);
+      expect(out.notes).toHaveLength(2);
+      expect(out.notes.filter((n) => n.type === 'rhythm')).toHaveLength(1);
+      // Sound note first even though the model listed rhythm first.
+      expect(out.notes[0].type).toBe('linking');
+      expect(out.notes[1]).toMatchObject({ type: 'rhythm', text: '', sounds: '', ipa: '' });
+    });
+
+    it('preserves the sentence order the model returned for sound notes', () => {
+      const raw = twoChunks({
+        notes: [note({ text: 'the manager' }), note({ text: 'had to' }), note({ text: 'to stop' })],
+      });
+      const out = normalizeShadowingAnalysis(raw, SOURCE);
+      expect(out.notes.map((n) => n.text)).toEqual(['the manager', 'had to', 'to stop']);
+    });
+
+    it('drops notes with no coaching instruction or an unknown type', () => {
+      const raw = twoChunks({ notes: [note({ why: '   ' }), note({ type: 'vowel-shift' }), note()] });
+      const out = normalizeShadowingAnalysis(raw, SOURCE);
+      expect(out.notes).toHaveLength(1);
+      expect(out.notes[0].text).toBe('had to');
+    });
+
+    it('accepts an empty note list - a cleanly articulated sentence is a real answer', () => {
+      expect(normalizeShadowingAnalysis(twoChunks({ notes: [] }), SOURCE).notes).toEqual([]);
+      expect(normalizeShadowingAnalysis(twoChunks({ notes: 'none' }), SOURCE).notes).toEqual([]);
+    });
+  });
+});
+
+describe('isRenderableAnalysis', () => {
+  const ok = {
+    chunks: [{ tokens: [{ w: 'hi', display: 'HI', level: 'strong' }], tone: 'fall', toneStrength: 'strong' }],
+    notes: [],
+  };
+
+  it('accepts a v2 analysis', () => {
+    expect(isRenderableAnalysis(ok)).toBe(true);
+  });
+
+  it('rejects a v1 analysis, which is what a not-yet-deployed function returns', () => {
+    const v1 = {
+      stressRhythm: { summary: 's', stressedWords: ['hi'] },
+      intonationPitch: { summary: 's', pattern: 'falling' },
+      connectedSpeech: { summary: 's', features: [] },
+      chunking: { summary: 's', groups: ['hi'] },
+    };
+    expect(isRenderableAnalysis(v1)).toBe(false);
+  });
+
+  it('rejects empty, malformed, and missing values', () => {
+    expect(isRenderableAnalysis(null)).toBe(false);
+    expect(isRenderableAnalysis(undefined)).toBe(false);
+    expect(isRenderableAnalysis('chunks')).toBe(false);
+    expect(isRenderableAnalysis({ chunks: [], notes: [] })).toBe(false);
+    expect(isRenderableAnalysis({ chunks: 'nope', notes: [] })).toBe(false);
+    expect(isRenderableAnalysis({ ...ok, notes: 'nope' })).toBe(false);
+    expect(isRenderableAnalysis({ chunks: [{ tokens: [] }], notes: [] })).toBe(false);
+    expect(isRenderableAnalysis({ chunks: [{ tokens: [{ w: 'hi' }] }], notes: [] })).toBe(false);
+  });
+
+  it('tolerates a missing notes list rather than calling the whole analysis bad', () => {
+    expect(isRenderableAnalysis({ chunks: ok.chunks })).toBe(true);
+  });
+});
+
+describe('nextSentencesToPrefetch', () => {
+  const s = (id: number): Sentence => ({ id, text: `s${id}`, start: id, end: id + 1 });
+  const transcript = [s(1), s(2), s(3), s(4), s(5)];
+
+  it('returns the next sentences in transcript order', () => {
+    expect(nextSentencesToPrefetch(transcript, 2, 2).map((x) => x.id)).toEqual([3, 4]);
+  });
+
+  it('stops at the end of the lesson instead of wrapping', () => {
+    expect(nextSentencesToPrefetch(transcript, 4, 2).map((x) => x.id)).toEqual([5]);
+    expect(nextSentencesToPrefetch(transcript, 5, 2)).toEqual([]);
+  });
+
+  it('prefetches nothing for an id that is not in this transcript', () => {
+    expect(nextSentencesToPrefetch(transcript, 99, 2)).toEqual([]);
+    expect(nextSentencesToPrefetch([], 1, 2)).toEqual([]);
+  });
+
+  it('follows transcript order, not id arithmetic', () => {
+    // Sentence ids come from the SRT and need not be contiguous.
+    const gappy = [s(2), s(7), s(9)];
+    expect(nextSentencesToPrefetch(gappy, 2, 2).map((x) => x.id)).toEqual([7, 9]);
+  });
+
+  it('prefetches nothing when the count is zero or negative', () => {
+    expect(nextSentencesToPrefetch(transcript, 1, 0)).toEqual([]);
+    expect(nextSentencesToPrefetch(transcript, 1, -1)).toEqual([]);
+  });
+
+  it('defaults to the configured prefetch count', () => {
+    expect(nextSentencesToPrefetch(transcript, 1)).toHaveLength(SHADOWING_PREFETCH_COUNT);
+  });
+});

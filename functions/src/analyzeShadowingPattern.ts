@@ -30,6 +30,11 @@ import * as path from "path";
 import { sliceAudioClip } from "./lib/sliceAudio";
 import { getShadowingModel } from "./lib/geminiClient";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
+import {
+  normalizeShadowingAnalysis,
+  ShadowingShapeError,
+  type NormalizedAnalysis,
+} from "./lib/normalizeShadowingAnalysis";
 import type { GenerativeModel } from "@google/generative-ai";
 
 /** Firestore database id owned by noda. Now `(default)` again: noda has its own
@@ -39,11 +44,22 @@ import type { GenerativeModel } from "@google/generative-ai";
  * `lib/firebase-db-id.ts` - keep both in sync. See `PLAN-project-split.md`. */
 const NODA_DB_ID = "(default)";
 
+/** Analysis shape version. Keep in sync with `SHADOWING_ANALYSIS_VERSION` in types/index.tsx.
+ * A cached doc with any other version is ignored and re-analyzed: v1 docs described four
+ * independent sections and cannot be converted to v2's chunk/token structure. */
+const ANALYSIS_VERSION = 2;
+
+/** Gemini budget per attempt. Raised twice as the response grew: v1's 25s, then 40s for the
+ * v2 schema (19.6s worst case measured), and now 55s because sweeping every junction instead
+ * of the top few pushed one real sentence to 36.9s. A timeout is not retried, so a tight
+ * budget turns a slow sentence into a hard failure. */
+const GEMINI_TIMEOUT_MS = 55000;
+
 /** Stage 6: thrown when Gemini's response text fails JSON.parse - caught by the
  * caller to trigger a single automatic retry before giving up. */
 class GeminiJsonParseError extends Error {}
 
-/** Stage 6: the SDK's `requestOptions.timeout` (25000ms) aborts the underlying
+/** Stage 6: the SDK's `requestOptions.timeout` (GEMINI_TIMEOUT_MS) aborts the underlying
  * fetch on timeout, surfacing as an AbortError (or a message mentioning
  * timeout/aborted depending on the runtime) - detect both. */
 function isGeminiTimeoutError(e: unknown): boolean {
@@ -60,7 +76,7 @@ async function callGeminiOnce(
   model: GenerativeModel,
   sourceText: string,
   base64ClipAudio: string
-): Promise<unknown> {
+): Promise<NormalizedAnalysis> {
   const result = await model.generateContent(
     {
       contents: [
@@ -73,7 +89,7 @@ async function callGeminiOnce(
         },
       ],
     },
-    { timeout: 25000 } // same convention as cogi's routes
+    { timeout: GEMINI_TIMEOUT_MS } // same convention as cogi's routes
   );
 
   const text = result.response.text();
@@ -81,36 +97,48 @@ async function callGeminiOnce(
     throw new HttpsError("internal", "Empty response from Gemini.");
   }
 
+  let parsed: unknown;
   try {
-    return JSON.parse(text);
+    parsed = JSON.parse(text);
   } catch {
     throw new GeminiJsonParseError("Gemini returned malformed JSON.");
   }
+
+  // Throws ShadowingShapeError on an unusable response, which the caller retries
+  // once - the cache doc is permanent, so nothing malformed may reach it.
+  return normalizeShadowingAnalysis(parsed, sourceText);
 }
 
 /** Stage 6: one call, with a single automatic retry on malformed JSON
- * (timeouts are not retried - they already ate the full 25s budget). */
+ * or an unusable shape (timeouts are not retried - they already ate the full budget). */
 async function callGeminiWithRetry(
   model: GenerativeModel,
   sourceText: string,
   base64ClipAudio: string
-): Promise<unknown> {
+): Promise<NormalizedAnalysis> {
+  const isRetryable = (e: unknown) => e instanceof GeminiJsonParseError || e instanceof ShadowingShapeError;
+
   try {
     return await callGeminiOnce(model, sourceText, base64ClipAudio);
   } catch (e) {
     if (isGeminiTimeoutError(e)) {
       throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
     }
-    if (!(e instanceof GeminiJsonParseError)) throw e;
+    if (!isRetryable(e)) throw e;
 
-    // Malformed JSON on attempt 1 - retry exactly once (đã chốt trong plan).
+    // Malformed JSON or an unusable shape on attempt 1 - retry exactly once.
+    console.warn("Shadowing analysis attempt 1 unusable, retrying:", (e as Error).message);
     try {
       return await callGeminiOnce(model, sourceText, base64ClipAudio);
     } catch (e2) {
       if (isGeminiTimeoutError(e2)) {
         throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
       }
-      throw new HttpsError("internal", "Gemini returned malformed JSON after retry.");
+      if (isRetryable(e2)) {
+        console.error("Shadowing analysis unusable after retry:", (e2 as Error).message);
+        throw new HttpsError("internal", "Gemini trả kết quả không dùng được, thử lại.");
+      }
+      throw e2;
     }
   }
 }
@@ -169,7 +197,9 @@ export const analyzeShadowingPattern = onCall(
     // only shows up as a 404/CORS failure at call time, so change both together.
     region: "asia-southeast1",
     secrets: ["GEMINI_API_KEY", "ALLOWED_USER_UID"],
-    timeoutSeconds: 60,
+    // Worst case is download + ffmpeg + two full Gemini attempts (2 x 55s), which needs
+    // headroom over 110s or a retry gets cut off and surfaces as a generic internal error.
+    timeoutSeconds: 180,
     memory: "512MiB",
   },
   async (request) => {
@@ -193,8 +223,11 @@ export const analyzeShadowingPattern = onCall(
     );
 
     const cachedSnapshot = await cacheDocRef.get();
-    if (cachedSnapshot.exists) {
-      return cachedSnapshot.data();
+    const cached = cachedSnapshot.data();
+    // A doc written by an older analysis version describes a shape the panel can no
+    // longer render, so it counts as a miss and gets overwritten below.
+    if (cached && cached.version === ANALYSIS_VERSION) {
+      return cached;
     }
 
     const downloadPath = path.join(os.tmpdir(), `media-${randomUUID()}-${path.basename(mediaStoragePath)}`);
@@ -216,13 +249,14 @@ export const analyzeShadowingPattern = onCall(
         endSec,
         sourceText,
         model: process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash",
+        version: ANALYSIS_VERSION,
         analysis,
       };
 
       await cacheDocRef.set({
         ...analysisResult,
         createdAt: FieldValue.serverTimestamp(),
-        generatedBy: "cloud-function-v1",
+        generatedBy: "cloud-function-v2",
       });
 
       return analysisResult;

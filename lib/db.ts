@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
-import type { ShadowingPatternDoc } from '@/types';
+import { SHADOWING_ANALYSIS_VERSION, type ShadowingPatternDoc } from '@/types';
 
 export interface FlashcardData {
   lines: string[];
@@ -332,6 +332,10 @@ export const getShadowingAnalysisFirestore = async (
   const data = snapshot.data() as Omit<ShadowingPatternDoc, 'createdAt'> & {
     createdAt?: Timestamp;
   };
+  // A doc from an older analysis version holds a shape the panel cannot render, so it
+  // reads as a miss and the Cloud Function overwrites it. The v1 cache was deleted, but
+  // this keeps a stray leftover from throwing in the panel instead of just re-analyzing.
+  if (data.version !== SHADOWING_ANALYSIS_VERSION) return null;
   return {
     ...data,
     createdAt: data.createdAt?.toMillis() ?? Date.now(),

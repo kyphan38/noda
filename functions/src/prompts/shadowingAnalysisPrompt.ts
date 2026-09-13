@@ -3,92 +3,117 @@
  *
  * Colocated on purpose (schema describes exactly what the prompt asks for) -
  * mirrors cogi's convention of one file per exercise type under
- * web/src/lib/ai/prompts/*.ts, and reuses the exact prompt text validated in
- * the Stage 1 spike (see /Users/kyphan/.claude/plans/ok-v-y-b-y-gi-delegated-garden.md).
+ * web/src/lib/ai/prompts/*.ts.
+ *
+ * v2 (current): one `chunks` + `notes` structure replacing v1's four parallel
+ * sections. v1 asked for stress, intonation, connected speech and chunking as
+ * independent blocks with their own prose summaries; the panel showed them as
+ * four tabs, which forced the learner to re-assemble one sentence in their head.
+ * v2 asks for the same information shaped the way it is displayed: one annotated
+ * line (stress per token, tone per chunk, chunk boundaries) plus a short ranked
+ * list of what actually differs from careful word-by-word reading.
+ *
+ * Every instruction below that looks oddly specific came out of a spike over 5
+ * real sentences:
+ * - The "Bad/Good" example must carry full Vietnamese diacritics. An earlier
+ *   draft wrote it unaccented and Gemini copied that, returning unaccented
+ *   Vietnamese for a whole sentence.
+ * - The `why` cap is 12 words. At 15 the model regularly returned 16-17.
+ * - Numbers must be spelled out in `notes[].text`, otherwise a note about
+ *   "24 hours" quotes digits while its pseudo-spelling covers only "four hours".
  */
 
 import { SchemaType, type Schema } from "@google/generative-ai";
 
+/** Keep in sync with `SHADOWING_MAX_NOTES` in constants/index.tsx. */
+export const MAX_NOTES = 8;
+
 export const SHADOWING_ANALYSIS_RESPONSE_SCHEMA: Schema = {
   type: SchemaType.OBJECT,
   properties: {
-    stressRhythm: {
-      type: SchemaType.OBJECT,
-      properties: {
-        summary: { type: SchemaType.STRING },
-        stressedWords: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        notes: { type: SchemaType.STRING },
-      },
-      required: ["summary", "stressedWords"],
-    },
-    intonationPitch: {
-      type: SchemaType.OBJECT,
-      properties: {
-        summary: { type: SchemaType.STRING },
-        pattern: {
-          type: SchemaType.STRING,
-          format: "enum",
-          enum: ["rising", "falling", "fall-rise", "rise-fall", "flat"],
-        },
-        notes: { type: SchemaType.STRING },
-      },
-      required: ["summary", "pattern"],
-    },
-    connectedSpeech: {
-      type: SchemaType.OBJECT,
-      properties: {
-        summary: { type: SchemaType.STRING },
-        features: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              type: {
-                type: SchemaType.STRING,
-                format: "enum",
-                enum: ["linking", "reduction", "elision", "assimilation"],
+    chunks: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          tokens: {
+            type: SchemaType.ARRAY,
+            items: {
+              type: SchemaType.OBJECT,
+              properties: {
+                w: { type: SchemaType.STRING },
+                display: { type: SchemaType.STRING },
+                level: {
+                  type: SchemaType.STRING,
+                  format: "enum",
+                  enum: ["strong", "normal", "weak"],
+                },
+                linked: { type: SchemaType.BOOLEAN },
               },
-              example: { type: SchemaType.STRING },
-              explanation: { type: SchemaType.STRING },
+              required: ["w", "display", "level"],
             },
-            required: ["type", "example", "explanation"],
           },
+          tone: {
+            type: SchemaType.STRING,
+            format: "enum",
+            enum: ["rise", "fall", "fall-rise", "rise-fall", "flat"],
+          },
+          toneStrength: { type: SchemaType.STRING, format: "enum", enum: ["strong", "weak"] },
         },
+        required: ["tokens", "tone", "toneStrength"],
       },
-      required: ["summary", "features"],
     },
-    chunking: {
-      type: SchemaType.OBJECT,
-      properties: {
-        summary: { type: SchemaType.STRING },
-        groups: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        pauseNotes: { type: SchemaType.STRING },
+    notes: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          type: {
+            type: SchemaType.STRING,
+            format: "enum",
+            enum: ["linking", "reduction", "elision", "assimilation", "rhythm"],
+          },
+          text: { type: SchemaType.STRING },
+          sounds: { type: SchemaType.STRING },
+          ipa: { type: SchemaType.STRING },
+          why: { type: SchemaType.STRING },
+        },
+        required: ["type", "text", "sounds", "ipa", "why"],
       },
-      required: ["summary", "groups"],
     },
   },
-  required: ["stressRhythm", "intonationPitch", "connectedSpeech", "chunking"],
+  required: ["chunks", "notes"],
 };
 
 export function buildShadowingAnalysisPrompt(sourceText: string): string {
-  return `You are an expert English pronunciation coach analyzing a short audio clip of a native/fluent speaker, explaining it to a Vietnamese learner.
-The transcript of this exact clip is: "${sourceText}"
+  return `You are a shadowing coach. The learner is Vietnamese, already comfortable reading IPA and familiar with phonetics terms. Their goal is NOT to learn the theory - it is to sound like this speaker. Coach the imitation.
 
-Listen carefully to the ACTUAL AUDIO provided (not generic textbook rules) and explain, based on what this specific speaker actually did in this specific recording.
-1. Sentence stress & rhythm - which words are stressed and why, and the overall rhythmic pattern.
-2. Intonation & pitch - how pitch rises/falls across the sentence, and what pattern it forms.
-3. Connected speech - linking, reduction, elision, or assimilation actually heard in this clip, with concrete before/after examples grounded in the audio.
-4. Chunking / thought groups - where the speaker pauses or groups words together, and why.
+Transcript of this exact clip: "${sourceText}"
 
-Give every observation on what is actually audible in the provided clip, not on how the sentence "should" theoretically be pronounced. If a feature (e.g. no strong connected-speech reduction) is absent, say so briefly rather than inventing one.
+Listen to the ACTUAL AUDIO. Describe only what this speaker really did in this recording, never how the sentence "should" be read.
 
-Language & style for every free-text field (summary, notes, explanation, pauseNotes):
-- Write in Vietnamese. Keep English where it reads more naturally than a forced Vietnamese translation: quoted words/phrases from the transcript, IPA transcriptions, and established phonetics terms (e.g. "schwa", "linking", "stress-timed rhythm", "weak form"). Do not force-translate these into awkward Vietnamese.
-- Each field must add NEW information, not restate another field. Concretely:
-  - "summary" = one short sentence giving the overall pattern (not a list of examples).
-  - "notes" = only extra detail not already said in "summary" or in "stressedWords"/"groups"/"pauseNotes". If there's nothing new to add, return an empty string instead of repeating "summary".
-  - Never repeat the same word/phrase example across "summary" and "notes" of the same section.
-- Keep every field concise: summary/notes/explanation each around 1 short sentence, not a paragraph.
+## chunks
+Split the sentence into thought groups exactly where this speaker grouped words together (breath, pause, or pitch reset). Keep the words in transcript order; every word of the transcript must appear exactly once across all chunks.
+
+For each token:
+- "w": the word exactly as written in the transcript, including any attached punctuation.
+- "display": the SAME characters as "w", only the letter case may differ. For level "strong", uppercase the letters of the stressed syllable only (e.g. w "manager" -> display "MANager"; w "rules" -> display "RULES"). For "normal" and "weak", repeat "w" unchanged. Never add, drop, or change a letter.
+- "level": "strong" = audibly stressed (pitch/length/loudness peak). "normal" = fully pronounced but not a peak. "weak" = audibly reduced, shortened, or swallowed. Only function words (articles, prepositions, auxiliaries, pronouns, conjunctions) may be "weak" - a content word is never "weak".
+- "linked": true only if this word takes part in one of the "notes" below.
+
+Per chunk also give "tone" (the pitch movement at the end of that chunk) and "toneStrength": "strong" for a clear, committed move, "weak" for a slight continuation rise or a small drop.
+
+## notes
+Work through the sentence from left to right and cover EVERY junction where the audio differs from a careful word-by-word reading: consonant-to-vowel links, weak forms of function words, swallowed or unreleased stops, assimilated sounds. List them in the order they occur in the sentence, up to ${MAX_NOTES}.
+- The learner wants the full picture of what makes this sound native, not only the single most dramatic moment. A short sentence can legitimately produce 5-6 notes; do not stop at two or three because the rest feel small.
+- Even so, only what is actually audible in THIS recording. Never invent a textbook rule the speaker did not apply, and if the speaker really does articulate a junction cleanly, leave it out - an empty array is a valid answer.
+- At most ONE note of type "rhythm" (about timing, pauses, or pitch), placed last, and only if it changes how the learner should deliver the line.
+- For sound notes ("linking", "reduction", "elision", "assimilation"): "text" = the exact words from the transcript, but if the transcript writes a number in digits, write the spoken words instead (e.g. transcript "24 hours" -> text "twenty-four hours"), "sounds" = a plain-letter pseudo-spelling a Vietnamese reader can say out loud (e.g. "had-tuh", "kee-pthuh"), "ipa" = the narrow IPA of what you actually hear. For "rhythm" notes leave "text", "sounds", "ipa" as empty strings.
+
+## "why" field - the coaching instruction
+Write in Vietnamese, keeping English words/IPA/phonetics terms as-is. Do NOT explain what the phenomenon is or name the rule - the learner already knows. Tell them what to DO with their mouth, tongue, or breath to copy it. Imperative, concrete, at most 12 words, one sentence. Write proper Vietnamese with full diacritics (tone marks) - never unaccented Vietnamese.
+Bad (explains theory): "/d/ bị mất tiếng bật và 'to' giảm thành schwa."
+Good (coaches action): "Đừng bật /d/ — chạm lưỡi rồi trượt thẳng sang 'tuh', gọn trong một nhịp."
 
 Respond only in the requested JSON structure.`;
 }
