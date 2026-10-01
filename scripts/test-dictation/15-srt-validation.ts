@@ -279,18 +279,19 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
 
   // ── Sentence matching determinism ──────────────────────────────────────────
 
-  unitCheck(report, '15f. Matching: overlapping SRT produces multiple matches with filter', () => {
+  // parseTranscript clamps an earlier cue's end to the next cue's start.
+  unitCheck(report, '15f. Matching: overlapping SRT is clamped so only the later sentence is active', () => {
     const srt = [
       '1', '00:00:00,000 --> 00:00:02,000', 'A', '',
       '2', '00:00:01,000 --> 00:00:03,000', 'B',
     ].join('\n');
     const sentences = parseTranscript(srt);
     const atOverlap = sentences.filter(s => 1.5 >= s.start && 1.5 < s.end);
-    if (atOverlap.length !== 2)
-      throw new Error(`Expected 2 active at t=1.5 in overlapping SRT, got ${atOverlap.length}`);
-    const first = findActiveSentence(sentences, 1.5);
-    if (!first || first.id !== 1)
-      throw new Error(`findActiveSentence should return first match (line 1), got ${first?.id ?? 'none'}`);
+    if (atOverlap.length !== 1)
+      throw new Error(`Expected 1 active at t=1.5 after clamping, got ${atOverlap.length}`);
+    const active = findActiveSentence(sentences, 1.5);
+    if (!active || active.id !== 2)
+      throw new Error(`findActiveSentence should return the later line (2), got ${active?.id ?? 'none'}`);
     return true;
   });
 
@@ -336,11 +337,12 @@ export async function run(_page: Page | null, report: ReportEntry[]) {
   // ── Timing quality detection ───────────────────────────────────────────────
 
   unitCheck(report, '15i. Detection: finds overlapping timestamps', () => {
-    const srt = [
-      '1', '00:00:00,000 --> 00:00:01,500', 'A', '',
-      '2', '00:00:01,000 --> 00:00:02,500', 'B',
-    ].join('\n');
-    const issues = findTimingIssues(parseTranscript(srt));
+    // Raw cues: parseTranscript would already have clamped this overlap away.
+    const raw: Sentence[] = [
+      { id: 1, start: 0, end: 1.5, text: 'A' },
+      { id: 2, start: 1, end: 2.5, text: 'B' },
+    ];
+    const issues = findTimingIssues(raw);
     const overlaps = issues.filter(i => i.type === 'overlap');
     if (overlaps.length !== 1)
       throw new Error(`Expected 1 overlap, found ${overlaps.length}`);
