@@ -30,9 +30,12 @@ export const onLessonDeleted = onDocumentDeleted(
     const data = event.data?.data() ?? {};
     const bucket = admin.storage().bucket();
 
-    for (const path of lessonStoragePaths(uid, data)) {
+    const paths = lessonStoragePaths(uid, data);
+    let deleted = 0;
+    for (const path of paths) {
       try {
         await bucket.file(path).delete({ ignoreNotFound: true });
+        deleted += 1;
       } catch (e) {
         console.error(`Could not delete ${path} for lesson ${lessonId}:`, (e as Error).message);
       }
@@ -41,5 +44,11 @@ export const onLessonDeleted = onDocumentDeleted(
     // The parent doc is already gone; this removes what is left under it.
     const lessonRef = getFirestore(admin.app(), NODA_DB_ID).doc(`users/${uid}/lessons/${lessonId}`);
     await getFirestore(admin.app(), NODA_DB_ID).recursiveDelete(lessonRef);
+
+    // One line per lesson, so a file that survives a delete can be traced back.
+    console.log(
+      `Cleaned lesson ${lessonId}: ${deleted}/${paths.length} storage path(s)` +
+        (typeof data.mediaPath === "string" ? ` (mediaPath ${data.mediaPath})` : " (no mediaPath)")
+    );
   }
 );
