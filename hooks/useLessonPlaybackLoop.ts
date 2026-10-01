@@ -17,7 +17,6 @@ export function useLessonPlaybackLoop(
   isLoopDelayingRef: RefBool,
   loopModeRef: MutableRefObject<LoopMode>,
   appModeRef: RefMode,
-  shadowingActiveRef: RefBool,
   completedSentencesRef: RefCompleted,
   activeSentenceRef: MutableRefObject<Sentence | null>,
   replayOnceRef: RefReplayOnce,
@@ -181,7 +180,7 @@ export function useLessonPlaybackLoop(
                 audioRef.current.currentTime = time;
                 sentencePlayCountRef.current = 0;
               }
-            } else if (shadowingActiveRef.current && appModeRef.current === 'normal') {
+            } else if (appModeRef.current === 'shadowing') {
               // Shadowing: stop after each line instead of continuing to the next one.
               // Press Enter to advance, or Control to replay the current line.
               audioRef.current.pause();
@@ -227,7 +226,6 @@ export function useLessonPlaybackLoop(
     isLoopDelayingRef,
     loopModeRef,
     appModeRef,
-    shadowingActiveRef,
     completedSentencesRef,
     audioRef,
     activeSentenceRef,

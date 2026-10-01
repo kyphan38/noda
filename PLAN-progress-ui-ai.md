@@ -80,7 +80,12 @@ Cần sửa:
 
 ---
 
-## Phase 2 - Chia mode và track progress
+## Phase 2 - Chia mode và track progress - XONG
+
+**Xong (2026-10-01).** Khác plan ở một điểm: dictation vẫn lưu ở field cũ
+`completedSentences` (không chép sang `progress.dictation.completed`). Không cần
+chuyển dữ liệu, và bản app cũ vẫn đọc được. `progress` chỉ giữ shadowing và vị trí
+từng mode; xem `lib/progress.ts`.
 
 Đã thống nhất:
 
@@ -144,5 +149,5 @@ Xem bằng app chạy local (E2E mode) ở 1280x800 và 375x812.
 
 1. ~~Phase 0 (xoá Decks)~~ - xong
 2. ~~Phase 1: A1, A5 (nhanh, là bug) -> A2 -> A3~~ - xong
-3. Phase 2 (mode + progress)
+3. ~~Phase 2 (mode + progress)~~ - xong
 4. Phase 3: U2, U3, U5, U6 làm cùng Phase 2; U1, U4 làm riêng; U7 nếu cần

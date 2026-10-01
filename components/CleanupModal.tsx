@@ -60,10 +60,10 @@ export function CleanupModal({
           <PartyPopper className="w-8 h-8 text-emerald-500" />
         </div>
         <h3 id="noda-cleanup-title" className="text-xl font-bold text-white mb-2">
-          Dictation complete!
+          Lesson complete!
         </h3>
         <p className="text-gray-400 mb-4 text-sm leading-relaxed">
-          You&apos;ve mastered all sentences in this lesson. Remove this lesson from this device to free space?
+          You&apos;ve finished dictation and shadowing for every sentence. Remove this lesson from this device to free space?
           Transcript and progress will be deleted from this browser.
         </p>
         <div className="mb-4 grid gap-2 text-left">

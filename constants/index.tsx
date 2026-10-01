@@ -4,14 +4,17 @@ export const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5] as const;
 // Default values
 export const DEFAULT_LOOP_MODE = 'none' as const;
 export const DEFAULT_REPEAT_COUNT = 1 as const;
-export const DEFAULT_APP_MODE = 'normal' as const;
+export const DEFAULT_APP_MODE = 'listen' as const;
 
-// Learning modes
-export const LEARNING_MODES = [
-  { value: 'normal' as const, label: 'Normal' },
-  { value: 'dictation' as const, label: 'Dictation (Type)' },
-  { value: 'shadowing' as const, label: 'Shadowing (Speak)' },
+// Lesson tabs, in header order (also the Cmd/Ctrl+1..3 shortcut order).
+export const LESSON_MODES = [
+  { mode: 'listen' as const, label: 'Listen' },
+  { mode: 'dictation' as const, label: 'Dictation' },
+  { mode: 'shadowing' as const, label: 'Shadowing' },
 ] as const;
+
+/** Throttle for saving where the learner is (sentence / playback time) to Firestore. */
+export const RESUME_SAVE_INTERVAL_MS = 3000;
 
 // Loop modes (UI display)
 export const LOOP_MODE_LABELS: Record<string, string> = {

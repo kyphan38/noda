@@ -44,11 +44,11 @@ export async function run(page: Page, report: ReportEntry[]) {
   }, 4_000);
 
   await dismissModal(page);
-  await check(report, '9d. Mode switch to Normal resets audio', async () => {
+  await check(report, '9d. Mode switch to Listen resets audio', async () => {
     await seekToSentence(page, 5);
     await sleep(300);
-    const normalTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Normal' });
-    await normalTab.click();
+    const listenTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Listen' });
+    await listenTab.click();
     await sleep(500);
     const time = await getAudioTime(page);
     const paused = await isAudioPaused(page);
@@ -65,8 +65,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await completeTyping(page, 0);
     await pressEnter(page).catch(() => {});
     await dismissModal(page);
-    const normalTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Normal' });
-    await normalTab.click();
+    const listenTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Listen' });
+    await listenTab.click();
     await sleep(300);
     await dictTab.click();
     await sleep(300);

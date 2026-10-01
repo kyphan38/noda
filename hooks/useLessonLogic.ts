@@ -4,6 +4,7 @@ import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { AppMode, ExpandedSections } from '@/types';
 import { DEFAULT_APP_MODE, DICTATION_SAVE_DEBOUNCE_MS, SAVE_PROGRESS_DELAY_MS } from '@/constants';
 import { parseTranscript } from '@/lib/utils';
+import { completionPercent, type LessonProgressRecord } from '@/lib/progress';
 import {
   deleteLessonFirestore,
   getLessonFirestore,
@@ -12,6 +13,7 @@ import {
   subscribeLessonsFirestore,
   touchLessonAccessedFirestore,
   updateLessonProgressFirestore,
+  updateShadowingProgressFirestore,
   type LessonRecord,
 } from '@/lib/db';
 
@@ -21,7 +23,8 @@ const LESSON_ROW_COMPARE_KEYS = [
   'language',
   'folderId',
   'sortKey',
-  'progress',
+  'dictationProgress',
+  'shadowingProgress',
   'totalSentences',
   'isTrashed',
   'hasMedia',
@@ -53,6 +56,13 @@ export function useLessonLogic(
   const [appMode, setAppMode] = useState<AppMode>(DEFAULT_APP_MODE);
   const [dictationInputs, setDictationInputs] = useState<Record<number, string>>({});
   const [completedSentences, setCompletedSentences] = useState<Record<number, boolean>>({});
+  const [shadowingCompleted, setShadowingCompleted] = useState<Record<number, boolean>>({});
+  /** Saved progress + last tab of the loaded lesson, as read at load time (for "Continue"). */
+  const [loadedProgress, setLoadedProgress] = useState<{
+    lessonId: string;
+    progress: LessonProgressRecord;
+    lastMode?: AppMode;
+  } | null>(null);
   const [isStarted, setIsStarted] = useState<boolean>(false);
   const currentLessonIdRef = useRef<string | null>(null);
   const lessonLoadGenerationRef = useRef(0);
@@ -62,7 +72,8 @@ export function useLessonLogic(
       id: string;
       name: string;
       language: string;
-      progress: number;
+      dictationProgress: number;
+      shadowingProgress: number;
       totalSentences: number;
       isTrashed: boolean;
       hasMedia: boolean;
@@ -85,6 +96,7 @@ export function useLessonLogic(
   const appModeRef = useRef<AppMode>(appMode);
   const completedSentencesRef = useRef<Record<number, boolean>>(completedSentences);
   const dictationInputsRef = useRef<Record<number, string>>({});
+  const shadowingCompletedRef = useRef<Record<number, boolean>>({});
 
   useEffect(() => {
     appModeRef.current = appMode;
@@ -98,23 +110,22 @@ export function useLessonLogic(
     dictationInputsRef.current = dictationInputs;
   }, [dictationInputs]);
 
+  useEffect(() => {
+    shadowingCompletedRef.current = shadowingCompleted;
+  }, [shadowingCompleted]);
+
   const transcript = useMemo(() => parseTranscript(transcriptText), [transcriptText]);
 
   const mapLessonsToRows = useCallback((lessons: LessonRecord[]) => {
     const rows = lessons.map((l) => {
-      const progress =
-        l.totalSentences > 0
-          ? Math.round(
-              (Object.values(l.completedSentences || {}).filter(Boolean).length / l.totalSentences) * 100
-            )
-          : 0;
       return {
         id: l.id,
         name: l.name,
         language: 'en',
         folderId: l.folderId ?? null,
         sortKey: l.sortKey,
-        progress,
+        dictationProgress: completionPercent(l.completedSentences, l.totalSentences),
+        shadowingProgress: completionPercent(l.progress?.shadowing?.completed, l.totalSentences),
         totalSentences: l.totalSentences ?? 0,
         isTrashed: !!l.isTrashed,
         hasMedia: !!(l.mediaUrl || l.mediaPath || l.mediaFile),
@@ -229,6 +240,28 @@ export function useLessonLogic(
     };
   }, [dictationInputs, currentLessonId, isStarted]);
 
+  const shadowingSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (shadowingSaveTimeoutRef.current) {
+      clearTimeout(shadowingSaveTimeoutRef.current);
+      shadowingSaveTimeoutRef.current = null;
+    }
+    if (!currentLessonId || !isStarted) return;
+    shadowingSaveTimeoutRef.current = setTimeout(() => {
+      shadowingSaveTimeoutRef.current = null;
+      updateShadowingProgressFirestore(currentLessonId, shadowingCompletedRef.current).catch((error) => {
+        console.error('Failed to persist shadowing progress', error);
+      });
+    }, SAVE_PROGRESS_DELAY_MS);
+    return () => {
+      if (shadowingSaveTimeoutRef.current) {
+        clearTimeout(shadowingSaveTimeoutRef.current);
+        shadowingSaveTimeoutRef.current = null;
+      }
+    };
+  }, [shadowingCompleted, currentLessonId, isStarted]);
+
   /** Cancel debounced progress save and persist latest progress so a later put cannot resurrect cleared audio. */
   const prepareForLessonMediaClear = useCallback(
     async (lessonId: string) => {
@@ -239,6 +272,10 @@ export function useLessonLogic(
       if (dictationSaveTimeoutRef.current) {
         clearTimeout(dictationSaveTimeoutRef.current);
         dictationSaveTimeoutRef.current = null;
+      }
+      if (shadowingSaveTimeoutRef.current) {
+        clearTimeout(shadowingSaveTimeoutRef.current);
+        shadowingSaveTimeoutRef.current = null;
       }
       const active = currentLessonIdRef.current === lessonId || currentLessonId === lessonId;
       if (active && isStarted) {
@@ -272,6 +309,8 @@ export function useLessonLogic(
 
         setTranscriptText(lesson.transcriptText);
         setCompletedSentences(lesson.completedSentences || {});
+        setShadowingCompleted(lesson.progress?.shadowing?.completed ?? {});
+        setLoadedProgress({ lessonId: lesson.id, progress: lesson.progress ?? {}, lastMode: lesson.lastMode });
         const rawDraft = lesson.dictationInputs ?? {};
         setDictationInputs(
           Object.fromEntries(
@@ -280,7 +319,7 @@ export function useLessonLogic(
         );
         const hasTranscript = !!(lesson.transcriptText && lesson.transcriptText.trim());
         setIsStarted(!!freshMediaUrl || hasTranscript);
-        setAppMode('normal');
+        setAppMode('listen');
 
         await touchLessonAccessedFirestore(lesson.id);
         if (myGen !== lessonLoadGenerationRef.current) return;
@@ -305,9 +344,11 @@ export function useLessonLogic(
     setMediaURL(null);
     setTranscriptText('');
     setCompletedSentences({});
+    setShadowingCompleted({});
+    setLoadedProgress(null);
     setDictationInputs({});
     setIsStarted(false);
-    setAppMode('normal');
+    setAppMode('listen');
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
@@ -344,6 +385,10 @@ export function useLessonLogic(
     setDictationInputs,
     completedSentences,
     setCompletedSentences,
+    shadowingCompleted,
+    setShadowingCompleted,
+    shadowingCompletedRef,
+    loadedProgress,
     isStarted,
     setIsStarted,
     lessonsList,

@@ -15,7 +15,7 @@ function findActiveSentence(
   return transcript.find((s) => time >= s.start && time < s.end) ?? null;
 }
 
-/** The seek target when the user clicks a sentence (Normal mode applies pre-roll). */
+/** The seek target when the user clicks a sentence (Listen mode applies pre-roll). */
 function clickSeekTarget(sentence: Sentence, appMode: AppMode): number {
   const preRoll = appMode === 'dictation' ? 0 : SENTENCE_PRE_ROLL_SECONDS;
   return Math.max(0, sentence.start - preRoll);
@@ -69,7 +69,7 @@ const threeBackToBack: Sentence[] = [
 // ---------------------------------------------------------------------------
 // Bug 1 - Click navigation with infinite repeat gets stuck on active line.
 //
-// Repro: Line 4 active, user clicks Line 5 in Normal mode with infinite
+// Repro: Line 4 active, user clicks Line 5 in Listen mode with infinite
 // repeat. Pre-roll seeks to Line5.start − 0.1, which lands inside Line 4.
 // Without the userSeekTarget guard the loop would repeat Line 4 forever.
 // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ describe('click navigation with infinite repeat (back-to-back sentences)', () =>
   const line5 = backToBack[1];
 
   it('pre-roll on click lands inside the previous sentence when sentences are back-to-back', () => {
-    const seekPos = clickSeekTarget(line5, 'normal');
+    const seekPos = clickSeekTarget(line5, 'listen');
     expect(seekPos).toBe(line5.start - SENTENCE_PRE_ROLL_SECONDS);
 
     const found = findActiveSentence(backToBack, seekPos);

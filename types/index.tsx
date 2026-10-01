@@ -9,7 +9,8 @@ export type Sentence = {
 // Learning modes
 export type LoopMode = 'none' | 'one';
 export type RepeatCount = 1 | 2 | 3 | 'infinite';
-export type AppMode = 'normal' | 'dictation';
+/** Lesson tabs. Only dictation and shadowing count toward progress; listen only remembers where you were. */
+export type AppMode = 'listen' | 'dictation' | 'shadowing';
 export type DictationInputs = Record<number, string>;
 export type CompletedSentences = Record<number, boolean>;
 
@@ -18,7 +19,9 @@ export type LessonSummary = {
   id: string;
   name: string;
   language: string;
-  progress: number;
+  /** 0-100, share of sentences completed in each mode. */
+  dictationProgress: number;
+  shadowingProgress: number;
   totalSentences: number;
   isTrashed: boolean;
   /** Whether a media blob exists in IndexedDB (audio or video). */
@@ -50,7 +53,9 @@ export interface LessonItem {
   id: string;
   name: string;
   language: 'en';
-  progress: number; // 0-100
+  /** 0-100, share of sentences completed in each mode. */
+  dictationProgress: number;
+  shadowingProgress: number;
   hasMedia: boolean;
   mediaType: 'audio' | 'video';
   folderId?: string | null;

@@ -4,9 +4,11 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMe
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
 import {
+  findActiveTranscriptIndex,
   scrollDictationTargetRow,
   scrollTranscriptRowIntoView,
 } from '@/lib/transcript-scroll';
+import { findResumeTarget } from '@/lib/progress';
 import { restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
@@ -19,7 +21,8 @@ import { useMediaPlayer } from '@/hooks/useMediaPlayer';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
 import { useFolders } from '@/hooks/useFolders';
 import { useLessonCreateFlow } from '@/hooks/useLessonCreateFlow';
-import { useDictationCompletionModal } from '@/hooks/useDictationCompletionModal';
+import { useLessonCompletionModal } from '@/hooks/useLessonCompletionModal';
+import { useResumePositionSaver } from '@/hooks/useResumePositionSaver';
 import { useLessonPlaybackLoop } from '@/hooks/useLessonPlaybackLoop';
 import { useAutoScrollActiveSentence } from '@/hooks/useAutoScrollActiveSentence';
 import { useGlobalPlaybackShortcuts } from '@/hooks/useGlobalPlaybackShortcuts';
@@ -58,13 +61,6 @@ export default function NodaApp() {
   const [headerItemMenuOpen, setHeaderItemMenuOpen] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
   const [hideCaptions, setHideCaptions] = useState(false);
-  // Shadowing practice (Normal mode only): pauses after each line; Enter = next line, Control = replay line.
-  const [shadowingActive, setShadowingActive] = useState(false);
-  const shadowingActiveRef = useRef(shadowingActive);
-  useEffect(() => {
-    shadowingActiveRef.current = shadowingActive;
-  }, [shadowingActive]);
-  const toggleShadowing = useCallback(() => setShadowingActive((v) => !v), []);
   // True while LessonView's Focus Mode (expanded single-line video view) is active.
   // Lets the page shell drop its max-w-4xl cap so the video can use the full width/height.
   const [pageFocusActive, setPageFocusActive] = useState(false);
@@ -96,6 +92,7 @@ export default function NodaApp() {
     appMode,
     setTranscriptText,
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
+    shadowingCompleted, setShadowingCompleted, shadowingCompletedRef, loadedProgress,
     isStarted, setIsStarted,
     lessonsList, isListLoading,
     currentLessonId, mediaStoragePath,
@@ -181,11 +178,11 @@ export default function NodaApp() {
         const el = mediaRef.current;
         if (el) {
           el.pause();
-          if (mode === 'normal') {
+          if (mode === 'listen') {
             el.currentTime = 0;
             setCurrentTime(0);
           }
-        } else if (mode === 'normal') {
+        } else if (mode === 'listen') {
           setCurrentTime(0);
         }
         setIsPlaying(false);
@@ -247,7 +244,8 @@ export default function NodaApp() {
         id: string;
         name: string;
         language: string;
-        progress: number;
+        dictationProgress: number;
+        shadowingProgress: number;
         totalSentences: number;
         hasMedia: boolean;
         mediaType: 'audio' | 'video';
@@ -261,7 +259,8 @@ export default function NodaApp() {
         id: row.id,
         name: row.name,
         language: 'en',
-        progress: row.progress,
+        dictationProgress: row.dictationProgress,
+        shadowingProgress: row.shadowingProgress,
         hasMedia: row.hasMedia,
         mediaType: row.mediaType ?? 'audio',
         type: 'lesson',
@@ -278,7 +277,7 @@ export default function NodaApp() {
       setSelectedItem({ id: row.id, type: 'lesson', data: lesson });
 
       void handleLoadLesson(row.id);
-      void handleModeChange('normal');
+      void handleModeChange('listen');
       if (pushHistory) pushItemHistoryState(row);
     },
     [
@@ -349,10 +348,6 @@ export default function NodaApp() {
 
   useEffect(() => {
     setHideCaptions(false);
-  }, [selectedItem?.id]);
-
-  useEffect(() => {
-    setShadowingActive(false);
   }, [selectedItem?.id]);
 
   useEffect(() => {
@@ -478,7 +473,14 @@ export default function NodaApp() {
     togglePlayPause();
   }, [togglePlayPause, setCurrentTime, mediaRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, userSeekTargetRef]);
 
-  const { showCleanupModal, setShowCleanupModal } = useDictationCompletionModal(selectedItem, isStarted, transcript, appMode, completedSentences);
+  const { showCleanupModal, setShowCleanupModal } = useLessonCompletionModal(
+    selectedItem,
+    isStarted,
+    transcript,
+    appMode,
+    completedSentences,
+    shadowingCompleted
+  );
 
   // Dev-only E2E bypass: set NEXT_PUBLIC_E2E_MODE=true to skip Firebase auth.
   const isE2EMode =
@@ -534,7 +536,8 @@ export default function NodaApp() {
           id: lesson.id,
           name: lesson.name,
           language: 'en',
-          progress: 0,
+          dictationProgress: 0,
+          shadowingProgress: 0,
           hasMedia: !!lesson.mediaDataUrl,
           mediaType: 'audio',
           type: 'lesson',
@@ -547,12 +550,19 @@ export default function NodaApp() {
     changeRepeatCount(getNextRepeatCount(repeatCount));
   }, [repeatCount, changeRepeatCount]);
 
-  // Shadowing: jump to the next line and play it (Enter key).
+  // Shadowing: mark the current line as shadowed, then jump to the next line and play it (Enter key).
   const handleShadowingNext = useCallback(() => {
     const media = mediaRef.current;
     if (!media) return;
     const tr = transcriptRef.current;
     const current = activeSentenceRef.current;
+    if (current && !shadowingCompletedRef.current[current.id]) {
+      setShadowingCompleted((prev) => {
+        const next = { ...prev, [current.id]: true };
+        shadowingCompletedRef.current = next;
+        return next;
+      });
+    }
     const next = current
       ? tr.find((s) => s.start > current.start)
       : tr.find((s) => s.start > media.currentTime);
@@ -561,7 +571,7 @@ export default function NodaApp() {
     media.currentTime = next.start;
     setCurrentTime(next.start);
     media.play().catch(() => {});
-  }, [mediaRef, activeSentenceRef, transcriptRef, setCurrentTime, userSeekTargetRef]);
+  }, [mediaRef, activeSentenceRef, transcriptRef, setCurrentTime, userSeekTargetRef, shadowingCompletedRef, setShadowingCompleted]);
 
   useGlobalPlaybackShortcuts(
     selectedItem?.type,
@@ -575,7 +585,6 @@ export default function NodaApp() {
     mediaRef,
     activeSentenceRef,
     dictationReplayOnceRef,
-    shadowingActiveRef,
     handleShadowingNext,
     transcriptRef,
     userSeekTargetRef
@@ -590,7 +599,6 @@ export default function NodaApp() {
     isLoopDelayingRef,
     loopModeRef,
     appModeRef,
-    shadowingActiveRef,
     completedSentencesRef,
     activeSentenceRef,
     dictationReplayOnceRef,
@@ -790,11 +798,66 @@ export default function NodaApp() {
     });
   }, [setCompletedSentences, setDictationInputs]);
 
-  const handleResetDictationProgress = () => {
+  const handleResetProgress = () => {
+    if (appMode === 'shadowing') {
+      setShadowingCompleted({});
+      shadowingCompletedRef.current = {};
+      return;
+    }
     setDictationInputs({});
     setCompletedSentences({});
     completedSentencesRef.current = {};
   };
+
+  const activeTranscriptIndex = useMemo(
+    () => findActiveTranscriptIndex(currentTime, transcript),
+    [currentTime, transcript]
+  );
+  useResumePositionSaver(
+    currentLessonId,
+    appMode,
+    activeTranscriptIndex,
+    currentTime,
+    isStarted && !!selectedItem && selectedItem.id === currentLessonId
+  );
+
+  // "Continue" prompt: built from the progress saved when the lesson was opened. It goes
+  // away once used, dismissed, or as soon as playback starts some other way.
+  const [resumeDismissedFor, setResumeDismissedFor] = useState<string | null>(null);
+  const resumeTarget = useMemo(() => {
+    if (!loadedProgress || loadedProgress.lessonId !== selectedItem?.id) return null;
+    if (resumeDismissedFor === loadedProgress.lessonId) return null;
+    return findResumeTarget(loadedProgress.lastMode, loadedProgress.progress, completedSentences, transcript);
+  }, [loadedProgress, selectedItem?.id, resumeDismissedFor, completedSentences, transcript]);
+
+  const dismissResume = useCallback(() => {
+    if (loadedProgress) setResumeDismissedFor(loadedProgress.lessonId);
+  }, [loadedProgress]);
+
+  useEffect(() => {
+    if (isPlaying) dismissResume();
+  }, [isPlaying, dismissResume]);
+
+  const handleResume = useCallback(async () => {
+    const target = resumeTarget;
+    if (!target) return;
+    dismissResume();
+    if (appModeRef.current !== target.mode) await handleModeChange(target.mode);
+    // Switching tabs remounts the lesson view (and its media element), so seek and scroll
+    // once the new view is on screen.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const media = mediaRef.current;
+        if (media) media.currentTime = target.time;
+        setCurrentTime(target.time);
+        lastScrolledIndexRef.current = -1;
+        const container = scrollContainerRef.current;
+        if (container && scrollTranscriptRowIntoView(container, target.index, 'smooth')) {
+          lastScrolledIndexRef.current = target.index;
+        }
+      });
+    });
+  }, [resumeTarget, dismissResume, appModeRef, handleModeChange, mediaRef, setCurrentTime]);
 
   const handleLogout = useCallback(async () => {
     await signOut(getFirebaseAuth());
@@ -906,7 +969,7 @@ export default function NodaApp() {
                   onDictationChange={handleDictationChange}
                   onDictationKeyDown={handleDictationKeyDown}
                   onDictationRetry={handleDictationRetry}
-                  onResetDictation={handleResetDictationProgress}
+                  onResetProgress={appMode === 'listen' ? undefined : handleResetProgress}
                   hideCaptions={hideCaptions}
                   onToggleHideCaptions={() => setHideCaptions((v) => !v)}
                   mediaRef={mediaRef}
@@ -931,8 +994,10 @@ export default function NodaApp() {
                     setToast({ message, type: 'error' });
                   }}
                   onFocusModeChange={setPageFocusActive}
-                  shadowingActive={shadowingActive}
-                  onToggleShadowing={toggleShadowing}
+                  shadowingCompleted={shadowingCompleted}
+                  resumeTarget={resumeTarget}
+                  onResume={handleResume}
+                  onDismissResume={dismissResume}
                   onShadowingPanelOpenChange={setShadowingPanelWide}
                 />
               </div>

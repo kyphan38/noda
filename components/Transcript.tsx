@@ -14,6 +14,8 @@ interface TranscriptProps {
   hideCaptions?: boolean;
   dictationInputs: DictationInputs;
   completedSentences: CompletedSentences;
+  /** Sentences shadowed (Enter pressed past them) in the Shadowing tab. */
+  shadowingCompleted: CompletedSentences;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   onSentenceClick: (sentence: Sentence) => void;
   onDictationChange: (sentence: Sentence, value: string) => void;
@@ -39,6 +41,7 @@ export function Transcript({
   hideCaptions,
   dictationInputs,
   completedSentences,
+  shadowingCompleted,
   scrollContainerRef,
   onSentenceClick,
   onDictationChange,
@@ -75,9 +78,13 @@ export function Transcript({
               isActive={isActive}
               isPast={isPast}
               appMode={appMode}
-              hideCaptions={!!hideCaptions && appMode === 'normal'}
+              hideCaptions={!!hideCaptions && appMode !== 'dictation'}
               dictationInput={dictationInputs[sentence.id] || ''}
-              isCompleted={!!completedSentences[sentence.id]}
+              isCompleted={
+                appMode === 'dictation'
+                  ? !!completedSentences[sentence.id]
+                  : appMode === 'shadowing' && !!shadowingCompleted[sentence.id]
+              }
               onSentenceClick={onSentenceClick}
               onDictationChange={onDictationChange}
               onDictationKeyDown={onDictationKeyDown}

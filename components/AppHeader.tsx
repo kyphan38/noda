@@ -4,6 +4,7 @@ import React, { type RefObject } from 'react';
 import { PanelLeft, Trash2, MoreVertical, Edit2 } from 'lucide-react';
 import type { AppMode, LessonItem } from '@/types';
 import { cn } from '@/lib/utils';
+import { LESSON_MODES } from '@/constants';
 
 export type HeaderSelectedItem = {
   id: string;
@@ -24,11 +25,6 @@ export interface AppHeaderProps {
   onRenameCurrent: () => void;
   onDeleteCurrent: () => void;
 }
-
-const MODE_TABS: { mode: AppMode; label: string }[] = [
-  { mode: 'normal', label: 'Normal' },
-  { mode: 'dictation', label: 'Dictation' },
-];
 
 export function AppHeader({
   isSidebarOpen,
@@ -60,7 +56,7 @@ export function AppHeader({
       {selectedItem && (
         <div className="mode-tabs-container">
           <nav className="mode-tabs" aria-label="Lesson mode">
-            {MODE_TABS.map(({ mode, label }) => (
+            {LESSON_MODES.map(({ mode, label }) => (
               <button
                 key={mode}
                 type="button"
