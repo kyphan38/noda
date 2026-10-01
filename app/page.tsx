@@ -31,12 +31,15 @@ import { useMobileViewport } from '@/hooks/use-mobile';
 import { LessonItem, Sentence, type AppMode } from '@/types';
 import { LessonView } from '@/components/LessonView';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
-import { Toast } from '@/components/Toast';
+import { Toast, type ToastAction } from '@/components/Toast';
 import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { hasAllowlistConfig, isAllowedUser } from '@/lib/auth/allowed-user';
 import { buildItemSearchString, parseItemFromSearch } from '@/lib/item-url';
 import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 import { cycleRepeatCount as getNextRepeatCount } from '@/lib/repeat-count';
+
+/** How long the Undo button stays up after a progress reset. */
+const RESET_UNDO_MS = 6000;
 
 function pushItemHistoryState(row: { id: string; name: string }) {
   const qs = buildItemSearchString(row);
@@ -53,7 +56,12 @@ export default function NodaApp() {
 
   const [uploadMode, setUploadMode] = useState<'idle' | 'lesson'>('idle');
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    action?: ToastAction;
+    durationMs?: number;
+  } | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
   const [trashDeleteIds, setTrashDeleteIds] = useState<string[] | null>(null);
@@ -362,6 +370,8 @@ export default function NodaApp() {
 
   useEffect(() => {
     setHeaderItemMenuOpen(false);
+    // An Undo belongs to the lesson it was offered on; drop it when the lesson changes.
+    setToast((t) => (t?.action ? null : t));
   }, [selectedItem?.id]);
 
   useEffect(() => {
@@ -816,15 +826,51 @@ export default function NodaApp() {
     });
   }, [setCompletedSentences, setDictationInputs]);
 
+  /** Clears the current tab's progress, with a short Undo window instead of a confirm dialog. */
   const handleResetProgress = () => {
+    const lessonId = selectedItemRef.current?.id;
+    if (!lessonId) return;
+    const stillSameLesson = () => selectedItemRef.current?.id === lessonId;
+
     if (appMode === 'shadowing') {
+      const before = shadowingCompletedRef.current;
       setShadowingCompleted({});
       shadowingCompletedRef.current = {};
+      setToast({
+        message: 'Shadowing progress reset',
+        type: 'info',
+        durationMs: RESET_UNDO_MS,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            if (!stillSameLesson()) return;
+            setShadowingCompleted(before);
+            shadowingCompletedRef.current = before;
+          },
+        },
+      });
       return;
     }
+
+    const beforeCompleted = completedSentencesRef.current;
+    const beforeInputs = dictationInputsRef.current;
     setDictationInputs({});
     setCompletedSentences({});
     completedSentencesRef.current = {};
+    setToast({
+      message: 'Dictation progress reset',
+      type: 'info',
+      durationMs: RESET_UNDO_MS,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (!stillSameLesson()) return;
+          setCompletedSentences(beforeCompleted);
+          completedSentencesRef.current = beforeCompleted;
+          setDictationInputs(beforeInputs);
+        },
+      },
+    });
   };
 
   const activeTranscriptIndex = useMemo(
@@ -1108,7 +1154,15 @@ export default function NodaApp() {
         }}
       />
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={dismissToast} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          action={toast.action}
+          durationMs={toast.durationMs}
+          onClose={dismissToast}
+        />
+      )}
     </div>
   );
 }
