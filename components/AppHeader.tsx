@@ -80,7 +80,7 @@ export function AppHeader({
             {modeProgress !== null && (
               <span className="tabular-nums">
                 {' '}
-                · {modeLabel} {modeProgress}%
+                · {modeProgress}%
               </span>
             )}
           </p>
