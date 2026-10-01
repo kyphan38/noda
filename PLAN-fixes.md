@@ -98,7 +98,12 @@ trước** khi xoá thật.
 
 ---
 
-## Đợt 3 - Hiệu năng (việc lớn hơn) - CHƯA LÀM
+## Đợt 3 - Hiệu năng (việc lớn hơn) - XONG (chờ deploy rules)
+
+**Xong (2026-10-01)**, branch `perf/batch-3`. F9: 234 -> 8 render/giây (dev) trên bài
+859 câu. F10: function đã deploy. F11: chủ app đã xoá hết bài cũ, nên không cần
+migrate; vẫn đọc được bài dạng cũ. Cần deploy `firestore.rules` (rule cho
+`content/{doc}`) **trước** khi merge, nếu không app sẽ không đọc/ghi được bài.
 
 **Tạm dừng (2026-10-01).** Chủ app sẽ ping khi muốn làm tiếp. Bắt đầu từ F9.
 Quyết định mới cho F11: **không migrate 12 bài hiện có.** Bài cũ giữ nguyên dạng cũ;
@@ -140,4 +145,4 @@ Transcript, `dictationInputs` và các map progress chuyển sang subdoc
 
 1. ~~Đợt 1: F0 → F1 → F5 → F4 → F3 → F2~~ - xong
 2. ~~Đợt 2: F7 → F8 → F6~~ - xong
-3. Đợt 3: F9 → F10 → F11
+3. ~~Đợt 3: F9 → F10 → F11~~ - xong
