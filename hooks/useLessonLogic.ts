@@ -17,6 +17,9 @@ import {
   type LessonRecord,
 } from '@/lib/db';
 
+/** How many lessons the welcome screen offers under "Continue learning". */
+const RECENT_LESSON_COUNT = 5;
+
 const LESSON_ROW_COMPARE_KEYS = [
   'id',
   'name',
@@ -82,6 +85,8 @@ export function useLessonLogic(
     }>
   >([]);
   const [isListLoading, setIsListLoading] = useState(true);
+  /** Ids of the most recently opened lessons, newest first (the snapshot is ordered by lastAccessed). */
+  const [recentLessonIds, setRecentLessonIds] = useState<string[]>([]);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   /** Firebase Storage path of the loaded lesson's media (for the shadowing-pattern Cloud Function). */
   const [mediaStoragePath, setMediaStoragePath] = useState<string | null>(null);
@@ -158,6 +163,8 @@ export function useLessonLogic(
           (lessons) => {
             const next = mapLessonsToRows(lessons);
             setLessonsList((prev) => (lessonRowsShallowEqual(prev, next) ? prev : next));
+            const recent = lessons.filter((l) => !l.isTrashed).slice(0, RECENT_LESSON_COUNT).map((l) => l.id);
+            setRecentLessonIds((prev) => (prev.join() === recent.join() ? prev : recent));
             if (!didReceiveFirstSnapshot) {
               didReceiveFirstSnapshot = true;
               setIsListLoading(false);
@@ -392,6 +399,7 @@ export function useLessonLogic(
     isStarted,
     setIsStarted,
     lessonsList,
+    recentLessonIds,
     isListLoading,
     currentLessonId,
     mediaStoragePath,

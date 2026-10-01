@@ -99,7 +99,7 @@ export function DictationControls({
                 data-dictation-next
                 title="Next sentence"
                 onClick={handleNext}
-                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-400 active:bg-emerald-500/20"
+                className="rounded-lg border border-gray-700 bg-gray-800 p-2 text-gray-200 active:bg-gray-700"
               >
                 <CornerDownLeft className="h-4 w-4" />
               </button>
@@ -222,7 +222,7 @@ export function DictationControls({
               syncDom(e.target, e.target.value);
             }}
             onKeyDown={(e) => onDictationKeyDown(e, sentence)}
-            className="flex-1 min-w-0 bg-gray-800/60 border border-gray-700 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono outline-none"
+            className="flex-1 min-w-0 bg-gray-800/60 border border-gray-700 focus:border-gray-500 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono outline-none"
             placeholder="Type what you hear…"
             autoComplete="off"
             autoCapitalize="off"

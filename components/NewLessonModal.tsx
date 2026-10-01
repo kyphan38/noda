@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Music2, FileText, Loader2 } from 'lucide-react';
+import { Music2, FileText, Loader2, X, Check } from 'lucide-react';
 import { isLessonNameTaken } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -177,7 +177,9 @@ export function NewLessonModal({
     <div className="app-modal-backdrop fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="app-modal-panel relative bg-gray-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700/80">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">🎧 New Lesson</h2>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Music2 size={22} strokeWidth={1.75} aria-hidden /> New Lesson
+          </h2>
           <Button
             type="button"
             variant="ghost"
@@ -186,7 +188,7 @@ export function NewLessonModal({
             onClick={onClose}
             aria-label="Close"
           >
-            ✕
+            <X size={18} aria-hidden />
           </Button>
         </div>
 
@@ -207,7 +209,7 @@ export function NewLessonModal({
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Name</label>
             <input
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
               placeholder=""
               value={lessonName}
               onChange={(e) => {
@@ -224,7 +226,7 @@ export function NewLessonModal({
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Folder</label>
             <select
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
               value={folderId ?? ''}
               onChange={(e) => setFolderId(e.target.value ? e.target.value : null)}
               disabled={isSaving}
@@ -253,9 +255,9 @@ export function NewLessonModal({
                 e.dataTransfer.dropEffect = 'copy';
               }}
               onDrop={handleMediaDrop}
-              className={`text-center pb-6 border-b border-gray-700 mb-4 relative rounded-xl transition-colors ${mediaDrag ? 'bg-emerald-500/10 border border-dashed border-emerald-500/50' : ''}`}
+              className={`text-center pb-6 border-b border-gray-700 mb-4 relative rounded-xl transition-colors ${mediaDrag ? 'bg-gray-800/60 border border-dashed border-gray-500' : ''}`}
             >
-              <div className="flex justify-center mb-3 text-emerald-500">
+              <div className="flex justify-center mb-3 text-gray-300">
                 <Music2 size={40} />
               </div>
               <p className="text-lg font-medium text-white mb-1">Upload audio or video</p>
@@ -272,7 +274,9 @@ export function NewLessonModal({
                 disabled={isSaving}
               />
               {mediaFile && !mediaNameConflict && (
-                <p className="text-emerald-500 font-medium relative z-10 pointer-events-none">✓ {mediaFile.name}</p>
+                <p className="text-gray-200 font-medium relative z-10 pointer-events-none inline-flex items-center gap-1.5">
+                  <Check size={16} aria-hidden /> {mediaFile.name}
+                </p>
               )}
             </div>
 
@@ -290,13 +294,17 @@ export function NewLessonModal({
                 e.dataTransfer.dropEffect = 'copy';
               }}
               onDrop={handleTranscriptDrop}
-              className={`flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg relative transition-colors ${transcriptDrag ? 'ring-1 ring-emerald-500/50 bg-emerald-500/5' : ''}`}
+              className={`flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg relative transition-colors ${transcriptDrag ? 'ring-1 ring-gray-500 bg-gray-800/60' : ''}`}
             >
               <FileText size={20} className="text-gray-400 shrink-0" />
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-medium text-gray-300">+ Add transcript (.srt)</p>
                 <p className="text-xs text-gray-500 mt-0.5">Drop file here or click</p>
-                {transcriptFile && <p className="text-xs text-emerald-500 mt-1">✓ {transcriptFile.name}</p>}
+                {transcriptFile && (
+                  <p className="text-xs text-gray-300 mt-1 inline-flex items-center gap-1">
+                    <Check size={12} aria-hidden /> {transcriptFile.name}
+                  </p>
+                )}
               </div>
               <input
                 type="file"

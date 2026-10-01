@@ -37,8 +37,6 @@ interface LessonViewProps {
   onSeek: (time: number) => void;
   onSpeedChange: (speed: number) => void;
   onRepeatCountChange: (count: RepeatCount) => void;
-  /** Clears progress of the current tab (dictation or shadowing). */
-  onResetProgress?: () => void;
   hideCaptions?: boolean;
   onToggleHideCaptions?: () => void;
   transcript: Sentence[];
@@ -89,7 +87,6 @@ export function LessonView({
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
-  onResetProgress,
   hideCaptions,
   onToggleHideCaptions,
   mediaRef,
@@ -481,9 +478,6 @@ export function LessonView({
             showFocusToggle={showFocusToggle}
             focusMode={focusActive}
             onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
-            showReset={mode !== 'listen' && !!onResetProgress}
-            resetLabel={mode === 'shadowing' ? 'Reset shadowing progress' : 'Reset dictation progress'}
-            onReset={onResetProgress}
           />
         </div>
       )}

@@ -56,8 +56,8 @@ export function CleanupModal({
         className="app-modal-panel bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-          <PartyPopper className="w-8 h-8 text-emerald-500" />
+        <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">
+          <PartyPopper className="w-8 h-8 text-gray-200" strokeWidth={1.5} />
         </div>
         <h3 id="noda-cleanup-title" className="text-xl font-bold text-white mb-2">
           Lesson complete!
@@ -78,7 +78,7 @@ export function CleanupModal({
             onChange={(e) => setConfirmPhrase(e.target.value)}
             placeholder="Delete"
             aria-invalid={confirmPhrase.length > 0 && confirmPhrase !== 'Delete'}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500/50"
           />
         </div>
         <div className="flex flex-col gap-3">

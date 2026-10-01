@@ -28,7 +28,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await activateClean(page, idx);
     const width = await rewriteSlotWidth(page, idx);
     const rewriteCount = await page.locator(`[data-index="${idx}"] [data-dictation-rewrite]`).count();
-    return width >= 40 && rewriteCount === 0;
+    // Slot is h-8/w-8 (32px) on desktop since the transcript rows were tightened.
+    return width >= 32 && rewriteCount === 0;
   }, 8_000);
 
   await check(report, '16b. Rewrite line button visible after completion', async () => {

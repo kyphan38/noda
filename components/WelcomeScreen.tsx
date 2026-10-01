@@ -1,44 +1,63 @@
 import React from 'react';
-import { Music2 } from 'lucide-react';
+import { Plus, Video, Music2 } from 'lucide-react';
+import type { LessonItem } from '@/types';
+import { LessonProgressBars } from './LessonProgressBars';
 
 interface WelcomeScreenProps {
+  /** Most recently opened lessons first. */
+  recentLessons: LessonItem[];
+  onSelectLesson: (lesson: LessonItem) => void;
   onNewLesson: () => void;
 }
 
-export function WelcomeScreen({ onNewLesson }: WelcomeScreenProps) {
+/** Start page: pick up a recent lesson, or create a new one. */
+export function WelcomeScreen({ recentLessons, onSelectLesson, onNewLesson }: WelcomeScreenProps) {
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="max-w-3xl w-full text-center space-y-12">
-        <div className="space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
-            Welcome to noda
-          </h1>
-          <p className="text-xl text-gray-400">
-            Your AI-powered language learning companion
-          </p>
+    <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-xl px-2 py-10 sm:py-16 space-y-8">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-gray-100">noda</h1>
+          <p className="text-sm text-gray-400">Listen, write what you hear, then speak along.</p>
         </div>
 
-        <div className="max-w-sm mx-auto">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 hover:border-emerald-500/50 transition-colors group">
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-              <Music2 size={24} className="text-emerald-500" />
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Audio Lessons</h3>
-            <p className="text-sm text-gray-400">Listen, practice dictation, or shadow native speakers</p>
-          </div>
-        </div>
+        {recentLessons.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Continue learning</h2>
+            <ul className="divide-y divide-gray-800 rounded-xl border border-gray-800 bg-gray-900/60">
+              {recentLessons.map((lesson) => (
+                <li key={lesson.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectLesson(lesson)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-800/60"
+                  >
+                    <span className="shrink-0 text-gray-500" aria-hidden>
+                      {lesson.mediaType === 'video' ? <Video size={16} /> : <Music2 size={16} />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-gray-100">{lesson.name}</span>
+                      <span className="block text-xs text-gray-500 tabular-nums">
+                        Dictation {lesson.dictationProgress}% · Shadowing {lesson.shadowingProgress}%
+                      </span>
+                    </span>
+                    <LessonProgressBars
+                      dictation={lesson.dictationProgress}
+                      shadowing={lesson.shadowingProgress}
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-        <div className="space-y-6 pt-8">
-          <p className="text-gray-400">Get started by creating a new lesson</p>
-          <div className="flex items-center justify-center">
-            <button
-              onClick={onNewLesson}
-              className="w-full sm:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <Music2 size={18} /> New Lesson
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={onNewLesson}
+          className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-900 hover:bg-white"
+        >
+          <Plus size={16} aria-hidden /> New lesson
+        </button>
       </div>
     </div>
   );

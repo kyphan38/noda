@@ -1,7 +1,7 @@
 'use client';
 
 import React, { type RefObject } from 'react';
-import { PanelLeft, Trash2, MoreVertical, Edit2 } from 'lucide-react';
+import { PanelLeft, Trash2, MoreVertical, Edit2, RotateCcw } from 'lucide-react';
 import type { AppMode, LessonItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { LESSON_MODES } from '@/constants';
@@ -24,6 +24,10 @@ export interface AppHeaderProps {
   headerMenuRef: RefObject<HTMLDivElement | null>;
   onRenameCurrent: () => void;
   onDeleteCurrent: () => void;
+  /** Share of the lesson done in the current tab; null in listen. */
+  modeProgress: number | null;
+  /** Clears the current tab's progress; absent in listen. */
+  onResetProgress?: () => void;
 }
 
 export function AppHeader({
@@ -37,7 +41,10 @@ export function AppHeader({
   headerMenuRef,
   onRenameCurrent,
   onDeleteCurrent,
+  modeProgress,
+  onResetProgress,
 }: AppHeaderProps) {
+  const modeLabel = LESSON_MODES.find((m) => m.mode === appMode)?.label ?? appMode;
   return (
     <header className="app-header">
       <div className="header-left">
@@ -68,6 +75,15 @@ export function AppHeader({
               </button>
             ))}
           </nav>
+          <p className="max-w-full truncate text-xs text-gray-500" title={selectedItem.data.name}>
+            <span className="text-gray-300">{selectedItem.data.name}</span>
+            {modeProgress !== null && (
+              <span className="tabular-nums">
+                {' '}
+                · {modeLabel} {modeProgress}%
+              </span>
+            )}
+          </p>
         </div>
       )}
 
@@ -89,7 +105,7 @@ export function AppHeader({
               <MoreVertical size={22} aria-hidden />
             </button>
             {headerItemMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 z-30">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 z-30">
                 <button
                   type="button"
                   onClick={onRenameCurrent}
@@ -97,6 +113,16 @@ export function AppHeader({
                 >
                   <Edit2 size={14} aria-hidden /> Rename
                 </button>
+                {onResetProgress && (
+                  <button
+                    type="button"
+                    onClick={onResetProgress}
+                    aria-label={`Reset ${appMode} progress`}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+                  >
+                    <RotateCcw size={14} aria-hidden /> Reset {modeLabel.toLowerCase()}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onDeleteCurrent}

@@ -108,16 +108,16 @@ export async function run(page: Page, report: ReportEntry[]) {
     return closed && btnLabel === 'Repeat 2 times';
   });
 
-  await check(report, '14j. Trigger button green when count > 1', async () => {
+  await check(report, '14j. Trigger button highlighted when count > 1', async () => {
     const classes = await repeatTrigger().getAttribute('class');
-    return classes?.includes('text-green-400') ?? false;
+    return classes?.includes('bg-gray-700/60') ?? false;
   });
 
   await check(report, '14k. Repeat popover re-opens and shows selected value', async () => {
     await repeatTrigger().click();
     await sleep(200);
     const classes = await repeatOption(2).getAttribute('class');
-    const isSelected = classes?.includes('bg-green-600') ?? false;
+    const isSelected = classes?.includes('bg-gray-100') ?? false;
     await closeByClickingPlay(page);
     return isSelected;
   });

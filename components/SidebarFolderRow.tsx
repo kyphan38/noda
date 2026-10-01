@@ -126,7 +126,7 @@ export function SidebarFolderRow({
                   setIsRenaming(false);
                 }
               }}
-              className="w-full min-w-0 bg-gray-950 border border-gray-700 text-gray-100 text-xs rounded px-1.5 py-0.5 outline-none focus:border-emerald-500/60"
+              className="w-full min-w-0 bg-gray-950 border border-gray-700 text-gray-100 text-xs rounded px-1.5 py-0.5 outline-none focus:border-gray-500"
             />
           </form>
         ) : (

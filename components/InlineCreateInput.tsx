@@ -44,7 +44,7 @@ export function InlineCreateInput({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-gray-950 border border-gray-700 text-gray-100 text-xs rounded px-2 py-1 outline-none focus:border-emerald-500/60 placeholder:text-gray-600"
+        className="w-full bg-gray-950 border border-gray-700 text-gray-100 text-xs rounded px-2 py-1 outline-none focus:border-gray-500 placeholder:text-gray-600"
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.preventDefault();

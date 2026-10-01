@@ -93,7 +93,7 @@ export function ShadowingConfirmPopover({ onConfirm, onClose, triggerRef }: Shad
             e.stopPropagation();
             onConfirm();
           }}
-          className="px-2 py-1 text-xs rounded-md bg-emerald-500/90 text-gray-900 font-medium hover:bg-emerald-400"
+          className="px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-900 font-medium hover:bg-white"
         >
           Phân tích
         </button>

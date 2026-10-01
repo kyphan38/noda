@@ -33,6 +33,8 @@ export async function run(page: Page, report: ReportEntry[]) {
   await dismissModal(page);
 
   await check(report, '9c. Reset clears all progress', async () => {
+    // Reset lives in the header "Lesson actions" menu.
+    await page.locator('button[aria-label="Lesson actions"]').click();
     const resetBtn = page.locator('button[aria-label="Reset dictation progress"]');
     if (await resetBtn.count() === 0) return false;
     await resetBtn.click();

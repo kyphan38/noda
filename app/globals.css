@@ -3,8 +3,8 @@
 :root {
   --background: #030712;
   --foreground: #f3f4f6;
-  --primary: #10b981;
-  --primary-foreground: #022c22;
+  --primary: #f3f4f6;
+  --primary-foreground: #111827;
   --border: #1f2937;
   --muted: #111827;
   --muted-foreground: #9ca3af;
@@ -42,7 +42,7 @@
 }
 
 .app-logo svg {
-  color: #34d399;
+  color: #e5e7eb;
   flex-shrink: 0;
 }
 
@@ -94,8 +94,8 @@
 }
 
 .mode-tab.active {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.15);
+  color: #f9fafb;
+  background: rgba(75, 85, 99, 0.45);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
@@ -190,7 +190,7 @@
   height: 100%;
   width: 38%;
   border-radius: 9999px;
-  background: rgba(52, 211, 153, 0.88);
+  background: rgba(209, 213, 219, 0.85);
   animation: nodaIpaIndeterminate 1.05s ease-in-out infinite;
 }
 
@@ -253,19 +253,19 @@
 }
 
 .toast-info {
-  background: #3b82f6;
+  background: #374151;
   color: white;
 }
 
 /* Focus & interaction polish */
 button:focus-visible,
 .mode-tab:focus-visible {
-  outline: 2px solid #10b981;
+  outline: 2px solid #9ca3af;
   outline-offset: 2px;
 }
 
 .lesson-card:focus-visible {
-  outline: 2px solid #10b981;
+  outline: 2px solid #9ca3af;
   outline-offset: 2px;
 }
 
