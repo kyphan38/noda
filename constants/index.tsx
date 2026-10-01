@@ -1,5 +1,8 @@
 // Playback speeds
 export const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5] as const;
+/** Slider range. Below 0.5x speech is not usable, and 0x looks like a frozen player. */
+export const MIN_PLAYBACK_RATE = 0.5;
+export const MAX_PLAYBACK_RATE = 2;
 
 // Default values
 export const DEFAULT_LOOP_MODE = 'none' as const;

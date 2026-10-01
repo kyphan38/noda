@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { LoopMode, RepeatCount } from '@/types';
-import { DEFAULT_LOOP_MODE, DEFAULT_REPEAT_COUNT } from '@/constants';
+import { DEFAULT_LOOP_MODE, DEFAULT_REPEAT_COUNT, MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE } from '@/constants';
 
 export function useMediaPlayer() {
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -66,7 +66,7 @@ export function useMediaPlayer() {
   };
 
   const changeSpeed = (speed: number) => {
-    const clamped = Math.round(Math.max(0, Math.min(2, speed)) * 100) / 100;
+    const clamped = Math.round(Math.max(MIN_PLAYBACK_RATE, Math.min(MAX_PLAYBACK_RATE, speed)) * 100) / 100;
     setPlaybackRate(clamped);
     if (mediaRef.current) {
       mediaRef.current.playbackRate = clamped;
