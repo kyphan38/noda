@@ -68,7 +68,10 @@ code.
 
 ---
 
-## Đợt 2 - Chi phí và trải nghiệm
+## Đợt 2 - Chi phí và trải nghiệm - XONG
+
+**Xong (2026-10-01)**, branch `fix/batch-2`. Dọn rác cũ: dry-run không thấy gì
+(12 file media cho 12 bài), nên không xoá gì.
 
 ### F6. Xoá bài không xoá file trên Storage và `shadowingAnalysis` (#7)
 
@@ -130,5 +133,5 @@ Transcript, `dictationInputs` và các map progress chuyển sang subdoc
 ## Thứ tự
 
 1. ~~Đợt 1: F0 → F1 → F5 → F4 → F3 → F2~~ - xong
-2. Đợt 2: F7 → F8 → F6
+2. ~~Đợt 2: F7 → F8 → F6~~ - xong
 3. Đợt 3: F9 → F10 → F11
