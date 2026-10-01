@@ -33,3 +33,24 @@ export function sliceAudioClip(inputPath: string, startSec: number, endSec: numb
       .save(outputPath);
   });
 }
+
+/**
+ * Converts a whole media file to mono 16kHz FLAC - the same channel layout and
+ * sample rate `sliceAudioClip` produces, stored losslessly so slicing the copy
+ * gives the same samples as slicing the original.
+ */
+export function extractAnalysisAudio(inputPath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioChannels(1)
+      .audioFrequency(16000)
+      .audioCodec("flac")
+      // 16-bit like the WAV clips; ffmpeg's FLAC default is 24-bit, which doubles the size.
+      .outputOptions(["-sample_fmt s16"])
+      .noVideo()
+      .format("flac")
+      .on("error", (err: Error) => reject(err))
+      .on("end", () => resolve())
+      .save(outputPath);
+  });
+}

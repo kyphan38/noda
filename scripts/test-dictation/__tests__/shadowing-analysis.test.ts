@@ -3,6 +3,7 @@ import {
   normalizeShadowingAnalysis,
   ShadowingShapeError,
 } from '../../../functions/src/lib/normalizeShadowingAnalysis';
+import { analysisAudioPath } from '../../../functions/src/lib/analysisAudio';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
 import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
 import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
@@ -266,5 +267,23 @@ describe('ShadowingRequestTracker', () => {
     t.begin(3);
     t.end(lessonA);
     expect(t.isLoading(3)).toBe(true);
+  });
+});
+
+describe('analysisAudioPath', () => {
+  it('maps an upload to its FLAC copy under analysis-audio', () => {
+    expect(analysisAudioPath('u1', 'users/u1/media/123-456-talk.mp4')).toBe(
+      'users/u1/analysis-audio/123-456-talk.mp4.flac'
+    );
+  });
+
+  it("rejects another user's upload", () => {
+    expect(analysisAudioPath('u1', 'users/u2/media/123-talk.mp4')).toBeNull();
+  });
+
+  it('rejects paths outside media/ or with nested segments', () => {
+    expect(analysisAudioPath('u1', 'users/u1/analysis-audio/x.flac')).toBeNull();
+    expect(analysisAudioPath('u1', 'users/u1/media/../media/x.mp4')).toBeNull();
+    expect(analysisAudioPath('u1', 'users/u1/media/')).toBeNull();
   });
 });
