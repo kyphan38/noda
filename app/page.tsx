@@ -8,7 +8,7 @@ import {
   scrollDictationTargetRow,
   scrollTranscriptRowIntoView,
 } from '@/lib/transcript-scroll';
-import { findResumeTarget } from '@/lib/progress';
+import { completionPercent, findResumeTarget } from '@/lib/progress';
 import { restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
@@ -94,7 +94,7 @@ export default function NodaApp() {
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
     shadowingCompleted, setShadowingCompleted, shadowingCompletedRef, loadedProgress,
     isStarted, setIsStarted,
-    lessonsList, isListLoading,
+    lessonsList, recentLessonIds, isListLoading,
     currentLessonId, mediaStoragePath,
     setLessonName,
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
@@ -295,6 +295,25 @@ export default function NodaApp() {
     if (!row || row.isTrashed) return;
     applySelectionFromRow(row, { pushHistory: true });
   }, [lessonsListEffective, applySelectionFromRow]);
+
+  /** Most recently opened lessons, for the welcome screen. */
+  const recentLessons = useMemo<LessonItem[]>(
+    () =>
+      recentLessonIds
+        .map((id) => lessonsListEffective.find((l) => l.id === id))
+        .filter((l): l is (typeof lessonsListEffective)[number] => !!l)
+        .map((l) => ({
+          id: l.id,
+          name: l.name,
+          language: 'en',
+          dictationProgress: l.dictationProgress,
+          shadowingProgress: l.shadowingProgress,
+          hasMedia: l.hasMedia,
+          mediaType: l.mediaType,
+          type: 'lesson',
+        })),
+    [recentLessonIds, lessonsListEffective]
+  );
 
   const handleTrashItem = useCallback(async (id: string) => {
     try {
@@ -882,7 +901,7 @@ export default function NodaApp() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-emerald-500/30">
+    <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-gray-500/40">
       <div>
         <Sidebar
           isOpen={isSidebarOpen}
@@ -923,6 +942,22 @@ export default function NodaApp() {
             setHeaderItemMenuOpen={setHeaderItemMenuOpen}
             headerMenuRef={headerMenuRef}
             onRenameCurrent={handleHeaderRenameCurrent}
+            modeProgress={
+              appMode === 'listen' || transcript.length === 0
+                ? null
+                : completionPercent(
+                    appMode === 'dictation' ? completedSentences : shadowingCompleted,
+                    transcript.length
+                  )
+            }
+            onResetProgress={
+              appMode === 'listen'
+                ? undefined
+                : () => {
+                    handleResetProgress();
+                    setHeaderItemMenuOpen(false);
+                  }
+            }
             onDeleteCurrent={() => {
               const id = selectedItem?.id;
               if (id) void handleTrashItem(id);
@@ -932,7 +967,11 @@ export default function NodaApp() {
 
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {!selectedItem && uploadMode === 'idle' && (
-              <WelcomeScreen onNewLesson={openNewLessonModal} />
+              <WelcomeScreen
+                recentLessons={recentLessons}
+                onSelectLesson={handleItemSelect}
+                onNewLesson={openNewLessonModal}
+              />
             )}
 
             {uploadMode === 'lesson' && (
@@ -969,7 +1008,6 @@ export default function NodaApp() {
                   onDictationChange={handleDictationChange}
                   onDictationKeyDown={handleDictationKeyDown}
                   onDictationRetry={handleDictationRetry}
-                  onResetProgress={appMode === 'listen' ? undefined : handleResetProgress}
                   hideCaptions={hideCaptions}
                   onToggleHideCaptions={() => setHideCaptions((v) => !v)}
                   mediaRef={mediaRef}

@@ -120,7 +120,14 @@ Việc cần làm:
 
 ---
 
-## Phase 3 - UI/UX
+## Phase 3 - UI/UX - XONG (trừ U7)
+
+**Xong (2026-10-01).** U1, U3, U4, U5, U6 đã làm. U2: khi kiểm tra lại thì trên điện
+thoại thật sidebar đã đóng sẵn khi tải trang. Lỗi thấy lúc review là do đổi kích thước
+cửa sổ sau khi trang đã tải, nên không cần sửa. U7 (tách file lớn) để lại, chưa cần.
+Màu còn giữ: câu đang phát, chữ đúng/sai trong dictation, câu đã shadow, toast,
+nút xoá (đỏ), cảnh báo (vàng), và màu của từng loại ghi chú trong panel phân tích AI
+(màu ở đó giúp phân biệt loại ghi chú).
 
 Xem bằng app chạy local (E2E mode) ở 1280x800 và 375x812.
 
@@ -150,4 +157,4 @@ Xem bằng app chạy local (E2E mode) ở 1280x800 và 375x812.
 1. ~~Phase 0 (xoá Decks)~~ - xong
 2. ~~Phase 1: A1, A5 (nhanh, là bug) -> A2 -> A3~~ - xong
 3. ~~Phase 2 (mode + progress)~~ - xong
-4. Phase 3: U2, U3, U5, U6 làm cùng Phase 2; U1, U4 làm riêng; U7 nếu cần
+4. ~~Phase 3: U2, U3, U5, U6 làm cùng Phase 2; U1, U4 làm riêng~~ - xong; U7 nếu cần

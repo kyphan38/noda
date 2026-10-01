@@ -11,7 +11,6 @@ import {
   VideoOff,
   Eye,
   EyeOff,
-  RotateCcw,
   Infinity,
   Maximize2,
   Minimize2,
@@ -46,9 +45,6 @@ interface PlayerProps {
   showFocusToggle?: boolean;
   focusMode?: boolean;
   onToggleFocusMode?: () => void;
-  showReset?: boolean;
-  resetLabel?: string;
-  onReset?: () => void;
 }
 
 const toolBtn =
@@ -131,7 +127,7 @@ function SpeedPopover({
         step={0.1}
         value={speed}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-24 sm:w-20 h-1.5 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-blue-400"
+        className="w-24 sm:w-20 h-1.5 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-gray-300"
         aria-label="Playback speed"
       />
       <div className="flex justify-between w-24 sm:w-20">
@@ -192,7 +188,7 @@ function RepeatPopover({
           }}
           className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
             count === n
-              ? 'bg-green-600 text-white'
+              ? 'bg-gray-100 text-gray-900'
               : 'text-gray-400 hover:bg-gray-800 hover:text-white'
           }`}
           aria-label={repeatOptionAriaLabel(n)}
@@ -229,9 +225,6 @@ export function Player({
   showFocusToggle = false,
   focusMode = false,
   onToggleFocusMode,
-  showReset = false,
-  resetLabel = 'Reset progress',
-  onReset,
 }: PlayerProps) {
   const [showSpeedPopover, setShowSpeedPopover] = useState(false);
   const [showRepeatPopover, setShowRepeatPopover] = useState(false);
@@ -251,7 +244,7 @@ export function Player({
       <button
         type="button"
         onClick={onPlayPause}
-        className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white transition-colors hover:bg-emerald-500 active:scale-95 active:bg-emerald-400"
+        className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-colors hover:bg-white active:scale-95 active:bg-gray-300"
         aria-label={isPlaying ? 'Pause' : 'Play'}
         title={isPlaying ? 'Pause' : 'Play'}
       >
@@ -275,7 +268,7 @@ export function Player({
           disabled={seekDisabled}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
           aria-label="Seek"
-          className={`h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-emerald-400 sm:h-2 ${
+          className={`h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-gray-300 sm:h-2 ${
             seekDisabled ? 'pointer-events-none cursor-not-allowed opacity-50' : ''
           }`}
         />
@@ -296,7 +289,7 @@ export function Player({
           aria-label={`Playback speed ${playbackRate.toFixed(1)}×`}
           title={`Playback speed (${playbackRate.toFixed(1)}×)`}
         >
-          <Gauge className="h-4 w-4 shrink-0 text-blue-400" aria-hidden />
+          <Gauge className="h-4 w-4 shrink-0" aria-hidden />
         </button>
         {showSpeedPopover && (
           <SpeedPopover
@@ -317,7 +310,7 @@ export function Player({
           }}
           className={`${toolBtn} ${
             isRepeatCountActive(repeatCount)
-              ? 'text-green-400 hover:bg-green-500/15 hover:text-green-300'
+              ? 'text-white bg-gray-700/60 hover:bg-gray-700'
               : ''
           } ${showRepeatPopover ? 'bg-gray-800' : ''}`}
           aria-label={repeatCountAriaLabel(repeatCount)}
@@ -382,17 +375,6 @@ export function Player({
           </button>
         )}
 
-        {showReset && onReset && (
-          <button
-            type="button"
-            onClick={onReset}
-            className={toolBtn}
-            aria-label={resetLabel}
-            title={resetLabel}
-          >
-            <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
-          </button>
-        )}
       </div>
     </div>
   );

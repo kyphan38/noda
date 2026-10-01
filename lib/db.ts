@@ -467,8 +467,10 @@ export const updateShadowingProgressFirestore = async (
 
 /**
  * Remembers where the learner is in `mode` (a sentence index, or a playback time for
- * listen) and makes `mode` the lesson's last-used tab. Not a substantive edit, so
- * `updatedAt` is left alone.
+ * listen) and makes `mode` the lesson's last-used tab. Runs every few seconds while
+ * playing, so it touches neither `updatedAt` (not a substantive edit) nor
+ * `lastAccessed` (already set when the lesson opens; bumping it would reorder the
+ * lessons snapshot on every save).
  */
 export const saveResumePositionFirestore = async (
   id: string,
@@ -480,7 +482,6 @@ export const saveResumePositionFirestore = async (
   const patch: Record<string, unknown> = {
     lastMode: mode,
     [`progress.${mode}.updatedAt`]: now,
-    lastAccessed: now,
   };
   if ('lastIndex' in position) patch[`progress.${mode}.lastIndex`] = position.lastIndex;
   else patch[`progress.${mode}.lastTime`] = position.lastTime;

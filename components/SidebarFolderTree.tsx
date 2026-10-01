@@ -296,7 +296,7 @@ function SidebarFolderTreeImpl({
             >
               {enableDnd && overTarget?.targetId === it.id && (
                 <div
-                  className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                  className="absolute left-2 right-2 h-0.5 bg-gray-300 pointer-events-none"
                   style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                 />
               )}
@@ -407,7 +407,7 @@ function SidebarFolderTreeImpl({
             >
               {enableDnd && overTarget?.targetId === f.id && dragRef.current?.entity === 'folder' && (
                 <div
-                  className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                  className="absolute left-2 right-2 h-0.5 bg-gray-300 pointer-events-none"
                   style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                 />
               )}
@@ -506,7 +506,7 @@ function SidebarFolderTreeImpl({
                     >
                       {enableDnd && overTarget?.targetId === it.id && (
                         <div
-                          className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                          className="absolute left-2 right-2 h-0.5 bg-gray-300 pointer-events-none"
                           style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                         />
                       )}
@@ -614,7 +614,7 @@ function SidebarFolderTreeImpl({
                       >
                         {enableDnd && overTarget?.targetId === sf.id && dragRef.current?.entity === 'folder' && (
                           <div
-                            className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                            className="absolute left-2 right-2 h-0.5 bg-gray-300 pointer-events-none"
                             style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                           />
                         )}
@@ -706,7 +706,7 @@ function SidebarFolderTreeImpl({
                               >
                                 {enableDnd && overTarget?.targetId === it.id && (
                                   <div
-                                    className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                                    className="absolute left-2 right-2 h-0.5 bg-gray-300 pointer-events-none"
                                     style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                                   />
                                 )}
@@ -817,7 +817,7 @@ function SidebarFolderTreeImpl({
                                 >
                                   {enableDnd && overTarget?.targetId === tf.id && dragRef.current?.entity === 'folder' && (
                                     <div
-                                      className="absolute left-2 right-2 h-0.5 bg-emerald-500 pointer-events-none"
+                                      className="absolute left-2 right-2 h-0.5 bg-gray-300 pointer-events-none"
                                       style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                                     />
                                   )}

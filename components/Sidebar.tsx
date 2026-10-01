@@ -109,7 +109,7 @@ function TrashedItemRow({
                     setMenuOpen(false);
                     onRestoreItem(item.id);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 flex items-center gap-2 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700/60 hover:text-white flex items-center gap-2 transition-colors"
                 >
                   <RotateCcw size={14} aria-hidden />
                   Restore
@@ -288,7 +288,7 @@ function SidebarImpl({
           <div className="actions-container flex flex-row gap-2 p-4">
             <button
               onClick={onNewLesson}
-              className="btn-new-lesson flex-1 py-2.5 px-2 text-sm bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
+              className="btn-new-lesson flex-1 py-2.5 px-2 text-sm bg-gray-100 hover:bg-white text-gray-900 rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
               title="New audio lesson"
             >
               <Music2 size={16} aria-hidden />
@@ -301,7 +301,7 @@ function SidebarImpl({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search…"
-              className="w-full bg-gray-950/60 border border-gray-800 focus:border-emerald-500/60 text-gray-100 placeholder:text-gray-500 rounded-lg px-3 py-2 text-sm outline-none"
+              className="w-full bg-gray-950/60 border border-gray-800 focus:border-gray-500 text-gray-100 placeholder:text-gray-500 rounded-lg px-3 py-2 text-sm outline-none"
             />
           </div>
 
