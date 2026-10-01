@@ -12,7 +12,9 @@ Các quyết định đã chốt ngày 2026-10-01 (ghi "Đã chọn"). Quyết �
 
 ---
 
-## Đợt 1 - Tránh mất dữ liệu (việc nhỏ)
+## Đợt 1 - Tránh mất dữ liệu (việc nhỏ) - XONG
+
+**Xong (2026-10-01)**, branch `fix/batch-1`. Unit test 160/160.
 
 ### F0. Chỉnh nhỏ theo yêu cầu (2026-10-01)
 
@@ -127,6 +129,6 @@ Transcript, `dictationInputs` và các map progress chuyển sang subdoc
 
 ## Thứ tự
 
-1. Đợt 1: F0 → F1 → F5 → F4 → F3 → F2
+1. ~~Đợt 1: F0 → F1 → F5 → F4 → F3 → F2~~ - xong
 2. Đợt 2: F7 → F8 → F6
 3. Đợt 3: F9 → F10 → F11
