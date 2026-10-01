@@ -11,7 +11,8 @@ type RefReplayOnce = MutableRefObject<{ sentenceId: number; end: number } | null
 export function useLessonPlaybackLoop(
   isPlaying: boolean,
   transcript: Sentence[],
-  setCurrentTime: (t: number) => void,
+  /** Every frame; `force` when page state must follow now (see useMediaPlayer.reportPlaybackTime). */
+  reportPlaybackTime: (t: number, force: boolean) => void,
   audioRef: RefObject<HTMLMediaElement | null>,
   loopTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
   isLoopDelayingRef: RefBool,
@@ -203,25 +204,37 @@ export function useLessonPlaybackLoop(
           audioRef.current.currentTime = time;
         }
 
-        if (time !== lastSetTime) {
+        // Page state must follow at once when the active sentence changes (row
+        // highlight, auto-scroll) or playback stopped here (final position).
+        const force = lastActiveSentenceId !== prevActiveSentenceId || audioRef.current.paused;
+        if (time !== lastSetTime || force) {
           lastSetTime = time;
-          setCurrentTime(time);
+          reportPlaybackTime(time, force);
         }
       }
       animationFrameId = requestAnimationFrame(updateProgress);
     };
 
+    // The element this run plays. Switching tabs remounts the view with a new element
+    // (at 0:00) before this cleanup runs, so the cleanup must not read audioRef.
+    const playingMedia = isPlaying ? audioRef.current : null;
     if (isPlaying) {
       animationFrameId = requestAnimationFrame(updateProgress);
     }
 
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      // Playback stopped from outside the loop (play button, Space): leave page state on
+      // the exact final position rather than the last throttled one. Only after a playing
+      // run - while paused, page state holds deliberate seek targets that must stay.
+      if (playingMedia && Number.isFinite(playingMedia.currentTime)) {
+        reportPlaybackTime(playingMedia.currentTime, true);
+      }
     };
   }, [
     isPlaying,
     transcript,
-    setCurrentTime,
+    reportPlaybackTime,
     loopTimeoutRef,
     isLoopDelayingRef,
     loopModeRef,

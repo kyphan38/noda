@@ -89,7 +89,7 @@ export default function NodaApp() {
 
   const {
     setMediaFile, mediaURL, setMediaURL,
-    duration, setDuration, currentTime, setCurrentTime,
+    duration, setDuration, currentTime, setCurrentTime, reportPlaybackTime, clock,
     isPlaying, setIsPlaying, playbackRate, loopMode,
     repeatCount, repeatCountRef, sentencePlayCountRef, userSeekTargetRef,
     mediaRef, loopTimeoutRef, isLoopDelayingRef, loopModeRef,
@@ -628,7 +628,7 @@ export default function NodaApp() {
   useLessonPlaybackLoop(
     isPlaying,
     transcript,
-    setCurrentTime,
+    reportPlaybackTime,
     mediaRef,
     loopTimeoutRef,
     isLoopDelayingRef,
@@ -1061,6 +1061,7 @@ export default function NodaApp() {
                   isPlaying={isPlaying}
                   duration={duration}
                   currentTime={currentTime}
+                  clock={clock}
                   playbackRate={playbackRate}
                   repeatCount={repeatCount}
                   onPlayPause={togglePlayPauseLesson}

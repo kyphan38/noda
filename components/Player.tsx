@@ -25,11 +25,13 @@ import {
 } from '@/lib/repeat-count';
 import { formatTime } from '@/lib/utils';
 import { MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE } from '@/constants';
+import { usePlaybackTime, type PlaybackClock } from '@/lib/playbackClock';
 
 interface PlayerProps {
   isPlaying: boolean;
   duration: number;
-  currentTime: number;
+  /** Frame-accurate playback time; the player re-renders on its own as it moves. */
+  clock: PlaybackClock;
   playbackRate: number;
   repeatCount: RepeatCount;
   onPlayPause: () => void;
@@ -209,7 +211,7 @@ function RepeatPopover({
 export function Player({
   isPlaying,
   duration,
-  currentTime,
+  clock,
   playbackRate,
   repeatCount,
   onPlayPause,
@@ -227,6 +229,7 @@ export function Player({
   focusMode = false,
   onToggleFocusMode,
 }: PlayerProps) {
+  const currentTime = usePlaybackTime(clock);
   const [showSpeedPopover, setShowSpeedPopover] = useState(false);
   const [showRepeatPopover, setShowRepeatPopover] = useState(false);
 

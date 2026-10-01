@@ -7,6 +7,7 @@ import { VideoPane } from './VideoPane';
 import { ShadowingPatternDock } from './ShadowingPatternDock';
 import { ResumePrompt } from './ResumePrompt';
 import type { ResumeTarget } from '@/lib/progress';
+import type { PlaybackClock } from '@/lib/playbackClock';
 import {
   LessonItem,
   AppMode,
@@ -31,6 +32,8 @@ interface LessonViewProps {
   isPlaying: boolean;
   duration: number;
   currentTime: number;
+  /** Frame-accurate playback time for the player's seek bar. */
+  clock: PlaybackClock;
   playbackRate: number;
   repeatCount: RepeatCount;
   onPlayPause: () => void;
@@ -72,6 +75,7 @@ export function LessonView({
   isPlaying,
   duration,
   currentTime,
+  clock,
   playbackRate,
   repeatCount,
   onPlayPause,
@@ -461,7 +465,7 @@ export function LessonView({
           <MemoPlayer
             isPlaying={isPlaying}
             duration={duration}
-            currentTime={currentTime}
+            clock={clock}
             playbackRate={playbackRate}
             repeatCount={repeatCount}
             onPlayPause={onPlayPause}
