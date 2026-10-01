@@ -8,25 +8,17 @@ import { Button } from '@/components/ui/button';
 interface CleanupModalProps {
   isOpen: boolean;
   onKeep: () => void;
-  onRemoveAudio?: () => void | Promise<void>;
+  /** Moves the lesson to the trash, where it can still be restored. */
+  onMoveToTrash: () => void | Promise<void>;
 }
 
-export function CleanupModal({
-  isOpen,
-  onKeep,
-  onRemoveAudio,
-}: CleanupModalProps) {
+/** Shown once a lesson is finished in both dictation and shadowing. */
+export function CleanupModal({ isOpen, onKeep, onMoveToTrash }: CleanupModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [confirmPhrase, setConfirmPhrase] = useState('');
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (isOpen) setConfirmPhrase('');
-  }, [isOpen]);
-
 
   useEffect(() => {
     if (!isOpen) return;
@@ -38,8 +30,6 @@ export function CleanupModal({
   }, [isOpen, onKeep]);
 
   if (!isOpen || !mounted) return null;
-
-  const destructiveDisabled = confirmPhrase !== 'Delete';
 
   const content = (
     <div
@@ -62,42 +52,27 @@ export function CleanupModal({
         <h3 id="noda-cleanup-title" className="text-xl font-bold text-white mb-2">
           Lesson complete!
         </h3>
-        <p className="text-gray-400 mb-4 text-sm leading-relaxed">
-          You&apos;ve finished dictation and shadowing for every sentence. Remove this lesson from this device to free space?
-          Transcript and progress will be deleted from this browser.
+        <p className="text-gray-400 mb-6 text-sm leading-relaxed">
+          You&apos;ve finished dictation and shadowing for every sentence. Keep the lesson to
+          review later, or move it to the trash. You can restore it from the trash.
         </p>
-        <div className="mb-4 grid gap-2 text-left">
-          <label htmlFor="noda-cleanup-lesson-confirm" className="text-sm text-gray-300">
-            Type <span className="font-mono font-semibold text-white">Delete</span> to enable removal
-          </label>
-          <input
-            id="noda-cleanup-lesson-confirm"
-            autoComplete="off"
-            autoFocus
-            value={confirmPhrase}
-            onChange={(e) => setConfirmPhrase(e.target.value)}
-            placeholder="Delete"
-            aria-invalid={confirmPhrase.length > 0 && confirmPhrase !== 'Delete'}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500/50"
-          />
-        </div>
         <div className="flex flex-col gap-3">
           <Button
             type="button"
             variant="default"
             className="h-auto w-full justify-center rounded-xl py-3 text-base font-medium"
-            disabled={destructiveDisabled}
-            onClick={() => void onRemoveAudio?.()}
+            onClick={onKeep}
+            autoFocus
           >
-            Remove lesson
+            Keep
           </Button>
           <Button
             type="button"
             variant="secondary"
             className="h-auto w-full justify-center rounded-xl py-3 text-base font-medium"
-            onClick={onKeep}
+            onClick={() => void onMoveToTrash()}
           >
-            Keep files
+            Move to trash
           </Button>
         </div>
       </div>

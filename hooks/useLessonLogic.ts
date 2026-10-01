@@ -308,31 +308,6 @@ export function useLessonLogic(
     return () => document.removeEventListener('visibilitychange', onHide);
   }, [flushPendingSaves]);
 
-  /** Cancel debounced progress save and persist latest progress so a later put cannot resurrect cleared audio. */
-  const prepareForLessonMediaClear = useCallback(
-    async (lessonId: string) => {
-      if (progressSaveTimeoutRef.current) {
-        clearTimeout(progressSaveTimeoutRef.current);
-        progressSaveTimeoutRef.current = null;
-      }
-      if (dictationSaveTimeoutRef.current) {
-        clearTimeout(dictationSaveTimeoutRef.current);
-        dictationSaveTimeoutRef.current = null;
-      }
-      if (shadowingSaveTimeoutRef.current) {
-        clearTimeout(shadowingSaveTimeoutRef.current);
-        shadowingSaveTimeoutRef.current = null;
-      }
-      const active = currentLessonIdRef.current === lessonId || currentLessonId === lessonId;
-      if (active && isStarted) {
-        await updateLessonProgressFirestore(lessonId, completedSentencesRef.current, {
-          dictationInputs: dictationInputsRef.current,
-        });
-      }
-    },
-    [currentLessonId, isStarted]
-  );
-
   const handleLoadLesson = async (id: string) => {
     const myGen = ++lessonLoadGenerationRef.current;
     // Save the outgoing lesson, then stop all saving until the new lesson's state is in:
@@ -482,6 +457,5 @@ export function useLessonLogic(
     handleDeletePermanently,
     handleModeChange: applyAppMode,
     expandSidebarForItem,
-    prepareForLessonMediaClear,
   };
 }
