@@ -14,6 +14,14 @@ Các quyết định đã chốt ngày 2026-10-01 (ghi "Đã chọn"). Quyết �
 
 ## Đợt 1 - Tránh mất dữ liệu (việc nhỏ)
 
+### F0. Chỉnh nhỏ theo yêu cầu (2026-10-01)
+
+- Header: dòng dưới tab chỉ hiện `Tên bài · 0%`, bỏ tên mode (tab đang chọn đã cho
+  biết mode). `components/AppHeader.tsx`.
+- Thứ tự tab: **Listen, Shadowing, Dictation** (`LESSON_MODES` trong
+  `constants/index.tsx`). Phím tắt đi theo thứ tự này: ⌘2 = Shadowing,
+  ⌘3 = Dictation. Không có test nào dùng phím tắt tab.
+
 ### F1. Đổi bài: progress bài cũ ghi đè bài mới; transcript cũ hiện dưới tên mới (#1, #2)
 
 Nguyên nhân (`hooks/useLessonLogic.ts`, `handleLoadLesson`):
@@ -119,6 +127,6 @@ Transcript, `dictationInputs` và các map progress chuyển sang subdoc
 
 ## Thứ tự
 
-1. Đợt 1: F1 → F5 → F4 → F3 → F2
+1. Đợt 1: F0 → F1 → F5 → F4 → F3 → F2
 2. Đợt 2: F7 → F8 → F6
 3. Đợt 3: F9 → F10 → F11
