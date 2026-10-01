@@ -2,7 +2,6 @@
 export const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5] as const;
 
 // Default values
-export const DEFAULT_RECOGNITION_LANG = 'en-US';
 export const DEFAULT_LOOP_MODE = 'none' as const;
 export const DEFAULT_REPEAT_COUNT = 1 as const;
 export const DEFAULT_APP_MODE = 'normal' as const;
@@ -25,7 +24,6 @@ export const LOOP_DELAY_MS = 1500; // 1.5 seconds delay on loop one
 export const SAVE_PROGRESS_DELAY_MS = 1000; // 1 second debounce for saving
 /** Debounce Firestore writes while typing in dictation (does not affect live match UI). */
 export const DICTATION_SAVE_DEBOUNCE_MS = 200;
-export const PRONUNCIATION_SCORE_THRESHOLD = 80; // Min score to show "Next" button
 export const REPEAT_PAUSE_MS = 750;
 export const SENTENCE_PRE_ROLL_SECONDS = 0.1;
 /** Dictation seek settle window: tolerate this much undershoot after seeking to a
