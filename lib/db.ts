@@ -13,7 +13,7 @@ import {
   Unsubscribe,
   updateDoc,
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
 import { SHADOWING_ANALYSIS_VERSION, type AppMode, type ShadowingPatternDoc } from '@/types';
 import type { LessonProgressRecord } from '@/lib/progress';
@@ -218,18 +218,26 @@ const resolveUploadContentType = (file: File): string | undefined => {
 /**
  * Upload lesson media to Firebase Storage under users/{uid}/media.
  * Returns remote path + public download URL for Firestore persistence.
+ * `onProgress` receives the uploaded share, 0..1.
  */
 export const uploadLessonMediaToFirebase = async (
   lessonId: string,
-  file: File
+  file: File,
+  onProgress?: (fraction: number) => void
 ): Promise<UploadedLessonMedia> => {
   const uid = getCurrentUidOrThrow();
   const safeName = sanitizeFileName(file.name || 'media.bin');
   const objectPath = `${getUserMediaCollectionPath(uid)}/${lessonId}-${Date.now()}-${safeName}`;
   const objectRef = ref(getFirebaseStorage(), objectPath);
-  const snapshot = await uploadBytes(objectRef, file, {
+  const task = uploadBytesResumable(objectRef, file, {
     contentType: resolveUploadContentType(file),
   });
+  if (onProgress) {
+    task.on('state_changed', (s) => {
+      if (s.totalBytes > 0) onProgress(s.bytesTransferred / s.totalBytes);
+    });
+  }
+  const snapshot = await task;
   const downloadURL = await getDownloadURL(snapshot.ref);
   return {
     path: objectPath,

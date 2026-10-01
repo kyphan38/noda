@@ -17,7 +17,8 @@ export interface LessonData {
 
 interface NewLessonModalProps {
   onClose: () => void;
-  onSubmit: (data: LessonData) => void | Promise<void>;
+  /** `onUploadProgress` reports the media upload share, 0..1. */
+  onSubmit: (data: LessonData, onUploadProgress: (fraction: number) => void) => void | Promise<void>;
   getTakenAudioLessonNames: () => string[];
   folders?: Array<{ id: string; name: string }>;
   onNotify?: (message: string, type: 'success' | 'error' | 'info') => void;
@@ -74,6 +75,8 @@ export function NewLessonModal({
   const [mediaNameConflict, setMediaNameConflict] = useState<string | null>(null);
   const [formUploadError, setFormUploadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  /** 0..100 while the media file uploads; null before the first progress event. */
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -159,6 +162,7 @@ export function NewLessonModal({
     if (!mediaFile || !lessonName || isSaving) return;
     setIsSaving(true);
     setFormUploadError(null);
+    setUploadPercent(null);
     try {
       await Promise.resolve(
         onSubmit({
@@ -167,7 +171,7 @@ export function NewLessonModal({
           mediaFile,
           mediaType: mediaTypeFromFile(mediaFile),
           transcriptFile,
-        })
+        }, (fraction) => setUploadPercent(Math.round(fraction * 100)))
       );
     } catch (error) {
       // Keep the modal and everything picked so far; show why it failed.
@@ -330,12 +334,24 @@ export function NewLessonModal({
             {isSaving ? (
               <>
                 <Loader2 className="animate-spin shrink-0" size={22} aria-hidden />
-                Saving…
+                {uploadPercent !== null && uploadPercent < 100 ? `Uploading… ${uploadPercent}%` : 'Saving…'}
               </>
             ) : (
               'Create'
             )}
           </Button>
+          {isSaving && uploadPercent !== null && (
+            <div
+              className="h-1.5 w-full overflow-hidden rounded-full bg-gray-700"
+              role="progressbar"
+              aria-label="Upload progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={uploadPercent}
+            >
+              <div className="h-full rounded-full bg-gray-200 transition-[width] duration-200" style={{ width: `${uploadPercent}%` }} />
+            </div>
+          )}
         </div>
       </div>
     </div>

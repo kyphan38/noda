@@ -27,7 +27,7 @@ export function useLessonCreateFlow(
       mediaFile: File;
       mediaType: 'audio' | 'video';
       transcriptFile: File | null;
-    }) => {
+    }, onUploadProgress?: (fraction: number) => void) => {
       // Failing before the lesson is saved throws, so the modal stays open with the
       // name, file and folder the user picked. Once saved, the modal closes either way.
       let lessonId: string;
@@ -43,7 +43,7 @@ export function useLessonCreateFlow(
         const baseName = data.name.trim() || 'Untitled lesson';
         uniqueName = uniquifyName(baseName, getTakenAudioLessonNames());
         const now = Date.now();
-        const uploadedMedia = await uploadLessonMediaToFirebase(lessonId, data.mediaFile);
+        const uploadedMedia = await uploadLessonMediaToFirebase(lessonId, data.mediaFile, onUploadProgress);
 
         const newLesson: LessonRecord = {
           id: lessonId,
