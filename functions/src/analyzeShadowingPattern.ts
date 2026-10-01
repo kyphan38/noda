@@ -6,7 +6,8 @@
  * Gemini), then writes the result back to that same doc.
  *
  * Flow: verify caller uid == ALLOWED_USER_UID -> check Firestore cache ->
- * (miss) download source media from Storage -> ffmpeg-slice
+ * (miss) fetch the small analysis-audio copy (built from the source media on
+ * first use, see lib/analysisAudio.ts) -> ffmpeg-slice
  * [startSec, endSec) -> base64 -> Gemini structured output -> write cache ->
  * return the parsed analysis object.
  *
@@ -23,11 +24,9 @@ import * as admin from "firebase-admin";
 // in both the emulator and production).
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { readFileSync, unlinkSync } from "fs";
-import { randomUUID } from "crypto";
-import * as os from "os";
-import * as path from "path";
 
 import { sliceAudioClip } from "./lib/sliceAudio";
+import { analysisAudioPath, fetchAnalysisAudio } from "./lib/analysisAudio";
 import { generateShadowingJson, getShadowingModelId } from "./lib/geminiClient";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
 import {
@@ -202,6 +201,11 @@ export const analyzeShadowingPattern = onCall(
     const { lessonId, sentenceId, startSec, endSec, mediaStoragePath, sourceText } = assertValidRequest(
       request.data
     );
+    // The media path comes from the client; only ever read the caller's own uploads.
+    const copyPath = analysisAudioPath(request.auth.uid, mediaStoragePath);
+    if (!copyPath) {
+      throw new HttpsError("invalid-argument", "mediaStoragePath is not one of your uploads.");
+    }
 
     // `admin.firestore()` always targets `(default)` and cannot take a database
     // id - use the modular `getFirestore(app, dbId)` form instead.
@@ -217,13 +221,14 @@ export const analyzeShadowingPattern = onCall(
       return cached;
     }
 
-    const downloadPath = path.join(os.tmpdir(), `media-${randomUUID()}-${path.basename(mediaStoragePath)}`);
+    let audioPath: string | null = null;
     let clipPath: string | null = null;
 
     try {
-      await admin.storage().bucket().file(mediaStoragePath).download({ destination: downloadPath });
+      // A small mono FLAC copy instead of the full upload - see lib/analysisAudio.ts.
+      audioPath = await fetchAnalysisAudio(admin.storage().bucket(), mediaStoragePath, copyPath);
 
-      clipPath = await sliceAudioClip(downloadPath, startSec, endSec);
+      clipPath = await sliceAudioClip(audioPath, startSec, endSec);
 
       const base64ClipAudio = readFileSync(clipPath).toString("base64");
 
@@ -251,7 +256,7 @@ export const analyzeShadowingPattern = onCall(
       const message = e instanceof Error ? e.message : "Unknown error";
       throw new HttpsError("internal", message);
     } finally {
-      for (const p of [downloadPath, clipPath]) {
+      for (const p of [audioPath, clipPath]) {
         if (!p) continue;
         try {
           unlinkSync(p);
