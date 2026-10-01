@@ -89,7 +89,7 @@ export function DictationControls({
     return (
       <div className="flex flex-col">
         <div className="flex items-start gap-2">
-          <div className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-words text-green-400">
+          <div className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-words text-green-400">
             {targetNorm}
           </div>
           {isMobile && isActive && (
@@ -127,7 +127,7 @@ export function DictationControls({
       {/* Feedback div */}
       <div
         aria-hidden
-        className="font-mono text-base sm:text-lg leading-normal tracking-normal min-w-0 cursor-text whitespace-pre-wrap break-words"
+        className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 cursor-text whitespace-pre-wrap break-words"
         onClick={(e) => {
           if (isActive) {
             e.stopPropagation();

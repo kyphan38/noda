@@ -61,7 +61,7 @@ export function TranscriptSentence({
       data-index={index}
       onClick={() => onSentenceClick(sentence)}
       className={`
-        group flex cursor-pointer items-baseline gap-2 sm:gap-4 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 mb-1 transition duration-200
+        group flex cursor-pointer items-baseline gap-2 sm:gap-4 rounded-xl px-2 sm:px-3 py-2.5 sm:py-3 mb-1.5 transition duration-200
         ${
           isActive
             ? 'border border-emerald-400/30 bg-emerald-400/10 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]'
@@ -94,8 +94,8 @@ export function TranscriptSentence({
         ) : (
           <p
             className={`
-              font-sans text-base sm:text-lg leading-relaxed
-              ${isActive ? 'text-emerald-400 font-medium sm:text-xl' : isPast ? 'text-gray-300' : 'text-gray-100'}
+              font-sans text-[15px] sm:text-base leading-relaxed
+              ${isActive ? 'text-emerald-400 font-medium sm:text-lg' : isPast ? 'text-gray-300' : 'text-gray-100'}
               ${hideCaptions ? 'invisible select-none' : ''}
             `}
           >
