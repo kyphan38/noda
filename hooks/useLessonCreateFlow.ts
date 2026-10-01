@@ -13,7 +13,7 @@ type Selected = {
 
 export function useLessonCreateFlow(
   setSelectedItem: Dispatch<SetStateAction<Selected | null>>,
-  handleLoadLesson: (id: string) => Promise<void>,
+  handleLoadLesson: (id: string) => Promise<'loaded' | 'failed' | 'superseded'>,
   handleModeChange: (mode: AppMode) => void | Promise<void>,
   setUploadMode: (m: 'idle' | 'lesson') => void,
   setToast: SetToast,
@@ -28,6 +28,10 @@ export function useLessonCreateFlow(
       mediaType: 'audio' | 'video';
       transcriptFile: File | null;
     }) => {
+      // Failing before the lesson is saved throws, so the modal stays open with the
+      // name, file and folder the user picked. Once saved, the modal closes either way.
+      let lessonId: string;
+      let uniqueName: string;
       try {
         let text = '';
         if (data.transcriptFile) {
@@ -35,9 +39,9 @@ export function useLessonCreateFlow(
         }
 
         const sentences = parseTranscript(text);
-        const lessonId = Date.now().toString();
+        lessonId = Date.now().toString();
         const baseName = data.name.trim() || 'Untitled lesson';
-        const uniqueName = uniquifyName(baseName, getTakenAudioLessonNames());
+        uniqueName = uniquifyName(baseName, getTakenAudioLessonNames());
         const now = Date.now();
         const uploadedMedia = await uploadLessonMediaToFirebase(lessonId, data.mediaFile);
 
@@ -65,33 +69,37 @@ export function useLessonCreateFlow(
         };
 
         await saveLessonFirestore(newLesson);
-
-        const lessonItem: LessonItem = {
-          id: lessonId,
-          name: uniqueName,
-          language: 'en',
-          dictationProgress: 0,
-          shadowingProgress: 0,
-          hasMedia: true,
-          mediaType: data.mediaType,
-          type: 'lesson',
-        };
-
-        setSelectedItem({
-          id: lessonId,
-          type: 'lesson',
-          data: lessonItem,
-        });
-        expandSidebarForItem();
-
-        await handleLoadLesson(lessonId);
-        await handleModeChange('listen');
-        setToast({ message: 'Lesson created.', type: 'success' });
-      } catch {
-        setToast({ message: 'Could not create lesson.', type: 'error' });
-      } finally {
-        setUploadMode('idle');
+      } catch (error) {
+        console.error('Could not create lesson', error);
+        throw new Error('Could not upload or save the lesson. Check your connection and try again.');
       }
+
+      setUploadMode('idle');
+      const lessonItem: LessonItem = {
+        id: lessonId,
+        name: uniqueName,
+        language: 'en',
+        dictationProgress: 0,
+        shadowingProgress: 0,
+        hasMedia: true,
+        mediaType: data.mediaType,
+        type: 'lesson',
+      };
+
+      setSelectedItem({
+        id: lessonId,
+        type: 'lesson',
+        data: lessonItem,
+      });
+      expandSidebarForItem();
+
+      const loaded = await handleLoadLesson(lessonId);
+      await handleModeChange('listen');
+      setToast(
+        loaded === 'failed'
+          ? { message: 'Lesson created, but it could not be opened. Pick it from the sidebar.', type: 'error' }
+          : { message: 'Lesson created.', type: 'success' }
+      );
     },
     [
       setSelectedItem,

@@ -92,7 +92,7 @@ describe('lesson switch', () => {
     progressWrites.length = 0;
 
     urlDelayMs = 800; // media URL slower than every save debounce
-    let pending: Promise<void> = Promise.resolve();
+    let pending: Promise<unknown> = Promise.resolve();
     await act(async () => {
       pending = result.current.handleLoadLesson('B');
       await vi.advanceTimersByTimeAsync(600);
@@ -147,5 +147,16 @@ describe('lesson switch', () => {
     });
 
     expect(progressWrites.filter((w) => w.id === 'A').at(-1)?.drafts).toEqual({ 2: 'hello the' });
+  });
+
+  it('reports a missing lesson as failed and leaves loading state', async () => {
+    const { result } = setup();
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.handleLoadLesson('does-not-exist');
+    });
+    expect(outcome).toBe('failed');
+    expect(result.current.isLessonLoading).toBe(false);
+    expect(result.current.currentLessonId).toBeNull();
   });
 });

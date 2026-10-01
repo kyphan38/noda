@@ -283,13 +283,20 @@ export default function NodaApp() {
       }
       setSelectedItem({ id: row.id, type: 'lesson', data: lesson });
 
-      void handleLoadLesson(row.id);
+      void handleLoadLesson(row.id).then((result) => {
+        if (result !== 'failed') return;
+        // Nothing half-loaded stays on screen: back to the start page with a message.
+        setToast({ message: `Could not open "${row.name}". Check your connection and try again.`, type: 'error' });
+        handleNewLesson();
+        setSelectedItem(null);
+      });
       void handleModeChange('listen');
       if (pushHistory) pushItemHistoryState(row);
     },
     [
       expandSidebarForItem,
       handleLoadLesson,
+      handleNewLesson,
       handleModeChange,
       saveTranscriptScrollForCurrentLesson,
       effectiveFolders,
@@ -1115,7 +1122,7 @@ export default function NodaApp() {
               if (selectedItem?.id === id) handleNewLessonWrapper();
             } catch {
               setToast({
-                message: 'Could not delete this item. IndexedDB may be unavailable (e.g. private browsing).',
+                message: 'Could not delete this lesson. Check your connection and try again.',
                 type: 'error',
               });
               setLessonToDelete(null);

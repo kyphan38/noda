@@ -158,6 +158,7 @@ export function NewLessonModal({
   const handleSubmit = async () => {
     if (!mediaFile || !lessonName || isSaving) return;
     setIsSaving(true);
+    setFormUploadError(null);
     try {
       await Promise.resolve(
         onSubmit({
@@ -168,6 +169,9 @@ export function NewLessonModal({
           transcriptFile,
         })
       );
+    } catch (error) {
+      // Keep the modal and everything picked so far; show why it failed.
+      setFormUploadError(error instanceof Error ? error.message : 'Could not create the lesson.');
     } finally {
       setIsSaving(false);
     }
@@ -194,7 +198,7 @@ export function NewLessonModal({
 
         {formUploadError ? (
           <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Cannot add this file</AlertTitle>
+            <AlertTitle>Cannot add this lesson</AlertTitle>
             <AlertDescription>{formUploadError}</AlertDescription>
           </Alert>
         ) : null}

@@ -308,7 +308,11 @@ export function useLessonLogic(
     return () => document.removeEventListener('visibilitychange', onHide);
   }, [flushPendingSaves]);
 
-  const handleLoadLesson = async (id: string) => {
+  /**
+   * Loads a lesson into state. Resolves 'superseded' when another load started in the
+   * meantime, and 'failed' when the lesson is missing or could not be read.
+   */
+  const handleLoadLesson = async (id: string): Promise<'loaded' | 'failed' | 'superseded'> => {
     const myGen = ++lessonLoadGenerationRef.current;
     // Save the outgoing lesson, then stop all saving until the new lesson's state is in:
     // until then, state still holds the old lesson's progress.
@@ -317,7 +321,7 @@ export function useLessonLogic(
     setIsLessonLoading(true);
     try {
       const lesson = await getLessonFirestore(id);
-      if (myGen !== lessonLoadGenerationRef.current) return;
+      if (myGen !== lessonLoadGenerationRef.current) return 'superseded';
       if (lesson) {
         // Re-derive the download URL from `mediaPath` instead of trusting the
         // `mediaUrl` frozen in at upload time: that stored URL hardcodes the
@@ -325,7 +329,7 @@ export function useLessonLogic(
         // moves to another Firebase project. See PLAN-project-split.md § 1.
         const hasMedia = !!(lesson.mediaPath || lesson.mediaUrl);
         const freshMediaUrl = hasMedia ? await resolveLessonMediaUrl(lesson) : null;
-        if (myGen !== lessonLoadGenerationRef.current) return;
+        if (myGen !== lessonLoadGenerationRef.current) return 'superseded';
         // Everything below lands in one render, so no save effect ever sees the new
         // lesson id next to the previous lesson's progress.
         currentLessonIdRef.current = lesson.id;
@@ -350,12 +354,15 @@ export function useLessonLogic(
         setAppMode('listen');
         setIsLessonLoading(false);
 
-        await touchLessonAccessedFirestore(lesson.id);
-        if (myGen !== lessonLoadGenerationRef.current) return;
+        // Not worth failing the load over; the lesson is already on screen.
+        touchLessonAccessedFirestore(lesson.id).catch((e) => console.warn('Could not mark lesson accessed', e));
         if (window.innerWidth < 768) setIsSidebarOpen(false);
+        return 'loaded';
       }
+      return 'failed';
     } catch (e) {
       console.error('Failed to load lesson', e);
+      return myGen === lessonLoadGenerationRef.current ? 'failed' : 'superseded';
     } finally {
       if (myGen === lessonLoadGenerationRef.current) setIsLessonLoading(false);
     }
