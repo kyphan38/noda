@@ -1,12 +1,45 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { LoopMode, RepeatCount } from '@/types';
 import { DEFAULT_LOOP_MODE, DEFAULT_REPEAT_COUNT, MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE } from '@/constants';
+import { createPlaybackClock } from '@/lib/playbackClock';
+
+/** Most often page state follows the playback loop; the clock itself moves every frame. */
+const STATE_SYNC_INTERVAL_MS = 250;
 
 export function useMediaPlayer() {
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaURL, setMediaURL] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
-  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [currentTime, setCurrentTimeState] = useState<number>(0);
+  const [clock] = useState(createPlaybackClock);
+  const lastStateSyncRef = useRef(0);
+
+  /** Seeks and other deliberate time changes: clock and page state update at once. */
+  const setCurrentTime = useCallback(
+    (time: number) => {
+      clock.set(time);
+      lastStateSyncRef.current = performance.now();
+      setCurrentTimeState(time);
+    },
+    [clock]
+  );
+
+  /**
+   * Called by the playback loop every frame. The clock always moves (seek bar and time
+   * display stay smooth); page state only when `force` is set (a new sentence started,
+   * playback stopped) or every STATE_SYNC_INTERVAL_MS.
+   */
+  const reportPlaybackTime = useCallback(
+    (time: number, force: boolean) => {
+      clock.set(time);
+      const now = performance.now();
+      if (force || now - lastStateSyncRef.current >= STATE_SYNC_INTERVAL_MS) {
+        lastStateSyncRef.current = now;
+        setCurrentTimeState(time);
+      }
+    },
+    [clock]
+  );
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   const [loopMode, setLoopMode] = useState<LoopMode>(DEFAULT_LOOP_MODE);
@@ -91,6 +124,8 @@ export function useMediaPlayer() {
     setDuration,
     currentTime,
     setCurrentTime,
+    reportPlaybackTime,
+    clock,
     isPlaying,
     setIsPlaying,
     playbackRate,
