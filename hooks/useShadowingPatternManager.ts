@@ -5,6 +5,7 @@ import { getShadowingAnalysisFirestore } from '@/lib/db';
 import { requestShadowingAnalysis } from '@/lib/shadowingAnalysis';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
 import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
+import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
 import { resolveShadowingErrorMessage, type ShadowingPatternStatus } from './useShadowingPatternAnalysis';
 import type { Sentence, ShadowingPatternAnalysis } from '@/types';
 
@@ -73,7 +74,8 @@ export function useShadowingPatternManager(
   const [activeSentenceId, setActiveSentenceId] = useState<number | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [confirmingSentenceId, setConfirmingSentenceId] = useState<number | null>(null);
-  const loadingIdsRef = useRef<Set<number>>(new Set());
+  /** In-flight requests for the open lesson; reset on lesson switch so late results are dropped. */
+  const requestsRef = useRef(new ShadowingRequestTracker());
   /** Mirrors `entries` so the prefetch path can read current state without being
    *  rebuilt (and re-firing) on every entry update. */
   const entriesRef = useRef<Record<number, ShadowingEntry>>({});
@@ -90,6 +92,7 @@ export function useShadowingPatternManager(
   // state kept across a lesson switch would show the previous lesson's analysis on a
   // same-numbered sentence. `LessonView` is not remounted per lesson, so clear it here.
   useEffect(() => {
+    requestsRef.current.reset();
     entriesRef.current = {};
     prefetchedIdsRef.current = new Set();
     setEntries({});
@@ -126,12 +129,14 @@ export function useShadowingPatternManager(
   const prefetchSentence = useCallback(
     async (sentence: Sentence) => {
       if (!lessonId || !mediaStoragePath) return;
-      if (loadingIdsRef.current.has(sentence.id)) return;
+      const requests = requestsRef.current;
+      if (requests.isLoading(sentence.id)) return;
       if (entriesRef.current[sentence.id]?.status === 'ready') return;
       if (prefetchedIdsRef.current.has(sentence.id)) return;
 
+      const token = requests.begin(sentence.id);
+      if (!token) return;
       prefetchedIdsRef.current.add(sentence.id);
-      loadingIdsRef.current.add(sentence.id);
       // A real 'loading' entry, not a hidden one: it spins that row's sparkle so the work
       // is visible, and it makes a click during the prefetch join the in-flight request
       // instead of starting a second (paid) one.
@@ -139,6 +144,7 @@ export function useShadowingPatternManager(
 
       try {
         const cached = await getShadowingAnalysisFirestore(lessonId, sentence.id);
+        if (!requests.isCurrent(token)) return;
         if (cached && isRenderableAnalysis(cached.analysis)) {
           setEntry(sentence.id, { status: 'ready', analysis: cached.analysis, error: null });
           return;
@@ -151,6 +157,7 @@ export function useShadowingPatternManager(
           mediaStoragePath,
           sentence.text
         );
+        if (!requests.isCurrent(token)) return;
         setEntry(
           sentence.id,
           isRenderableAnalysis(result.analysis)
@@ -159,9 +166,9 @@ export function useShadowingPatternManager(
         );
       } catch (e) {
         console.warn('Shadowing prefetch failed (harmless):', e);
-        setEntry(sentence.id, IDLE_ENTRY);
+        if (requests.isCurrent(token)) setEntry(sentence.id, IDLE_ENTRY);
       } finally {
-        loadingIdsRef.current.delete(sentence.id);
+        requests.end(token);
       }
     },
     [lessonId, mediaStoragePath, setEntry]
@@ -194,8 +201,9 @@ export function useShadowingPatternManager(
         });
         return;
       }
-      if (loadingIdsRef.current.has(sentence.id)) return;
-      loadingIdsRef.current.add(sentence.id);
+      const requests = requestsRef.current;
+      const token = requests.begin(sentence.id);
+      if (!token) return;
       setEntry(sentence.id, { status: 'loading', analysis: null, error: null });
 
       (async () => {
@@ -208,6 +216,7 @@ export function useShadowingPatternManager(
             mediaStoragePath,
             sentence.text
           );
+          if (!requests.isCurrent(token)) return;
           if (!isRenderableAnalysis(result.analysis)) {
             console.error('Shadowing analysis has an unrenderable shape:', result.analysis);
             setEntry(sentence.id, { status: 'error', analysis: null, error: STALE_SERVER_ERROR });
@@ -217,9 +226,10 @@ export function useShadowingPatternManager(
           prefetchAfter(sentence.id);
         } catch (e) {
           console.error('Shadowing pattern analysis failed:', e);
+          if (!requests.isCurrent(token)) return;
           setEntry(sentence.id, { status: 'error', analysis: null, error: resolveShadowingErrorMessage(e) });
         } finally {
-          loadingIdsRef.current.delete(sentence.id);
+          requests.end(token);
         }
       })();
     },
@@ -264,7 +274,8 @@ export function useShadowingPatternManager(
 
       // Already in flight - usually a prefetch for this very sentence. Show the panel and
       // let the running request land in it rather than ignoring the click.
-      if (loadingIdsRef.current.has(sentence.id)) {
+      const requests = requestsRef.current;
+      if (requests.isLoading(sentence.id)) {
         setActiveSentenceId(sentence.id);
         setIsPanelOpen(true);
         return;
@@ -277,12 +288,14 @@ export function useShadowingPatternManager(
       }
 
       // Silent cache peek - never counts as the costly Gemini call.
-      loadingIdsRef.current.add(sentence.id);
+      const token = requests.begin(sentence.id);
+      if (!token) return;
       setEntry(sentence.id, { status: 'loading', analysis: null, error: null });
 
       (async () => {
         try {
           const cached = await getShadowingAnalysisFirestore(lessonId, sentence.id);
+          if (!requests.isCurrent(token)) return;
           if (cached && isRenderableAnalysis(cached.analysis)) {
             setEntry(sentence.id, { status: 'ready', analysis: cached.analysis, error: null });
             setActiveSentenceId(sentence.id);
@@ -294,10 +307,11 @@ export function useShadowingPatternManager(
           }
         } catch (e) {
           console.error('Shadowing pattern cache check failed:', e);
+          if (!requests.isCurrent(token)) return;
           setEntry(sentence.id, { status: 'idle', analysis: null, error: null });
           setConfirmingSentenceId(sentence.id);
         } finally {
-          loadingIdsRef.current.delete(sentence.id);
+          requests.end(token);
         }
       })();
     },
