@@ -24,6 +24,7 @@ import {
   repeatOptionAriaLabel,
 } from '@/lib/repeat-count';
 import { formatTime } from '@/lib/utils';
+import { MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE } from '@/constants';
 
 interface PlayerProps {
   isPlaying: boolean;
@@ -122,8 +123,8 @@ function SpeedPopover({
       <span className="text-xs font-medium text-white tabular-nums">{speed.toFixed(1)}×</span>
       <input
         type="range"
-        min={0}
-        max={2}
+        min={MIN_PLAYBACK_RATE}
+        max={MAX_PLAYBACK_RATE}
         step={0.1}
         value={speed}
         onChange={(e) => onChange(parseFloat(e.target.value))}
