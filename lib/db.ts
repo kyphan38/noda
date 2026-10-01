@@ -15,7 +15,8 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
-import { SHADOWING_ANALYSIS_VERSION, type ShadowingPatternDoc } from '@/types';
+import { SHADOWING_ANALYSIS_VERSION, type AppMode, type ShadowingPatternDoc } from '@/types';
+import type { LessonProgressRecord } from '@/lib/progress';
 
 /** Full lesson row stored in IndexedDB (includes File blob when present). */
 export interface LessonRecord {
@@ -52,6 +53,10 @@ export interface LessonRecord {
   completedSentences: Record<number, boolean>;
   /** Dictation mode drafts (sentence id → input); optional for older documents. */
   dictationInputs?: Record<number, string>;
+  /** Shadowing progress and per-mode resume positions; see lib/progress.ts. */
+  progress?: LessonProgressRecord;
+  /** Tab the learner used last, for the "Continue" prompt. */
+  lastMode?: AppMode;
   totalSentences: number;
   createdAt: number;
   lastAccessed: number;
@@ -153,6 +158,8 @@ const fromFirestoreLessonRecord = (
     transcriptText: data.transcriptText ?? '',
     completedSentences: data.completedSentences ?? {},
     dictationInputs: data.dictationInputs ?? {},
+    progress: data.progress ?? {},
+    lastMode: data.lastMode,
     totalSentences: data.totalSentences ?? 0,
     createdAt: data.createdAt ?? Date.now(),
     lastAccessed: data.lastAccessed ?? Date.now(),
@@ -441,6 +448,42 @@ export const updateLessonProgressFirestore = async (
   if (options?.dictationInputs !== undefined) {
     patch.dictationInputs = options.dictationInputs;
   }
+  await updateDoc(getLessonDocRef(uid, id), patch);
+};
+
+export const updateShadowingProgressFirestore = async (
+  id: string,
+  completed: Record<number, boolean>
+): Promise<void> => {
+  const uid = getCurrentUidOrThrow();
+  const now = Date.now();
+  await updateDoc(getLessonDocRef(uid, id), {
+    'progress.shadowing.completed': completed,
+    'progress.shadowing.updatedAt': now,
+    lastAccessed: now,
+    updatedAt: now,
+  });
+};
+
+/**
+ * Remembers where the learner is in `mode` (a sentence index, or a playback time for
+ * listen) and makes `mode` the lesson's last-used tab. Not a substantive edit, so
+ * `updatedAt` is left alone.
+ */
+export const saveResumePositionFirestore = async (
+  id: string,
+  mode: AppMode,
+  position: { lastIndex: number } | { lastTime: number }
+): Promise<void> => {
+  const uid = getCurrentUidOrThrow();
+  const now = Date.now();
+  const patch: Record<string, unknown> = {
+    lastMode: mode,
+    [`progress.${mode}.updatedAt`]: now,
+    lastAccessed: now,
+  };
+  if ('lastIndex' in position) patch[`progress.${mode}.lastIndex`] = position.lastIndex;
+  else patch[`progress.${mode}.lastTime`] = position.lastTime;
   await updateDoc(getLessonDocRef(uid, id), patch);
 };
 

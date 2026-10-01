@@ -5,6 +5,8 @@ import { Player } from './Player';
 import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
 import { ShadowingPatternDock } from './ShadowingPatternDock';
+import { ResumePrompt } from './ResumePrompt';
+import type { ResumeTarget } from '@/lib/progress';
 import {
   LessonItem,
   AppMode,
@@ -35,12 +37,14 @@ interface LessonViewProps {
   onSeek: (time: number) => void;
   onSpeedChange: (speed: number) => void;
   onRepeatCountChange: (count: RepeatCount) => void;
-  onResetDictation?: () => void;
+  /** Clears progress of the current tab (dictation or shadowing). */
+  onResetProgress?: () => void;
   hideCaptions?: boolean;
   onToggleHideCaptions?: () => void;
   transcript: Sentence[];
   dictationInputs: DictationInputs;
   completedSentences: CompletedSentences;
+  shadowingCompleted: CompletedSentences;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   onSentenceClick: (sentence: Sentence) => void;
   onDictationChange: (sentence: Sentence, value: string) => void;
@@ -54,10 +58,11 @@ interface LessonViewProps {
   onMediaError?: (e: React.SyntheticEvent<HTMLMediaElement>) => void;
   /** Notified whenever Focus Mode (single-line expanded video view) becomes active/inactive, so the page shell can widen to make room. */
   onFocusModeChange?: (active: boolean) => void;
-  /** Shadowing practice (Normal mode only): pauses after each line; Enter = next line, Control = replay line. */
-  shadowingActive?: boolean;
-  onToggleShadowing?: () => void;
-  /** Notified whenever the Shadowing Pattern analysis panel (side panel / bottom sheet) opens/closes, so the page shell can widen a bit to make room for the split. Distinct from `shadowingActive` above. */
+  /** Saved spot to offer as "Continue", or null. */
+  resumeTarget?: ResumeTarget | null;
+  onResume?: () => void;
+  onDismissResume?: () => void;
+  /** Notified whenever the Shadowing Pattern analysis panel (side panel / bottom sheet) opens/closes, so the page shell can widen a bit to make room for the split. */
   onShadowingPanelOpenChange?: (open: boolean) => void;
 }
 
@@ -78,12 +83,13 @@ export function LessonView({
   transcript,
   dictationInputs,
   completedSentences,
+  shadowingCompleted,
   scrollContainerRef,
   onSentenceClick,
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
-  onResetDictation,
+  onResetProgress,
   hideCaptions,
   onToggleHideCaptions,
   mediaRef,
@@ -93,8 +99,9 @@ export function LessonView({
   setIsPlaying,
   onMediaError,
   onFocusModeChange,
-  shadowingActive,
-  onToggleShadowing,
+  resumeTarget,
+  onResume,
+  onDismissResume,
   onShadowingPanelOpenChange,
 }: LessonViewProps) {
   const [seekDisabled, setSeekDisabled] = useState(false);
@@ -123,7 +130,7 @@ export function LessonView({
   const isVideoLesson = mediaType === 'video' && !!mediaURL;
   const videoLayout = isVideoLesson && !isMobile;
   const showVideoStage = videoLayout && !videoHidden;
-  const showFocusToggle = mode === 'normal' && showVideoStage;
+  const showFocusToggle = mode !== 'dictation' && showVideoStage;
   const focusActive = focusMode && showFocusToggle;
 
   const toggleFocusMode = useCallback(() => setFocusMode((v) => !v), []);
@@ -149,8 +156,7 @@ export function LessonView({
     activeTranscriptIndex >= 0 ? transcript[activeTranscriptIndex] : undefined;
 
   // Shadowing-pattern explanation feature (Stage 7: centralized manager, side panel / bottom
-  // sheet). Named distinctly from `shadowingActive`/`onToggleShadowing` above, which control
-  // the unrelated Player "shadowing mode" playback loop (auto-pause per line).
+  // sheet). Separate from the Shadowing tab's playback loop (auto-pause per line).
   const {
     activeSentenceId: activeShadowingSentenceId,
     isPanelOpen: isShadowingPanelOpen,
@@ -342,6 +348,15 @@ export function LessonView({
         <audio ref={mediaRef} src={mediaURL} preload="auto" className="hidden" {...mediaEvents} loop={false} />
       )}
 
+      {resumeTarget && onResume && onDismissResume && (
+        <ResumePrompt
+          target={resumeTarget}
+          totalSentences={transcript.length}
+          onResume={onResume}
+          onDismiss={onDismissResume}
+        />
+      )}
+
       {focusActive ? (
         <div
           className="shrink-0 rounded-2xl border border-gray-800 bg-gray-900 px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-center min-h-[64px] text-center transition-all duration-200"
@@ -372,6 +387,7 @@ export function LessonView({
               hideCaptions={hideCaptions}
               dictationInputs={dictationInputs}
               completedSentences={completedSentences}
+              shadowingCompleted={shadowingCompleted}
               scrollContainerRef={scrollContainerRef}
               onSentenceClick={onSentenceClick}
               onDictationChange={onDictationChange}
@@ -459,17 +475,15 @@ export function LessonView({
             showVideoToggle={isVideoLesson}
             videoHidden={videoHidden}
             onToggleVideoHidden={toggleVideoHidden}
-            showCaptionsToggle={mode === 'normal' && !!onToggleHideCaptions}
+            showCaptionsToggle={mode !== 'dictation' && !!onToggleHideCaptions}
             captionsHidden={!!hideCaptions}
             onToggleCaptions={onToggleHideCaptions}
             showFocusToggle={showFocusToggle}
             focusMode={focusActive}
             onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
-            showShadowingToggle={mode === 'normal' && !!onToggleShadowing}
-            shadowingActive={!!shadowingActive}
-            onToggleShadowing={mode === 'normal' ? onToggleShadowing : undefined}
-            showReset={mode === 'dictation' && !!onResetDictation}
-            onReset={onResetDictation}
+            showReset={mode !== 'listen' && !!onResetProgress}
+            resetLabel={mode === 'shadowing' ? 'Reset shadowing progress' : 'Reset dictation progress'}
+            onReset={onResetProgress}
           />
         </div>
       )}

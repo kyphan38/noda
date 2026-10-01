@@ -70,7 +70,8 @@ export function useLessonCreateFlow(
           id: lessonId,
           name: uniqueName,
           language: 'en',
-          progress: 0,
+          dictationProgress: 0,
+          shadowingProgress: 0,
           hasMedia: true,
           mediaType: data.mediaType,
           type: 'lesson',
@@ -84,7 +85,7 @@ export function useLessonCreateFlow(
         expandSidebarForItem();
 
         await handleLoadLesson(lessonId);
-        await handleModeChange('normal');
+        await handleModeChange('listen');
         setToast({ message: 'Lesson created.', type: 'success' });
       } catch {
         setToast({ message: 'Could not create lesson.', type: 'error' });

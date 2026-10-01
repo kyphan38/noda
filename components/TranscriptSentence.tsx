@@ -19,9 +19,10 @@ interface TranscriptSentenceProps {
   onSparkleClick: (sentence: Sentence) => void;
   onConfirmShadowingGenerate: (sentence: Sentence) => void;
   onCancelShadowingConfirm: () => void;
-  /** When true (normal mode only), caption text is visually hidden but layout stays. */
+  /** When true (listen / shadowing), caption text is visually hidden but layout stays. */
   hideCaptions?: boolean;
   dictationInput: string;
+  /** Done in the current tab: typed correctly (dictation) or shadowed (shadowing). */
   isCompleted: boolean;
   onSentenceClick: (sentence: Sentence) => void;
   onDictationChange: (sentence: Sentence, value: string) => void;
@@ -166,7 +167,14 @@ export function TranscriptSentence({
               aria-hidden
             />
           )}
-          {isPast && !isActive && (
+          {!isActive && appMode === 'shadowing' && isCompleted && (
+            <CheckCircle2
+              data-shadowing-done-icon
+              className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500/80"
+              aria-label="Shadowed"
+            />
+          )}
+          {!isActive && appMode !== 'shadowing' && isPast && (
             <CheckCircle2
               data-dictation-status-icon
               className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600"

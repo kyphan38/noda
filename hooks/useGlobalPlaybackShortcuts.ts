@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject, type RefObject } from 'react';
-import type { AppMode, RepeatCount, Sentence } from '@/types';
-import { ARROW_SKIP_SECONDS, SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
+import type { AppMode, Sentence } from '@/types';
+import { ARROW_SKIP_SECONDS, LESSON_MODES, SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 
 type ModeChange = (mode: AppMode) => void | Promise<void>;
 
@@ -16,7 +16,6 @@ export function useGlobalPlaybackShortcuts(
   audioRef: RefObject<HTMLMediaElement | null>,
   activeSentenceRef: MutableRefObject<Sentence | null>,
   replayOnceRef: MutableRefObject<{ sentenceId: number; end: number } | null>,
-  shadowingActiveRef: MutableRefObject<boolean>,
   onShadowingNext: () => void,
   transcriptRef: MutableRefObject<Sentence[]>,
   userSeekTargetRef: MutableRefObject<number | null>
@@ -41,7 +40,7 @@ export function useGlobalPlaybackShortcuts(
       if (
         e.code === 'KeyH' &&
         selectedItemType === 'lesson' &&
-        appMode === 'normal' &&
+        appMode !== 'dictation' &&
         !e.metaKey &&
         !e.ctrlKey &&
         !e.altKey
@@ -52,14 +51,10 @@ export function useGlobalPlaybackShortcuts(
       }
 
       if (selectedItemType === 'lesson' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
-        if (e.key === '1') {
+        const tab = LESSON_MODES[Number(e.key) - 1];
+        if (tab) {
           e.preventDefault();
-          void handleModeChange('normal');
-          return;
-        }
-        if (e.key === '2') {
-          e.preventDefault();
-          void handleModeChange('dictation');
+          void handleModeChange(tab.mode);
           return;
         }
       }
@@ -78,7 +73,7 @@ export function useGlobalPlaybackShortcuts(
       } else if (e.code === 'KeyL' || e.code === 'KeyR') {
         e.preventDefault();
         cycleRepeatCount();
-      } else if (e.key === 'Enter' && shadowingActiveRef.current && appMode === 'normal') {
+      } else if (e.key === 'Enter' && appMode === 'shadowing') {
         e.preventDefault();
         if (loopTimeoutRef.current) {
           clearTimeout(loopTimeoutRef.current);
@@ -126,7 +121,6 @@ export function useGlobalPlaybackShortcuts(
     handleModeChange,
     activeSentenceRef,
     replayOnceRef,
-    shadowingActiveRef,
     onShadowingNext,
     transcriptRef,
     userSeekTargetRef,

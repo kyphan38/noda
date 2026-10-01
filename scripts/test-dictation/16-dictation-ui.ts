@@ -72,13 +72,13 @@ export async function run(page: Page, report: ReportEntry[]) {
     return completed && visible;
   }, 20_000);
 
-  await check(report, '16g. Normal→Dictation scrolls active line into view', async () => {
+  await check(report, '16g. Listen→Dictation scrolls active line into view', async () => {
     const targetIdx = 8;
-    const normalTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Normal' });
+    const listenTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Listen' });
     const dictTab = page.locator('nav[aria-label="Lesson mode"] button', { hasText: 'Dictation' });
     const currentMode = page.locator('nav[aria-label="Lesson mode"] button[aria-current="page"]');
     if ((await currentMode.textContent())?.trim() === 'Dictation') {
-      await normalTab.click();
+      await listenTab.click();
       await sleep(400);
     }
     await seekToSentence(page, targetIdx);
