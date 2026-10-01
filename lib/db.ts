@@ -4,7 +4,6 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -12,11 +11,13 @@ import {
   Timestamp,
   Unsubscribe,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
 import { SHADOWING_ANALYSIS_VERSION, type AppMode, type ShadowingPatternDoc } from '@/types';
 import type { LessonProgressRecord } from '@/lib/progress';
+import { LESSON_CONTENT_DOC_ID, countDone, mergeLesson, splitLesson } from '@/lib/lessonLayout';
 
 /** Full lesson row stored in IndexedDB (includes File blob when present). */
 export interface LessonRecord {
@@ -64,6 +65,9 @@ export interface LessonRecord {
   updatedAt: number;
   isTrashed?: boolean;
   trashedAt?: number;
+  /** Sentences done per mode, kept on the small lesson doc for the sidebar (see lib/lessonLayout.ts). */
+  dictationDone?: number;
+  shadowingDone?: number;
 }
 
 /** Firestore-safe lesson document shape (excludes in-browser File blobs). */
@@ -96,6 +100,10 @@ export const getUserSidebarFoldersCollectionPath = (uid: string): string => `use
 
 const getLessonDocRef = (uid: string, lessonId: string) =>
   doc(getFirebaseFirestore(), getUserLessonsCollectionPath(uid), lessonId);
+
+/** Heavy half of a lesson (transcript, drafts, progress maps); see lib/lessonLayout.ts. */
+const getLessonContentDocRef = (uid: string, lessonId: string) =>
+  doc(getFirebaseFirestore(), getUserLessonsCollectionPath(uid), lessonId, 'content', LESSON_CONTENT_DOC_ID);
 
 const getSidebarFolderDocRef = (uid: string, folderId: string) =>
   doc(getFirebaseFirestore(), getUserSidebarFoldersCollectionPath(uid), folderId);
@@ -166,8 +174,17 @@ const fromFirestoreLessonRecord = (
     updatedAt: data.updatedAt ?? Date.now(),
     isTrashed: data.isTrashed ?? false,
     trashedAt: data.trashedAt,
+    dictationDone: data.dictationDone,
+    shadowingDone: data.shadowingDone,
   };
 };
+
+/**
+ * Last done-counts written to each lesson doc, so frequent progress saves (every
+ * 200ms while typing) only touch the small lesson doc - which every lessons snapshot
+ * resends - when a count actually changes.
+ */
+const writtenCounts = new Map<string, { dictation?: number; shadowing?: number }>();
 
 export type SidebarFolderKind = 'audio';
 export type SidebarFolderLanguage = 'en' | 'de';
@@ -278,18 +295,32 @@ export const resolveLessonMediaUrl = async (
   return lesson.mediaUrl ?? null;
 };
 
-/** Firebase-first CRUD API (Phase 1) */
+/** Writes a whole lesson: metadata to the lesson doc, heavy fields to `content/main`. */
 export const saveLessonFirestore = async (lesson: LessonRecord): Promise<void> => {
   const uid = getCurrentUidOrThrow();
-  const payload = toFirestoreLessonRecord(lesson);
-  await setDoc(getLessonDocRef(uid, lesson.id), payload);
+  const { meta, content } = splitLesson(toFirestoreLessonRecord(lesson) as unknown as Record<string, unknown>);
+  const batch = writeBatch(getFirebaseFirestore());
+  batch.set(getLessonDocRef(uid, lesson.id), meta);
+  batch.set(getLessonContentDocRef(uid, lesson.id), content);
+  await batch.commit();
+  writtenCounts.set(lesson.id, {
+    dictation: meta.dictationDone as number,
+    shadowing: meta.shadowingDone as number,
+  });
 };
 
+/** Reads both halves of a lesson and joins them. */
 export const getLessonFirestore = async (id: string): Promise<LessonRecord | null> => {
   const uid = getCurrentUidOrThrow();
-  const snapshot = await getDoc(getLessonDocRef(uid, id));
-  if (!snapshot.exists()) return null;
-  return fromFirestoreLessonRecord(snapshot.id, snapshot.data() as FirestoreLessonRecord);
+  const [lessonSnap, contentSnap] = await Promise.all([
+    getDoc(getLessonDocRef(uid, id)),
+    getDoc(getLessonContentDocRef(uid, id)),
+  ]);
+  if (!lessonSnap.exists()) return null;
+  const merged = mergeLesson(lessonSnap.data(), contentSnap.exists() ? contentSnap.data() : undefined);
+  const lesson = fromFirestoreLessonRecord(lessonSnap.id, merged as Partial<FirestoreLessonRecord>);
+  writtenCounts.set(id, { dictation: lesson.dictationDone, shadowing: lesson.shadowingDone });
+  return lesson;
 };
 
 /**
@@ -315,18 +346,6 @@ export const getShadowingAnalysisFirestore = async (
     ...data,
     createdAt: data.createdAt?.toMillis() ?? Date.now(),
   };
-};
-
-export const getAllLessonsFirestore = async (): Promise<LessonRecord[]> => {
-  const uid = getCurrentUidOrThrow();
-  const lessonsQuery = query(
-    collection(getFirebaseFirestore(), getUserLessonsCollectionPath(uid)),
-    orderBy('lastAccessed', 'desc')
-  );
-  const snapshots = await getDocs(lessonsQuery);
-  return snapshots.docs.map((item) =>
-    fromFirestoreLessonRecord(item.id, item.data() as FirestoreLessonRecord)
-  );
 };
 
 export const subscribeLessonsFirestore = (
@@ -416,69 +435,67 @@ export const patchLessonSidebarPlacementFirestore = async (
   });
 };
 
-export const subscribeLessonFirestore = (
-  id: string,
-  onData: (lesson: LessonRecord | null) => void,
-  onError?: (error: unknown) => void
-): Unsubscribe => {
-  const uid = getCurrentUidOrThrow();
-  return onSnapshot(
-    getLessonDocRef(uid, id),
-    (snapshot) => {
-      if (!snapshot.exists()) {
-        onData(null);
-        return;
-      }
-      onData(fromFirestoreLessonRecord(snapshot.id, snapshot.data() as FirestoreLessonRecord));
-    },
-    (error) => {
-      onError?.(error);
-    }
-  );
-};
-
 export const deleteLessonFirestore = async (id: string): Promise<void> => {
   const uid = getCurrentUidOrThrow();
   await deleteDoc(getLessonDocRef(uid, id));
 };
 
+/**
+ * Dictation progress (and drafts) go to `content/main`; the lesson doc only gets the
+ * new `dictationDone` count, and only when it changed.
+ */
 export const updateLessonProgressFirestore = async (
   id: string,
   completedSentences: Record<number, boolean>,
   options?: { dictationInputs?: Record<number, string> }
 ): Promise<void> => {
   const uid = getCurrentUidOrThrow();
-  const patch: Record<string, unknown> = {
-    completedSentences,
-    lastAccessed: Date.now(),
-    updatedAt: Date.now(),
-  };
+  const batch = writeBatch(getFirebaseFirestore());
+  const content: Record<string, unknown> = { completedSentences };
+  const fields = ['completedSentences'];
   if (options?.dictationInputs !== undefined) {
-    patch.dictationInputs = options.dictationInputs;
+    content.dictationInputs = options.dictationInputs;
+    fields.push('dictationInputs');
   }
-  await updateDoc(getLessonDocRef(uid, id), patch);
+  // mergeFields replaces these maps whole, so cleared sentences really go away.
+  batch.set(getLessonContentDocRef(uid, id), content, { mergeFields: fields });
+  const count = countDone(completedSentences);
+  const known = writtenCounts.get(id) ?? {};
+  if (known.dictation !== count) {
+    const now = Date.now();
+    batch.update(getLessonDocRef(uid, id), { dictationDone: count, lastAccessed: now, updatedAt: now });
+  }
+  await batch.commit();
+  writtenCounts.set(id, { ...known, dictation: count });
 };
 
+/** Shadowing progress to `content/main`; `shadowingDone` on the lesson doc when it changed. */
 export const updateShadowingProgressFirestore = async (
   id: string,
   completed: Record<number, boolean>
 ): Promise<void> => {
   const uid = getCurrentUidOrThrow();
   const now = Date.now();
-  await updateDoc(getLessonDocRef(uid, id), {
-    'progress.shadowing.completed': completed,
-    'progress.shadowing.updatedAt': now,
-    lastAccessed: now,
-    updatedAt: now,
-  });
+  const batch = writeBatch(getFirebaseFirestore());
+  batch.set(
+    getLessonContentDocRef(uid, id),
+    { progress: { shadowing: { completed, updatedAt: now } } },
+    { mergeFields: ['progress.shadowing.completed', 'progress.shadowing.updatedAt'] }
+  );
+  const count = countDone(completed);
+  const known = writtenCounts.get(id) ?? {};
+  if (known.shadowing !== count) {
+    batch.update(getLessonDocRef(uid, id), { shadowingDone: count, lastAccessed: now, updatedAt: now });
+  }
+  await batch.commit();
+  writtenCounts.set(id, { ...known, shadowing: count });
 };
 
 /**
  * Remembers where the learner is in `mode` (a sentence index, or a playback time for
  * listen) and makes `mode` the lesson's last-used tab. Runs every few seconds while
- * playing, so it touches neither `updatedAt` (not a substantive edit) nor
- * `lastAccessed` (already set when the lesson opens; bumping it would reorder the
- * lessons snapshot on every save).
+ * playing, so it writes only the content doc - neither `updatedAt` (not a substantive
+ * edit) nor `lastAccessed` (set when the lesson opens) on the lesson doc.
  */
 export const saveResumePositionFirestore = async (
   id: string,
@@ -487,13 +504,15 @@ export const saveResumePositionFirestore = async (
 ): Promise<void> => {
   const uid = getCurrentUidOrThrow();
   const now = Date.now();
-  const patch: Record<string, unknown> = {
-    lastMode: mode,
-    [`progress.${mode}.updatedAt`]: now,
-  };
-  if ('lastIndex' in position) patch[`progress.${mode}.lastIndex`] = position.lastIndex;
-  else patch[`progress.${mode}.lastTime`] = position.lastTime;
-  await updateDoc(getLessonDocRef(uid, id), patch);
+  const key = 'lastIndex' in position ? 'lastIndex' : 'lastTime';
+  const value = 'lastIndex' in position ? position.lastIndex : position.lastTime;
+  // Content doc only: this runs every few seconds while playing and must not resend
+  // the lesson doc to every lessons listener.
+  await setDoc(
+    getLessonContentDocRef(uid, id),
+    { lastMode: mode, progress: { [mode]: { [key]: value, updatedAt: now } } },
+    { mergeFields: ['lastMode', `progress.${mode}.${key}`, `progress.${mode}.updatedAt`] }
+  );
 };
 
 export const trashLessonFirestore = async (id: string): Promise<void> => {

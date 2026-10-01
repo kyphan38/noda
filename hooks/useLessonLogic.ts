@@ -4,7 +4,8 @@ import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { AppMode, ExpandedSections } from '@/types';
 import { DEFAULT_APP_MODE, DICTATION_SAVE_DEBOUNCE_MS, SAVE_PROGRESS_DELAY_MS } from '@/constants';
 import { parseTranscript } from '@/lib/utils';
-import { completionPercent, type LessonProgressRecord } from '@/lib/progress';
+import type { LessonProgressRecord } from '@/lib/progress';
+import { donePercent } from '@/lib/lessonLayout';
 import {
   deleteLessonFirestore,
   getLessonFirestore,
@@ -131,8 +132,9 @@ export function useLessonLogic(
         language: 'en',
         folderId: l.folderId ?? null,
         sortKey: l.sortKey,
-        dictationProgress: completionPercent(l.completedSentences, l.totalSentences),
-        shadowingProgress: completionPercent(l.progress?.shadowing?.completed, l.totalSentences),
+        // Counts from the small lesson doc; pre-split docs still carry the maps.
+        dictationProgress: donePercent(l.dictationDone, l.completedSentences, l.totalSentences),
+        shadowingProgress: donePercent(l.shadowingDone, l.progress?.shadowing?.completed, l.totalSentences),
         totalSentences: l.totalSentences ?? 0,
         isTrashed: !!l.isTrashed,
         hasMedia: !!(l.mediaUrl || l.mediaPath || l.mediaFile),
