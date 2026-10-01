@@ -3,7 +3,7 @@ import {
   normalizeShadowingAnalysis,
   ShadowingShapeError,
 } from '../../../functions/src/lib/normalizeShadowingAnalysis';
-import { analysisAudioPath } from '../../../functions/src/lib/analysisAudio';
+import { analysisAudioPath } from '../../../functions/src/lib/analysisAudioPath';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
 import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
 import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
