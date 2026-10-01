@@ -94,7 +94,7 @@ export default function NodaApp() {
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
     shadowingCompleted, setShadowingCompleted, shadowingCompletedRef, loadedProgress,
     isStarted, setIsStarted,
-    lessonsList, recentLessonIds, isListLoading,
+    lessonsList, recentLessonIds, isListLoading, isLessonLoading,
     currentLessonId, mediaStoragePath,
     setLessonName,
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
@@ -984,7 +984,22 @@ export default function NodaApp() {
               />
             )}
 
-            {selectedItem?.type === 'lesson' && (
+            {selectedItem && isLessonLoading && (
+              <div
+                className="flex-1 min-h-0 rounded-xl border border-gray-800 bg-gray-900 p-3 md:p-4 space-y-4"
+                aria-busy="true"
+                aria-label="Loading lesson"
+              >
+                {Array.from({ length: 8 }, (_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <div className="skeleton-shimmer h-3 w-6 rounded" />
+                    <div className="skeleton-shimmer h-4 rounded" style={{ width: `${55 + ((i * 37) % 40)}%` }} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedItem?.type === 'lesson' && !isLessonLoading && (
               <div key={`${selectedItem.id}-${appMode}`} className="mode-content-fade flex flex-col flex-1 min-h-0">
                 <LessonView
                   lesson={selectedItem.data}

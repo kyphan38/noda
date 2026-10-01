@@ -85,6 +85,8 @@ export function useLessonLogic(
     }>
   >([]);
   const [isListLoading, setIsListLoading] = useState(true);
+  /** True between picking a lesson and its transcript/progress being in state. */
+  const [isLessonLoading, setIsLessonLoading] = useState(false);
   /** Ids of the most recently opened lessons, newest first (the snapshot is ordered by lastAccessed). */
   const [recentLessonIds, setRecentLessonIds] = useState<string[]>([]);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
@@ -269,6 +271,43 @@ export function useLessonLogic(
     };
   }, [shadowingCompleted, currentLessonId, isStarted]);
 
+  /**
+   * Writes any debounced save that is still waiting, right now, for the lesson that is
+   * loaded. Call before the loaded lesson changes: otherwise the effect cleanup cancels
+   * the timer and the last edits (up to the debounce delay) are lost.
+   */
+  const flushPendingSaves = useCallback(() => {
+    const lessonId = currentLessonIdRef.current;
+    const progressPending = !!progressSaveTimeoutRef.current || !!dictationSaveTimeoutRef.current;
+    const shadowingPending = !!shadowingSaveTimeoutRef.current;
+    for (const ref of [progressSaveTimeoutRef, dictationSaveTimeoutRef, shadowingSaveTimeoutRef]) {
+      if (ref.current) {
+        clearTimeout(ref.current);
+        ref.current = null;
+      }
+    }
+    if (!lessonId) return;
+    if (progressPending) {
+      updateLessonProgressFirestore(lessonId, completedSentencesRef.current, {
+        dictationInputs: dictationInputsRef.current,
+      }).catch((error) => console.error('Failed to flush lesson progress', error));
+    }
+    if (shadowingPending) {
+      updateShadowingProgressFirestore(lessonId, shadowingCompletedRef.current).catch((error) =>
+        console.error('Failed to flush shadowing progress', error)
+      );
+    }
+  }, []);
+
+  // Leaving the page (tab close, app switch on mobile): best-effort flush.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flushPendingSaves();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, [flushPendingSaves]);
+
   /** Cancel debounced progress save and persist latest progress so a later put cannot resurrect cleared audio. */
   const prepareForLessonMediaClear = useCallback(
     async (lessonId: string) => {
@@ -296,14 +335,15 @@ export function useLessonLogic(
 
   const handleLoadLesson = async (id: string) => {
     const myGen = ++lessonLoadGenerationRef.current;
+    // Save the outgoing lesson, then stop all saving until the new lesson's state is in:
+    // until then, state still holds the old lesson's progress.
+    flushPendingSaves();
+    setIsStarted(false);
+    setIsLessonLoading(true);
     try {
       const lesson = await getLessonFirestore(id);
       if (myGen !== lessonLoadGenerationRef.current) return;
       if (lesson) {
-        currentLessonIdRef.current = lesson.id;
-        setCurrentLessonId(lesson.id);
-        setMediaStoragePath(lesson.mediaPath ?? null);
-        setLessonName(lesson.name);
         // Re-derive the download URL from `mediaPath` instead of trusting the
         // `mediaUrl` frozen in at upload time: that stored URL hardcodes the
         // bucket name and download token, both of which change when the app
@@ -311,6 +351,12 @@ export function useLessonLogic(
         const hasMedia = !!(lesson.mediaPath || lesson.mediaUrl);
         const freshMediaUrl = hasMedia ? await resolveLessonMediaUrl(lesson) : null;
         if (myGen !== lessonLoadGenerationRef.current) return;
+        // Everything below lands in one render, so no save effect ever sees the new
+        // lesson id next to the previous lesson's progress.
+        currentLessonIdRef.current = lesson.id;
+        setCurrentLessonId(lesson.id);
+        setMediaStoragePath(lesson.mediaPath ?? null);
+        setLessonName(lesson.name);
         setMediaFile(null);
         setMediaURL(freshMediaUrl);
 
@@ -327,6 +373,7 @@ export function useLessonLogic(
         const hasTranscript = !!(lesson.transcriptText && lesson.transcriptText.trim());
         setIsStarted(!!freshMediaUrl || hasTranscript);
         setAppMode('listen');
+        setIsLessonLoading(false);
 
         await touchLessonAccessedFirestore(lesson.id);
         if (myGen !== lessonLoadGenerationRef.current) return;
@@ -334,6 +381,8 @@ export function useLessonLogic(
       }
     } catch (e) {
       console.error('Failed to load lesson', e);
+    } finally {
+      if (myGen === lessonLoadGenerationRef.current) setIsLessonLoading(false);
     }
   };
 
@@ -343,6 +392,8 @@ export function useLessonLogic(
 
   const handleNewLesson = () => {
     bumpLessonLoadGeneration();
+    flushPendingSaves();
+    setIsLessonLoading(false);
     currentLessonIdRef.current = null;
     setCurrentLessonId(null);
     setMediaStoragePath(null);
@@ -367,6 +418,15 @@ export function useLessonLogic(
   };
 
   const handleDeletePermanently = async (id: string) => {
+    if (currentLessonIdRef.current === id) {
+      // Pending saves belong to the lesson being deleted; writing them would fail.
+      for (const ref of [progressSaveTimeoutRef, dictationSaveTimeoutRef, shadowingSaveTimeoutRef]) {
+        if (ref.current) {
+          clearTimeout(ref.current);
+          ref.current = null;
+        }
+      }
+    }
     await deleteLessonFirestore(id);
     if (currentLessonId === id) {
       handleNewLesson();
@@ -401,6 +461,7 @@ export function useLessonLogic(
     lessonsList,
     recentLessonIds,
     isListLoading,
+    isLessonLoading,
     currentLessonId,
     mediaStoragePath,
     lessonName,
