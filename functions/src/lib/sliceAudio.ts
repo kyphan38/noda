@@ -35,7 +35,7 @@ export function sliceAudioClip(inputPath: string, startSec: number, endSec: numb
 }
 
 /**
- * Converts a whole media file to mono 16kHz FLAC - the same channel layout and
+ * Converts a whole media file (a local path or an https URL) to mono 16kHz FLAC - the same channel layout and
  * sample rate `sliceAudioClip` produces, stored losslessly so slicing the copy
  * gives the same samples as slicing the original.
  */

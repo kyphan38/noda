@@ -20,6 +20,7 @@ import * as os from "os";
 import * as path from "path";
 
 import { extractAnalysisAudio } from "./sliceAudio";
+import { firebaseDownloadUrl } from "./firebaseDownloadUrl";
 
 export { analysisAudioPath } from "./analysisAudioPath";
 
@@ -59,15 +60,30 @@ export async function fetchAnalysisAudio(
     if (!isNotFound(e)) throw e;
   }
 
-  const localOriginal = path.join(os.tmpdir(), `media-${randomUUID()}-${path.basename(mediaStoragePath)}`);
-  try {
-    await bucket.file(mediaStoragePath).download({ destination: localOriginal });
-    await extractAnalysisAudio(localOriginal, localCopy);
-  } catch (e) {
-    removeQuietly(localCopy);
-    throw e;
-  } finally {
-    removeQuietly(localOriginal);
+  // Preferred: ffmpeg reads the original over HTTPS (range requests), so only the
+  // small FLAC lands in /tmp - which counts against the function's memory. Files
+  // without a download token (not uploaded through the app) fall back to a full copy.
+  const original = bucket.file(mediaStoragePath);
+  const [meta] = await original.getMetadata();
+  const url = firebaseDownloadUrl(bucket.name, mediaStoragePath, meta.metadata?.firebaseStorageDownloadTokens);
+  if (url) {
+    try {
+      await extractAnalysisAudio(url, localCopy);
+    } catch (e) {
+      removeQuietly(localCopy);
+      throw e;
+    }
+  } else {
+    const localOriginal = path.join(os.tmpdir(), `media-${randomUUID()}-${path.basename(mediaStoragePath)}`);
+    try {
+      await original.download({ destination: localOriginal });
+      await extractAnalysisAudio(localOriginal, localCopy);
+    } catch (e) {
+      removeQuietly(localCopy);
+      throw e;
+    } finally {
+      removeQuietly(localOriginal);
+    }
   }
 
   try {
