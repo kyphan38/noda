@@ -74,16 +74,18 @@ describe('parseTranscript', () => {
 });
 
 describe('sentence matching', () => {
-  it('15f. overlapping SRT produces multiple matches with filter', () => {
+  // parseTranscript clamps an earlier cue's end to the next cue's start, so once the
+  // next sentence has started it is the only active one (no snap back to the previous).
+  it('15f. overlapping SRT is clamped so only the later sentence is active', () => {
     const srt = [
       '1', '00:00:00,000 --> 00:00:02,000', 'A', '',
       '2', '00:00:01,000 --> 00:00:03,000', 'B',
     ].join('\n');
     const sentences = parseTranscript(srt);
+    expect(sentences[0].end).toBe(1);
     const atOverlap = sentences.filter(s => 1.5 >= s.start && 1.5 < s.end);
-    expect(atOverlap).toHaveLength(2);
-    const first = findActiveSentence(sentences, 1.5);
-    expect(first?.id).toBe(1);
+    expect(atOverlap).toHaveLength(1);
+    expect(findActiveSentence(sentences, 1.5)?.id).toBe(2);
   });
 
   it('15f2. non-overlapping SRT has at most one active', () => {
@@ -120,12 +122,13 @@ describe('sentence matching', () => {
 });
 
 describe('timing quality detection', () => {
+  // Raw cues: parseTranscript would already have clamped this overlap away.
   it('15i. finds overlapping timestamps', () => {
-    const srt = [
-      '1', '00:00:00,000 --> 00:00:01,500', 'A', '',
-      '2', '00:00:01,000 --> 00:00:02,500', 'B',
-    ].join('\n');
-    const overlaps = findTimingIssues(parseTranscript(srt)).filter(i => i.type === 'overlap');
+    const raw: Sentence[] = [
+      { id: 1, start: 0, end: 1.5, text: 'A' },
+      { id: 2, start: 1, end: 2.5, text: 'B' },
+    ];
+    const overlaps = findTimingIssues(raw).filter(i => i.type === 'overlap');
     expect(overlaps).toHaveLength(1);
   });
 
