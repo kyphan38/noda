@@ -156,36 +156,6 @@ export const parseTranscript = (text: string): Sentence[] => {
   return sentences;
 };
 
-export const compareSentences = (target: string, spoken: string) => {
-  const clean = (s: string) => s.toLowerCase().replace(/[.,?!;:()]/g, '').trim();
-  const targetWords = clean(target).split(/\s+/).filter(w => w);
-  const spokenWords = clean(spoken).split(/\s+/).filter(w => w);
-
-  let correctCount = 0;
-  let spokenIndex = 0;
-  
-  const diff = targetWords.map(tw => {
-    let found = false;
-    for(let i = spokenIndex; i < Math.min(spokenIndex + 3, spokenWords.length); i++) {
-        if (spokenWords[i] === tw) {
-            found = true;
-            spokenIndex = i + 1;
-            break;
-        }
-    }
-    
-    if (found) {
-        correctCount++;
-        return { word: tw, status: 'correct' };
-    } else {
-        return { word: tw, status: 'incorrect' };
-    }
-  });
-
-  const score = targetWords.length > 0 ? Math.round((correctCount / targetWords.length) * 100) : 0;
-  return { score, diff, text: spoken };
-};
-
 export const getNextPlaybackSpeed = (currentSpeed: number) => {
   const speeds = PLAYBACK_SPEEDS as readonly number[];
   let idx = speeds.indexOf(currentSpeed);

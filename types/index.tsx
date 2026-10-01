@@ -10,16 +10,6 @@ export type Sentence = {
 export type LoopMode = 'none' | 'one';
 export type RepeatCount = 1 | 2 | 3 | 'infinite';
 export type AppMode = 'normal' | 'dictation';
-// Pronunciation result
-export type SpokenResult = {
-  text: string;
-  score: number;
-  diff: { word: string; status: string }[];
-};
-
-// Recognition error/result state
-export type RecognitionState = Record<number, string>;
-export type SpokenResults = Record<number, SpokenResult>;
 export type DictationInputs = Record<number, string>;
 export type CompletedSentences = Record<number, boolean>;
 
