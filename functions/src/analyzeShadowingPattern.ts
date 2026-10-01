@@ -28,14 +28,13 @@ import * as os from "os";
 import * as path from "path";
 
 import { sliceAudioClip } from "./lib/sliceAudio";
-import { getShadowingModel } from "./lib/geminiClient";
+import { generateShadowingJson, getShadowingModelId } from "./lib/geminiClient";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
 import {
   normalizeShadowingAnalysis,
   ShadowingShapeError,
   type NormalizedAnalysis,
 } from "./lib/normalizeShadowingAnalysis";
-import type { GenerativeModel } from "@google/generative-ai";
 
 /** Firestore database id owned by noda. Now `(default)` again: noda has its own
  * Firebase project (`kyphan38-noda-app`), so it no longer needs the named
@@ -59,7 +58,7 @@ const GEMINI_TIMEOUT_MS = 55000;
  * caller to trigger a single automatic retry before giving up. */
 class GeminiJsonParseError extends Error {}
 
-/** Stage 6: the SDK's `requestOptions.timeout` (GEMINI_TIMEOUT_MS) aborts the underlying
+/** Stage 6: the SDK's `httpOptions.timeout` (GEMINI_TIMEOUT_MS) aborts the underlying
  * fetch on timeout, surfacing as an AbortError (or a message mentioning
  * timeout/aborted depending on the runtime) - detect both. */
 function isGeminiTimeoutError(e: unknown): boolean {
@@ -72,27 +71,19 @@ function isGeminiTimeoutError(e: unknown): boolean {
 /** One Gemini call attempt: generate + parse JSON. Throws GeminiJsonParseError
  * on malformed JSON so the caller can retry once; timeout/other errors
  * propagate as-is. */
-async function callGeminiOnce(
-  model: GenerativeModel,
-  sourceText: string,
-  base64ClipAudio: string
-): Promise<NormalizedAnalysis> {
-  const result = await model.generateContent(
-    {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: buildShadowingAnalysisPrompt(sourceText) },
-            { inlineData: { mimeType: "audio/wav", data: base64ClipAudio } },
-          ],
-        },
-      ],
-    },
-    { timeout: GEMINI_TIMEOUT_MS } // same convention as cogi's routes
+async function callGeminiOnce(sourceText: string, base64ClipAudio: string): Promise<NormalizedAnalysis> {
+  const text = await generateShadowingJson(
+    [
+      {
+        role: "user",
+        parts: [
+          { text: buildShadowingAnalysisPrompt(sourceText) },
+          { inlineData: { mimeType: "audio/wav", data: base64ClipAudio } },
+        ],
+      },
+    ],
+    GEMINI_TIMEOUT_MS
   );
-
-  const text = result.response.text();
   if (!text) {
     throw new HttpsError("internal", "Empty response from Gemini.");
   }
@@ -111,15 +102,11 @@ async function callGeminiOnce(
 
 /** Stage 6: one call, with a single automatic retry on malformed JSON
  * or an unusable shape (timeouts are not retried - they already ate the full budget). */
-async function callGeminiWithRetry(
-  model: GenerativeModel,
-  sourceText: string,
-  base64ClipAudio: string
-): Promise<NormalizedAnalysis> {
+async function callGeminiWithRetry(sourceText: string, base64ClipAudio: string): Promise<NormalizedAnalysis> {
   const isRetryable = (e: unknown) => e instanceof GeminiJsonParseError || e instanceof ShadowingShapeError;
 
   try {
-    return await callGeminiOnce(model, sourceText, base64ClipAudio);
+    return await callGeminiOnce(sourceText, base64ClipAudio);
   } catch (e) {
     if (isGeminiTimeoutError(e)) {
       throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
@@ -129,7 +116,7 @@ async function callGeminiWithRetry(
     // Malformed JSON or an unusable shape on attempt 1 - retry exactly once.
     console.warn("Shadowing analysis attempt 1 unusable, retrying:", (e as Error).message);
     try {
-      return await callGeminiOnce(model, sourceText, base64ClipAudio);
+      return await callGeminiOnce(sourceText, base64ClipAudio);
     } catch (e2) {
       if (isGeminiTimeoutError(e2)) {
         throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
@@ -240,15 +227,14 @@ export const analyzeShadowingPattern = onCall(
 
       const base64ClipAudio = readFileSync(clipPath).toString("base64");
 
-      const model = getShadowingModel();
-      const analysis = await callGeminiWithRetry(model, sourceText, base64ClipAudio);
+      const analysis = await callGeminiWithRetry(sourceText, base64ClipAudio);
 
       const analysisResult = {
         sentenceId,
         startSec,
         endSec,
         sourceText,
-        model: process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash",
+        model: getShadowingModelId(),
         version: ANALYSIS_VERSION,
         analysis,
       };

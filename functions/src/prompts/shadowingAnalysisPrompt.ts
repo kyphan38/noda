@@ -23,60 +23,60 @@
  *   "24 hours" quotes digits while its pseudo-spelling covers only "four hours".
  */
 
-import { SchemaType, type Schema } from "@google/generative-ai";
+import { Type, type Schema } from "@google/genai";
 
 /** Keep in sync with `SHADOWING_MAX_NOTES` in constants/index.tsx. */
 export const MAX_NOTES = 8;
 
 export const SHADOWING_ANALYSIS_RESPONSE_SCHEMA: Schema = {
-  type: SchemaType.OBJECT,
+  type: Type.OBJECT,
   properties: {
     chunks: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
           tokens: {
-            type: SchemaType.ARRAY,
+            type: Type.ARRAY,
             items: {
-              type: SchemaType.OBJECT,
+              type: Type.OBJECT,
               properties: {
-                w: { type: SchemaType.STRING },
-                display: { type: SchemaType.STRING },
+                w: { type: Type.STRING },
+                display: { type: Type.STRING },
                 level: {
-                  type: SchemaType.STRING,
+                  type: Type.STRING,
                   format: "enum",
                   enum: ["strong", "normal", "weak"],
                 },
-                linked: { type: SchemaType.BOOLEAN },
+                linked: { type: Type.BOOLEAN },
               },
               required: ["w", "display", "level"],
             },
           },
           tone: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             format: "enum",
             enum: ["rise", "fall", "fall-rise", "rise-fall", "flat"],
           },
-          toneStrength: { type: SchemaType.STRING, format: "enum", enum: ["strong", "weak"] },
+          toneStrength: { type: Type.STRING, format: "enum", enum: ["strong", "weak"] },
         },
         required: ["tokens", "tone", "toneStrength"],
       },
     },
     notes: {
-      type: SchemaType.ARRAY,
+      type: Type.ARRAY,
       items: {
-        type: SchemaType.OBJECT,
+        type: Type.OBJECT,
         properties: {
           type: {
-            type: SchemaType.STRING,
+            type: Type.STRING,
             format: "enum",
             enum: ["linking", "reduction", "elision", "assimilation", "rhythm"],
           },
-          text: { type: SchemaType.STRING },
-          sounds: { type: SchemaType.STRING },
-          ipa: { type: SchemaType.STRING },
-          why: { type: SchemaType.STRING },
+          text: { type: Type.STRING },
+          sounds: { type: Type.STRING },
+          ipa: { type: Type.STRING },
+          why: { type: Type.STRING },
         },
         required: ["type", "text", "sounds", "ipa", "why"],
       },
