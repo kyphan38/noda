@@ -55,4 +55,17 @@ describe('lesson create flow', () => {
     expect(calls.selected).toBe(1);
     expect(calls.toasts.at(-1)).toMatchObject({ type: 'success' });
   });
+
+  it('passes upload progress through to the caller', async () => {
+    upload.mockImplementationOnce(async (_id: string, _file: File, onProgress?: (f: number) => void) => {
+      onProgress?.(0.25);
+      onProgress?.(1);
+      return { path: 'users/u/media/x.mp3', downloadURL: 'u', contentType: 'audio/mpeg', size: 1 };
+    });
+    const { result } = setup();
+    const seen: number[] = [];
+    await result.current.handleLessonCreated(input, (f) => seen.push(f));
+    expect(seen).toEqual([0.25, 1]);
+  });
 });
+
