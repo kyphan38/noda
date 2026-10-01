@@ -5,6 +5,7 @@ import {
 } from '../../../functions/src/lib/normalizeShadowingAnalysis';
 import { analysisAudioPath } from '../../../functions/src/lib/analysisAudioPath';
 import { lessonStoragePaths } from '../../../functions/src/lib/lessonCleanup';
+import { firebaseDownloadUrl } from '../../../functions/src/lib/firebaseDownloadUrl';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
 import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
 import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
@@ -307,3 +308,17 @@ describe('lessonStoragePaths', () => {
     expect(lessonStoragePaths('u1', { mediaPath: null })).toEqual([]);
   });
 });
+
+describe('firebaseDownloadUrl', () => {
+  it('builds a token URL with the path encoded as one segment', () => {
+    expect(firebaseDownloadUrl('b.firebasestorage.app', 'users/u1/media/1 talk.mp4', 'tok1,tok2')).toBe(
+      'https://firebasestorage.googleapis.com/v0/b/b.firebasestorage.app/o/users%2Fu1%2Fmedia%2F1%20talk.mp4?alt=media&token=tok1'
+    );
+  });
+
+  it('returns null without a token', () => {
+    expect(firebaseDownloadUrl('b', 'p', undefined)).toBeNull();
+    expect(firebaseDownloadUrl('b', 'p', '')).toBeNull();
+  });
+});
+
