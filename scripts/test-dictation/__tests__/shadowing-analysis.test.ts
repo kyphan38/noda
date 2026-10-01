@@ -5,6 +5,7 @@ import {
 } from '../../../functions/src/lib/normalizeShadowingAnalysis';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
 import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
+import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
 import { SHADOWING_PREFETCH_COUNT } from '@/constants';
 import type { Sentence } from '@/types';
 
@@ -222,5 +223,48 @@ describe('nextSentencesToPrefetch', () => {
 
   it('defaults to the configured prefetch count', () => {
     expect(nextSentencesToPrefetch(transcript, 1)).toHaveLength(SHADOWING_PREFETCH_COUNT);
+  });
+});
+
+describe('ShadowingRequestTracker', () => {
+  it('refuses a second request for a sentence that is already loading', () => {
+    const t = new ShadowingRequestTracker();
+    expect(t.begin(3)).not.toBeNull();
+    expect(t.begin(3)).toBeNull();
+    expect(t.isLoading(3)).toBe(true);
+  });
+
+  it('frees the sentence when the request ends', () => {
+    const t = new ShadowingRequestTracker();
+    const token = t.begin(3)!;
+    t.end(token);
+    expect(t.isLoading(3)).toBe(false);
+    expect(t.begin(3)).not.toBeNull();
+  });
+
+  it('marks a request from the previous lesson as stale after a lesson switch', () => {
+    const t = new ShadowingRequestTracker();
+    const lessonA = t.begin(3)!;
+    t.reset();
+    expect(t.isCurrent(lessonA)).toBe(false);
+  });
+
+  it('does not let a previous-lesson request block the same sentence id in the new lesson', () => {
+    const t = new ShadowingRequestTracker();
+    t.begin(3);
+    t.reset();
+    expect(t.isLoading(3)).toBe(false);
+    const lessonB = t.begin(3);
+    expect(lessonB).not.toBeNull();
+    expect(t.isCurrent(lessonB!)).toBe(true);
+  });
+
+  it('a late end() from the previous lesson leaves the new lesson request loading', () => {
+    const t = new ShadowingRequestTracker();
+    const lessonA = t.begin(3)!;
+    t.reset();
+    t.begin(3);
+    t.end(lessonA);
+    expect(t.isLoading(3)).toBe(true);
   });
 });
