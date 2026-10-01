@@ -9,8 +9,8 @@ export const DEFAULT_APP_MODE = 'listen' as const;
 // Lesson tabs, in header order (also the Cmd/Ctrl+1..3 shortcut order).
 export const LESSON_MODES = [
   { mode: 'listen' as const, label: 'Listen' },
-  { mode: 'dictation' as const, label: 'Dictation' },
   { mode: 'shadowing' as const, label: 'Shadowing' },
+  { mode: 'dictation' as const, label: 'Dictation' },
 ] as const;
 
 /** Throttle for saving where the learner is (sentence / playback time) to Firestore. */
