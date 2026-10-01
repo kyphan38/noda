@@ -4,6 +4,7 @@ import {
   ShadowingShapeError,
 } from '../../../functions/src/lib/normalizeShadowingAnalysis';
 import { analysisAudioPath } from '../../../functions/src/lib/analysisAudioPath';
+import { lessonStoragePaths } from '../../../functions/src/lib/lessonCleanup';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
 import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
 import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
@@ -285,5 +286,24 @@ describe('analysisAudioPath', () => {
     expect(analysisAudioPath('u1', 'users/u1/analysis-audio/x.flac')).toBeNull();
     expect(analysisAudioPath('u1', 'users/u1/media/../media/x.mp4')).toBeNull();
     expect(analysisAudioPath('u1', 'users/u1/media/')).toBeNull();
+  });
+});
+
+describe('lessonStoragePaths', () => {
+  it('returns the upload and its analysis copy', () => {
+    expect(lessonStoragePaths('u1', { mediaPath: 'users/u1/media/1-talk.mp4' })).toEqual([
+      'users/u1/media/1-talk.mp4',
+      'users/u1/analysis-audio/1-talk.mp4.flac',
+    ]);
+  });
+
+  it("never returns paths outside the owner's media folder", () => {
+    expect(lessonStoragePaths('u1', { mediaPath: 'users/u2/media/1-talk.mp4' })).toEqual([]);
+    expect(lessonStoragePaths('u1', { mediaPath: 'public/shared.mp4' })).toEqual([]);
+  });
+
+  it('returns nothing for lessons without a mediaPath', () => {
+    expect(lessonStoragePaths('u1', {})).toEqual([]);
+    expect(lessonStoragePaths('u1', { mediaPath: null })).toEqual([]);
   });
 });

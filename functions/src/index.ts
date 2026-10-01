@@ -12,3 +12,4 @@ if (!admin.apps.length) {
 }
 
 export { analyzeShadowingPattern } from "./analyzeShadowingPattern";
+export { onLessonDeleted } from "./onLessonDeleted";
