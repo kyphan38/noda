@@ -98,7 +98,13 @@ trước** khi xoá thật.
 
 ---
 
-## Đợt 3 - Hiệu năng (việc lớn hơn)
+## Đợt 3 - Hiệu năng (việc lớn hơn) - CHƯA LÀM
+
+**Tạm dừng (2026-10-01).** Chủ app sẽ ping khi muốn làm tiếp. Bắt đầu từ F9.
+Quyết định mới cho F11: **không migrate 12 bài hiện có.** Bài cũ giữ nguyên dạng cũ;
+app phải đọc được cả dạng cũ (mọi thứ trong doc bài) lẫn dạng mới (subdoc
+`content/main`). Không cần backup/migrate script. Khi bắt đầu F11, hỏi lại: bài mới
+dùng dạng mới ngay, hay chỉ chuyển khi bài cũ được lưu lại lần sau.
 
 ### F9. Trang render lại 60 lần/giây khi đang phát (#12)
 
