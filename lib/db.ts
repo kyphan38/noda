@@ -17,20 +17,11 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
 import { SHADOWING_ANALYSIS_VERSION, type ShadowingPatternDoc } from '@/types';
 
-export interface FlashcardData {
-  lines: string[];
-  ratings: Record<number, 'again' | 'good' | 'done'>;
-  currentIndex: number;
-  isShuffled: boolean;
-  shuffledIndices: number[];
-  /** After "Deck complete" → Keep, suppresses the cleanup modal until progress is reset. */
-  completionModalShown?: boolean;
-}
-
 /** Full lesson row stored in IndexedDB (includes File blob when present). */
 export interface LessonRecord {
   id: string;
-  type?: 'audio' | 'flashcard';
+  /** Always 'audio' (flashcard decks were removed on 2026-10-01). */
+  type?: 'audio';
   name: string;
   language: string;
   /**
@@ -55,7 +46,7 @@ export interface LessonRecord {
   mediaMimeType?: string | null;
   /** Optional size metadata for migration/debugging support. */
   mediaSizeBytes?: number | null;
-  /** Audio vs video lesson; flashcard rows omit or use 'audio' as unused. */
+  /** Audio vs video lesson. */
   mediaType?: 'audio' | 'video';
   transcriptText: string;
   completedSentences: Record<number, boolean>;
@@ -68,7 +59,6 @@ export interface LessonRecord {
   updatedAt: number;
   isTrashed?: boolean;
   trashedAt?: number;
-  flashcardData?: FlashcardData;
 }
 
 /** Firestore-safe lesson document shape (excludes in-browser File blobs). */
@@ -148,7 +138,7 @@ const fromFirestoreLessonRecord = (
 ): LessonRecord => {
   return {
     id: data.id ?? lessonId,
-    type: data.type ?? 'audio',
+    type: 'audio',
     name: data.name ?? '',
     language: data.language ?? '',
     folderId: data.folderId ?? null,
@@ -169,11 +159,10 @@ const fromFirestoreLessonRecord = (
     updatedAt: data.updatedAt ?? Date.now(),
     isTrashed: data.isTrashed ?? false,
     trashedAt: data.trashedAt,
-    flashcardData: data.flashcardData,
   };
 };
 
-export type SidebarFolderKind = 'audio' | 'flashcard';
+export type SidebarFolderKind = 'audio';
 export type SidebarFolderLanguage = 'en' | 'de';
 
 export interface SidebarFolderRecord {
@@ -279,35 +268,6 @@ export const saveLessonFirestore = async (lesson: LessonRecord): Promise<void> =
   const uid = getCurrentUidOrThrow();
   const payload = toFirestoreLessonRecord(lesson);
   await setDoc(getLessonDocRef(uid, lesson.id), payload);
-};
-
-/**
- * Patch only `flashcardData.completionModalShown` (plus `updatedAt`).
- * Prefer this over read + saveLessonFirestore after deck completion: a full setDoc from a stale
- * read can race with the async last-card rating persist and drop the final "done" in Firestore.
- */
-export const patchFlashcardCompletionModalShownFirestore = async (
-  lessonId: string,
-  completionModalShown: boolean
-): Promise<void> => {
-  const uid = getCurrentUidOrThrow();
-  await updateDoc(getLessonDocRef(uid, lessonId), {
-    'flashcardData.completionModalShown': completionModalShown,
-    updatedAt: Date.now(),
-  });
-};
-
-/** Patch a single flashcard rating without rewriting the whole lesson (avoids setDoc races). */
-export const patchFlashcardRatingFirestore = async (
-  lessonId: string,
-  lineIndex: number,
-  rating: 'again' | 'good' | 'done'
-): Promise<void> => {
-  const uid = getCurrentUidOrThrow();
-  await updateDoc(getLessonDocRef(uid, lessonId), {
-    [`flashcardData.ratings.${lineIndex}`]: rating,
-    updatedAt: Date.now(),
-  });
 };
 
 export const getLessonFirestore = async (id: string): Promise<LessonRecord | null> => {
@@ -667,8 +627,8 @@ export const clearLessonMedia = async (id: string) => {
   const db = await initDB();
   if (!db) throw new Error('Database not available');
   const lesson = await db.get('lessons', id);
-  if (!lesson || lesson.type === 'flashcard') {
-    throw new Error('Lesson not found or cannot clear media for this item');
+  if (!lesson) {
+    throw new Error('Lesson not found');
   }
   lesson.mediaFile = null;
   lesson.type = 'audio';

@@ -67,7 +67,7 @@ export function DeleteManyModal({ count, onCancel, onConfirm }: DeleteManyModalP
           Delete {count} {count === 1 ? 'item' : 'items'}?
         </h3>
         <p className="text-gray-400 mb-4 text-sm leading-relaxed">
-          This permanently removes all trashed lessons and decks. This cannot be undone.
+          This permanently removes all trashed lessons. This cannot be undone.
         </p>
         <div className="mb-6 grid gap-2">
           <label htmlFor="noda-delete-many-confirm" className="text-sm text-gray-300">

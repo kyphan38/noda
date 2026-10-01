@@ -7,11 +7,10 @@ import {
   scrollDictationTargetRow,
   scrollTranscriptRowIntoView,
 } from '@/lib/transcript-scroll';
-import { patchFlashcardCompletionModalShownFirestore, restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
+import { restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
 import { NewLessonModal } from '@/components/NewLessonModal';
-import { NewDeckModal } from '@/components/NewDeckModal';
 import { CleanupModal } from '@/components/CleanupModal';
 import { AppHeader } from '@/components/AppHeader';
 import { DeleteLessonModal } from '@/components/DeleteLessonModal';
@@ -26,9 +25,8 @@ import { useAutoScrollActiveSentence } from '@/hooks/useAutoScrollActiveSentence
 import { useGlobalPlaybackShortcuts } from '@/hooks/useGlobalPlaybackShortcuts';
 import { useHeaderItemMenuClickOutside } from '@/hooks/useHeaderItemMenu';
 import { useMobileViewport } from '@/hooks/use-mobile';
-import { LessonItem, DeckItem, Sentence, type AppMode } from '@/types';
+import { LessonItem, Sentence, type AppMode } from '@/types';
 import { LessonView } from '@/components/LessonView';
-import { FlashcardViewer } from '@/components/FlashcardViewer';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { Toast } from '@/components/Toast';
 import { getFirebaseAuth } from '@/lib/auth/firebase-client';
@@ -37,19 +35,12 @@ import { buildItemSearchString, parseItemFromSearch } from '@/lib/item-url';
 import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 import { cycleRepeatCount as getNextRepeatCount } from '@/lib/repeat-count';
 
-function pushItemHistoryState(
-  row: {
-    id: string;
-    name: string;
-    kind: 'audio' | 'flashcard';
-  }
-) {
+function pushItemHistoryState(row: { id: string; name: string }) {
   const qs = buildItemSearchString(row);
   const url = new URL(window.location.href);
   const cur = url.search.startsWith('?') ? url.search.slice(1) : url.search;
   if (cur === qs) return;
-  const itemType = row.kind === 'flashcard' ? 'deck' : 'lesson';
-  window.history.pushState({ itemId: row.id, itemType }, '', `${url.pathname}?${qs}`);
+  window.history.pushState({ itemId: row.id, itemType: 'lesson' }, '', `${url.pathname}?${qs}`);
 }
 
 export default function NodaApp() {
@@ -57,7 +48,7 @@ export default function NodaApp() {
   const viewport = useMobileViewport();
   const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthorized'>('loading');
 
-  const [uploadMode, setUploadMode] = useState<'idle' | 'lesson' | 'deck'>('idle');
+  const [uploadMode, setUploadMode] = useState<'idle' | 'lesson'>('idle');
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
@@ -85,20 +76,15 @@ export default function NodaApp() {
 
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
-    type: 'lesson' | 'deck';
-    data: LessonItem | DeckItem;
+    type: 'lesson';
+    data: LessonItem;
   } | null>(null);
-
-  /** Bumps when a flashcard row is selected so reopening the same deck remounts the viewer (cleanup modal can show again). */
-  const [deckOpenGeneration, setDeckOpenGeneration] = useState(0);
-  /** Bumps after persisting deck-only metadata so FlashcardViewer reloads hydrate (e.g. completionModalShown). */
-  const [deckHydrateBump, setDeckHydrateBump] = useState(0);
 
   const urlHydratedRef = useRef(false);
   const mobileSidebarInitialCloseRef = useRef(false);
 
   const {
-    mediaFile, setMediaFile, mediaURL, setMediaURL,
+    setMediaFile, mediaURL, setMediaURL,
     duration, setDuration, currentTime, setCurrentTime,
     isPlaying, setIsPlaying, playbackRate, loopMode,
     repeatCount, repeatCountRef, sentencePlayCountRef, userSeekTargetRef,
@@ -121,7 +107,7 @@ export default function NodaApp() {
     handleModeChange: applyLessonAppMode,
     expandSidebarForItem,
     prepareForLessonMediaClear,
-  } = useLessonLogic(mediaFile, setMediaFile, setMediaURL);
+  } = useLessonLogic(setMediaFile, setMediaURL);
 
   const {
     folders,
@@ -225,26 +211,18 @@ export default function NodaApp() {
   const getTakenAudioLessonNames = useCallback(
     () =>
       lessonsListRef.current
-        .filter((l) => l.kind === 'audio' && !l.isTrashed)
-        .map((l) => l.name),
-    []
-  );
-  const getTakenFlashcardDeckNames = useCallback(
-    () =>
-      lessonsListRef.current
-        .filter((l) => l.kind === 'flashcard' && !l.isTrashed)
+        .filter((l) => !l.isTrashed)
         .map((l) => l.name),
     []
   );
 
-  const { handleLessonCreated, handleDeckCreated } = useLessonCreateFlow(
+  const { handleLessonCreated } = useLessonCreateFlow(
     setSelectedItem,
     handleLoadLesson,
     handleModeChange,
     setUploadMode,
     setToast,
     getTakenAudioLessonNames,
-    getTakenFlashcardDeckNames,
     expandSidebarForItem
   );
 
@@ -259,11 +237,6 @@ export default function NodaApp() {
     setUploadMode('lesson');
   }, [handleNewLessonWrapper]);
 
-  const openNewDeckModal = useCallback(() => {
-    handleNewLessonWrapper();
-    setUploadMode('deck');
-  }, [handleNewLessonWrapper]);
-
   const closeUploadModal = () => {
     setUploadMode('idle');
   };
@@ -274,7 +247,6 @@ export default function NodaApp() {
         id: string;
         name: string;
         language: string;
-        kind: 'audio' | 'flashcard';
         progress: number;
         totalSentences: number;
         hasMedia: boolean;
@@ -285,31 +257,6 @@ export default function NodaApp() {
     ) => {
       saveTranscriptScrollForCurrentLesson();
       const pushHistory = opts?.pushHistory !== false;
-      if (row.kind === 'flashcard') {
-        const deck: DeckItem = {
-          id: row.id,
-          name: row.name,
-          language: 'en',
-          cardCount: row.totalSentences,
-          progress: row.progress,
-          type: 'deck',
-        };
-        expandSidebarForItem('flashcard');
-        if (row.folderId) {
-          setExpandedSections((prev) => {
-            const next = { ...prev, [`folder:${row.folderId}`]: true };
-            const parentId = effectiveFolders.find((f) => f.id === row.folderId)?.parentId;
-            if (parentId) next[`folder:${parentId}`] = true;
-            return next;
-          });
-        }
-        setDeckOpenGeneration((g) => g + 1);
-        setSelectedItem({ id: row.id, type: 'deck', data: deck });
-        void handleLoadLesson(row.id);
-        if (pushHistory) pushItemHistoryState(row);
-        return;
-      }
-
       const lesson: LessonItem = {
         id: row.id,
         name: row.name,
@@ -319,7 +266,7 @@ export default function NodaApp() {
         mediaType: row.mediaType ?? 'audio',
         type: 'lesson',
       };
-      expandSidebarForItem('audio');
+      expandSidebarForItem();
       if (row.folderId) {
         setExpandedSections((prev) => {
           const next = { ...prev, [`folder:${row.folderId}`]: true };
@@ -344,7 +291,7 @@ export default function NodaApp() {
     ]
   );
 
-  const handleItemSelect = useCallback((item: LessonItem | DeckItem) => {
+  const handleItemSelect = useCallback((item: LessonItem) => {
     const row = lessonsListEffective.find((l) => l.id === item.id);
     if (!row || row.isTrashed) return;
     applySelectionFromRow(row, { pushHistory: true });
@@ -443,7 +390,7 @@ export default function NodaApp() {
     applySelectionFromRow(row, { pushHistory: false });
     const qs = buildItemSearchString(row);
     window.history.replaceState(
-      { itemId: row.id, itemType: row.kind === 'flashcard' ? 'deck' : 'lesson' },
+      { itemId: row.id, itemType: 'lesson' },
       '',
       `${window.location.pathname}?${qs}`
     );
@@ -485,15 +432,7 @@ export default function NodaApp() {
     if (!t || t === cur) return;
     void handleRenameLesson(selectedItem.id, t);
     setSelectedItem((prev) =>
-      prev && prev.id === selectedItem.id
-        ? {
-            ...prev,
-            data:
-              prev.type === 'lesson'
-                ? { ...(prev.data as LessonItem), name: t }
-                : { ...(prev.data as DeckItem), name: t },
-          }
-        : prev
+      prev && prev.id === selectedItem.id ? { ...prev, data: { ...prev.data, name: t } } : prev
     );
     setHeaderItemMenuOpen(false);
   };
@@ -539,24 +478,7 @@ export default function NodaApp() {
     togglePlayPause();
   }, [togglePlayPause, setCurrentTime, mediaRef, appModeRef, activeSentenceRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, userSeekTargetRef]);
 
-  const {
-    showCleanupModal,
-    setShowCleanupModal,
-    cleanupModalVariant,
-    setCleanupModalVariant,
-  } = useDictationCompletionModal(selectedItem, isStarted, transcript, appMode, completedSentences);
-
-  const handleCleanupKeep = useCallback(async () => {
-    if (cleanupModalVariant === 'deck' && selectedItem?.type === 'deck') {
-      try {
-        await patchFlashcardCompletionModalShownFirestore(selectedItem.id, true);
-        setDeckHydrateBump((v) => v + 1);
-      } catch {
-        setToast({ message: 'Could not save deck preference.', type: 'error' });
-      }
-    }
-    setShowCleanupModal(false);
-  }, [cleanupModalVariant, selectedItem, setShowCleanupModal, setToast]);
+  const { showCleanupModal, setShowCleanupModal } = useDictationCompletionModal(selectedItem, isStarted, transcript, appMode, completedSentences);
 
   // Dev-only E2E bypass: set NEXT_PUBLIC_E2E_MODE=true to skip Firebase auth.
   const isE2EMode =
@@ -910,7 +832,6 @@ export default function NodaApp() {
           expandedSections={expandedSections}
           onItemSelect={handleItemSelect}
           onNewLesson={openNewLessonModal}
-          onNewDeck={openNewDeckModal}
           onTrashItem={handleTrashItem}
           onRestoreItem={handleRestoreItem}
           onDeleteForever={setLessonToDelete}
@@ -948,7 +869,7 @@ export default function NodaApp() {
 
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {!selectedItem && uploadMode === 'idle' && (
-              <WelcomeScreen onNewLesson={openNewLessonModal} onNewDeck={openNewDeckModal} />
+              <WelcomeScreen onNewLesson={openNewLessonModal} />
             )}
 
             {uploadMode === 'lesson' && (
@@ -956,28 +877,15 @@ export default function NodaApp() {
                 onClose={closeUploadModal}
                 onSubmit={handleLessonCreated}
                 getTakenAudioLessonNames={getTakenAudioLessonNames}
-                folders={effectiveFolders
-                  .filter((f) => f.kind === 'audio')
-                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? f.name }))}
+                folders={effectiveFolders.map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? f.name }))}
                 onNotify={(message, type) => setToast({ message, type })}
-              />
-            )}
-
-            {uploadMode === 'deck' && (
-              <NewDeckModal
-                onClose={closeUploadModal}
-                onSubmit={handleDeckCreated}
-                getTakenFlashcardDeckNames={getTakenFlashcardDeckNames}
-                folders={effectiveFolders
-                  .filter((f) => f.kind === 'flashcard')
-                  .map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? f.name }))}
               />
             )}
 
             {selectedItem?.type === 'lesson' && (
               <div key={`${selectedItem.id}-${appMode}`} className="mode-content-fade flex flex-col flex-1 min-h-0">
                 <LessonView
-                  lesson={selectedItem.data as LessonItem}
+                  lesson={selectedItem.data}
                   lessonId={currentLessonId}
                   mediaStoragePath={mediaStoragePath}
                   mode={appMode}
@@ -1030,18 +938,6 @@ export default function NodaApp() {
               </div>
             )}
 
-            {selectedItem?.type === 'deck' && (
-              <FlashcardViewer
-                key={`${selectedItem.id}-${deckOpenGeneration}`}
-                deck={selectedItem.data as DeckItem}
-                deckHydrateBump={deckHydrateBump}
-                onComplete={() => {
-                  setCleanupModalVariant('deck');
-                  setShowCleanupModal(true);
-                }}
-                onPersistError={(message) => setToast({ message, type: 'error' })}
-              />
-            )}
           </div>
         </div>
       </div>
@@ -1087,45 +983,28 @@ export default function NodaApp() {
 
       <CleanupModal
         isOpen={showCleanupModal}
-        variant={cleanupModalVariant}
-        onKeep={() => void handleCleanupKeep()}
-        onDismiss={cleanupModalVariant === 'deck' ? () => setShowCleanupModal(false) : undefined}
-        onRemoveAudio={
-          cleanupModalVariant === 'lesson'
-            ? async () => {
-                const id = selectedItem?.id;
-                if (!id || selectedItem?.type !== 'lesson') return;
-                setShowCleanupModal(false);
-                try {
-                  if (mediaURL) {
-                    URL.revokeObjectURL(mediaURL);
-                  }
-                  setMediaURL(null);
-                  setMediaFile(null);
-                  setIsPlaying(false);
-                  await prepareForLessonMediaClear(id);
-                  await handleDeletePermanently(id);
-                  handleNewLessonWrapper();
-                } catch {
-                  setToast({
-                    message: 'Could not remove this lesson. IndexedDB may be unavailable (e.g. private browsing).',
-                    type: 'error',
-                  });
-                }
-              }
-            : undefined
-        }
-        onDeleteDeck={
-          cleanupModalVariant === 'deck'
-            ? async () => {
-                const id = selectedItem?.id;
-                if (!id || selectedItem?.type !== 'deck') return;
-                setShowCleanupModal(false);
-                await handleDeletePermanently(id);
-                handleNewLessonWrapper();
-              }
-            : undefined
-        }
+        onKeep={() => setShowCleanupModal(false)}
+        onRemoveAudio={async () => {
+          const id = selectedItem?.id;
+          if (!id) return;
+          setShowCleanupModal(false);
+          try {
+            if (mediaURL) {
+              URL.revokeObjectURL(mediaURL);
+            }
+            setMediaURL(null);
+            setMediaFile(null);
+            setIsPlaying(false);
+            await prepareForLessonMediaClear(id);
+            await handleDeletePermanently(id);
+            handleNewLessonWrapper();
+          } catch {
+            setToast({
+              message: 'Could not remove this lesson. IndexedDB may be unavailable (e.g. private browsing).',
+              type: 'error',
+            });
+          }
+        }}
       />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={dismissToast} />}

@@ -12,7 +12,6 @@ export const LEARNING_MODES = [
   { value: 'normal' as const, label: 'Normal' },
   { value: 'dictation' as const, label: 'Dictation (Type)' },
   { value: 'shadowing' as const, label: 'Shadowing (Speak)' },
-  // { value: 'flashcard' as const, label: 'Flashcard' },
 ] as const;
 
 // Loop modes (UI display)

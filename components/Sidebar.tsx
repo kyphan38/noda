@@ -4,7 +4,6 @@ import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from 're
 import { createPortal } from 'react-dom';
 import {
   Music2,
-  Layers,
   LogOut,
   PanelLeft,
   ChevronDown,
@@ -13,7 +12,7 @@ import {
   Trash2,
   MoreVertical,
 } from 'lucide-react';
-import { LessonSummary, ExpandedSections, LessonItem, DeckItem, SidebarFolder } from '@/types';
+import { LessonSummary, ExpandedSections, LessonItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
 import type { UseFoldersResult } from '@/hooks/useFolders';
 
@@ -71,7 +70,7 @@ function TrashedItemRow({
         <div className="text-left text-gray-200 font-medium truncate flex-1 min-w-0">
           {item.name}
           <span className="block text-[10px] text-gray-500 font-normal mt-0.5">
-            {item.kind === 'flashcard' ? 'Deck' : 'Lesson'}
+            Lesson
             {item.trashedAt != null ? ` · ${new Date(item.trashedAt).toLocaleString()}` : ''}
           </span>
         </div>
@@ -155,9 +154,8 @@ interface SidebarProps {
   selectedItemId?: string;
   expandedSections: ExpandedSections;
   forcedExpandedFolderIds?: Set<string>;
-  onItemSelect: (item: LessonItem | DeckItem) => void;
+  onItemSelect: (item: LessonItem) => void;
   onNewLesson: () => void;
-  onNewDeck: () => void;
   onTrashItem: (id: string) => void;
   onRestoreItem: (id: string) => void;
   onDeleteForever: (id: string) => void;
@@ -180,7 +178,6 @@ function SidebarImpl({
   forcedExpandedFolderIds,
   onItemSelect,
   onNewLesson,
-  onNewDeck,
   onTrashItem,
   onRestoreItem,
   onDeleteForever,
@@ -207,7 +204,7 @@ function SidebarImpl({
   const activeLessons: LessonItem[] = useMemo(
     () =>
       lessons
-        .filter((l) => !l.isTrashed && l.kind === 'audio')
+        .filter((l) => !l.isTrashed)
         .map((l) => ({
           id: l.id,
           name: l.name,
@@ -222,36 +219,12 @@ function SidebarImpl({
     [lessons]
   );
 
-  const activeDecks: DeckItem[] = useMemo(
-    () =>
-      lessons
-        .filter((l) => !l.isTrashed && l.kind === 'flashcard')
-        .map((l) => ({
-          id: l.id,
-          name: l.name,
-          language: 'en',
-          folderId: l.folderId ?? null,
-          sortKey: l.sortKey,
-          cardCount: l.totalSentences,
-          progress: l.progress,
-          type: 'deck' as const,
-        })),
-    [lessons]
-  );
-
   const filteredLessons = useMemo(
     () =>
       searching
         ? activeLessons.filter((x) => x.name.toLowerCase().includes(searchTerm))
         : activeLessons,
     [searching, activeLessons, searchTerm]
-  );
-  const filteredDecks = useMemo(
-    () =>
-      searching
-        ? activeDecks.filter((x) => x.name.toLowerCase().includes(searchTerm))
-        : activeDecks,
-    [searching, activeDecks, searchTerm]
   );
 
   const forcedExpanded = useMemo(() => {
@@ -262,11 +235,11 @@ function SidebarImpl({
       const p = folderParentById.get(folderId);
       if (p) out.add(p);
     };
-    for (const it of [...filteredLessons, ...filteredDecks]) {
+    for (const it of filteredLessons) {
       if (it.folderId) addPath(it.folderId);
     }
     return out;
-  }, [searching, filteredLessons, filteredDecks, folderParentById]);
+  }, [searching, filteredLessons, folderParentById]);
 
   const trashed = useMemo(() => lessons.filter((l) => l.isTrashed), [lessons]);
   const trashExpanded = expandedSections.trash ?? false;
@@ -320,14 +293,6 @@ function SidebarImpl({
               <Music2 size={16} aria-hidden />
               <span>+ Audio</span>
             </button>
-            <button
-              onClick={onNewDeck}
-              className="btn-new-deck flex-1 py-2.5 px-2 text-sm bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
-              title="New flashcard deck"
-            >
-              <Layers size={16} aria-hidden />
-              <span>+ Deck</span>
-            </button>
           </div>
 
           <div className="px-4 pb-2">
@@ -344,26 +309,6 @@ function SidebarImpl({
               type="lessons"
               title="AUDIO"
               items={filteredLessons}
-              folders={folders}
-              folderActions={folderActions}
-              isLoading={isListLoading}
-              selectedItemId={selectedItemId}
-              expandedSections={expandedSections}
-              forcedExpandedFolderIds={forcedExpandedFolderIds ?? forcedExpanded}
-              disableCaps={searching}
-              onToggleSection={onToggleSection}
-              onItemSelect={onItemSelect}
-              onTrashItem={onTrashItem}
-              onRenameLesson={onRenameLesson}
-              activeMenu={activeMenu}
-              setActiveMenu={setActiveMenu}
-              isMobile={isMobile}
-            />
-
-            <SidebarSection
-              type="decks"
-              title="DECKS"
-              items={filteredDecks}
               folders={folders}
               folderActions={folderActions}
               isLoading={isListLoading}

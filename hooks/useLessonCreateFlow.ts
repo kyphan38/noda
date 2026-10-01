@@ -1,25 +1,24 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { parseTranscript, uniquifyName } from '@/lib/utils';
 import { saveLessonFirestore, type LessonRecord, uploadLessonMediaToFirebase } from '@/lib/db';
-import type { AppMode, DeckItem, LessonItem } from '@/types';
+import type { AppMode, LessonItem } from '@/types';
 
 type SetToast = (t: { message: string; type: 'success' | 'error' | 'info' } | null) => void;
 
 type Selected = {
   id: string;
-  type: 'lesson' | 'deck';
-  data: LessonItem | DeckItem;
+  type: 'lesson';
+  data: LessonItem;
 };
 
 export function useLessonCreateFlow(
   setSelectedItem: Dispatch<SetStateAction<Selected | null>>,
   handleLoadLesson: (id: string) => Promise<void>,
   handleModeChange: (mode: AppMode) => void | Promise<void>,
-  setUploadMode: (m: 'idle' | 'lesson' | 'deck') => void,
+  setUploadMode: (m: 'idle' | 'lesson') => void,
   setToast: SetToast,
   getTakenAudioLessonNames: () => string[],
-  getTakenFlashcardDeckNames: () => string[],
-  expandSidebarForItem: (kind: 'audio' | 'flashcard') => void
+  expandSidebarForItem: () => void
 ) {
   const handleLessonCreated = useCallback(
     async (data: {
@@ -82,7 +81,7 @@ export function useLessonCreateFlow(
           type: 'lesson',
           data: lessonItem,
         });
-        expandSidebarForItem('audio');
+        expandSidebarForItem();
 
         await handleLoadLesson(lessonId);
         await handleModeChange('normal');
@@ -104,69 +103,5 @@ export function useLessonCreateFlow(
     ]
   );
 
-  const handleDeckCreated = useCallback(
-    async (deckData: { name: string; folderId: string | null; content: string }) => {
-      try {
-        const lines = deckData.content
-          .split('\n')
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0);
-
-        const lessonId = Date.now().toString();
-        const baseName = deckData.name.trim() || 'Untitled deck';
-        const uniqueName = uniquifyName(baseName, getTakenFlashcardDeckNames());
-        const now = Date.now();
-
-        const newLesson: LessonRecord = {
-          id: lessonId,
-          type: 'flashcard',
-          name: uniqueName,
-          language: 'en',
-          folderId: deckData.folderId,
-          sortKey: Date.now(),
-          transcriptText: '',
-          completedSentences: {},
-          totalSentences: lines.length,
-          createdAt: now,
-          lastAccessed: now,
-          updatedAt: now,
-          flashcardData: {
-            lines,
-            ratings: {},
-            currentIndex: 0,
-            isShuffled: false,
-            shuffledIndices: [],
-          },
-        };
-
-        await saveLessonFirestore(newLesson);
-
-        const deckItem: DeckItem = {
-          id: lessonId,
-          name: uniqueName,
-          language: 'en',
-          cardCount: lines.length,
-          progress: 0,
-          type: 'deck',
-        };
-
-        setSelectedItem({
-          id: lessonId,
-          type: 'deck',
-          data: deckItem,
-        });
-        expandSidebarForItem('flashcard');
-
-        await handleLoadLesson(lessonId);
-        setToast({ message: 'Deck created.', type: 'success' });
-      } catch {
-        setToast({ message: 'Could not create deck.', type: 'error' });
-      } finally {
-        setUploadMode('idle');
-      }
-    },
-    [setSelectedItem, handleLoadLesson, setUploadMode, setToast, getTakenFlashcardDeckNames, expandSidebarForItem]
-  );
-
-  return { handleLessonCreated, handleDeckCreated };
+  return { handleLessonCreated };
 }
