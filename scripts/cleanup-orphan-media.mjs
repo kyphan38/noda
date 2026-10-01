@@ -57,8 +57,14 @@ let orphanFiles = 0;
 let orphanBytes = 0;
 let orphanAnalysisDocs = 0;
 
-for (const userRef of await db.collection("users").listDocuments()) {
-  const uid = userRef.id;
+// Users come from Firestore *and* Storage: once every lesson of a user is gone,
+// Firestore no longer lists that user, but their files can still be there.
+const uids = new Set((await db.collection("users").listDocuments()).map((ref) => ref.id));
+const [allFiles] = await bucket.getFiles({ prefix: "users/" });
+for (const f of allFiles) uids.add(f.name.split("/")[1]);
+
+for (const uid of uids) {
+  const userRef = db.collection("users").doc(uid);
   const inUse = new Set();
   const deletedLessonRefs = [];
 
@@ -77,7 +83,7 @@ for (const userRef of await db.collection("users").listDocuments()) {
     }
   }
 
-  const [files] = await bucket.getFiles({ prefix: `users/${uid}/` });
+  const files = allFiles.filter((f) => f.name.startsWith(`users/${uid}/`));
   const orphans = files.filter(
     (f) =>
       (f.name.startsWith(`users/${uid}/media/`) || f.name.startsWith(`users/${uid}/analysis-audio/`)) &&
