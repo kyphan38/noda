@@ -103,7 +103,6 @@ export default function NodaApp() {
     handleLoadLesson, handleNewLesson, handleRenameLesson, handleDeletePermanently,
     handleModeChange: applyLessonAppMode,
     expandSidebarForItem,
-    prepareForLessonMediaClear,
   } = useLessonLogic(setMediaFile, setMediaURL);
 
   const {
@@ -1102,26 +1101,10 @@ export default function NodaApp() {
       <CleanupModal
         isOpen={showCleanupModal}
         onKeep={() => setShowCleanupModal(false)}
-        onRemoveAudio={async () => {
+        onMoveToTrash={async () => {
           const id = selectedItem?.id;
-          if (!id) return;
           setShowCleanupModal(false);
-          try {
-            if (mediaURL) {
-              URL.revokeObjectURL(mediaURL);
-            }
-            setMediaURL(null);
-            setMediaFile(null);
-            setIsPlaying(false);
-            await prepareForLessonMediaClear(id);
-            await handleDeletePermanently(id);
-            handleNewLessonWrapper();
-          } catch {
-            setToast({
-              message: 'Could not remove this lesson. IndexedDB may be unavailable (e.g. private browsing).',
-              type: 'error',
-            });
-          }
+          if (id) await handleTrashItem(id);
         }}
       />
 
