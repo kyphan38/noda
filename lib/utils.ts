@@ -101,25 +101,6 @@ export function alignDictationInput(rawInput: string, targetNorm: string): strin
   return aligned;
 }
 
-/** Sidebar % for flashcard decks: matches session queue - permanently done cards / total lines. */
-export function flashcardDeckProgressPercent(
-  flashcardData: { lines?: string[]; ratings?: Record<number, string> } | undefined,
-  totalSentences: number
-): number {
-  const linesLen =
-    flashcardData?.lines && flashcardData.lines.length > 0
-      ? flashcardData.lines.length
-      : totalSentences;
-  if (linesLen <= 0) return 0;
-  const ratings = flashcardData?.ratings ?? {};
-  let notDone = 0;
-  for (let i = 0; i < linesLen; i++) {
-    if (ratings[i] !== 'done') notDone += 1;
-  }
-  const done = linesLen - notDone;
-  return Math.round(Math.min(100, (done / linesLen) * 100));
-}
-
 export const formatTime = (time: number) => {
   if (isNaN(time)) return "0:00";
   const minutes = Math.floor(time / 60);

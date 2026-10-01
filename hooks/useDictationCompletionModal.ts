@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AppMode, Sentence } from '@/types';
 
-type Selected = { id: string; type: 'lesson' | 'deck' } | null;
+type Selected = { id: string } | null;
 
 function completedCount(transcript: Sentence[], completedSentences: Record<number, boolean>): number {
   return transcript.filter((s) => completedSentences[s.id]).length;
@@ -18,7 +18,6 @@ export function useDictationCompletionModal(
   completedSentences: Record<number, boolean>
 ) {
   const [showCleanupModal, setShowCleanupModal] = useState(false);
-  const [cleanupModalVariant, setCleanupModalVariant] = useState<'lesson' | 'deck'>('lesson');
   const prevLessonIdForCompletionRef = useRef<string | null>(null);
   const prevCompletedCountRef = useRef<number>(-1);
 
@@ -28,7 +27,7 @@ export function useDictationCompletionModal(
 
     if (id !== prevLessonIdForCompletionRef.current) {
       prevLessonIdForCompletionRef.current = id;
-      if (id && selectedItem?.type === 'lesson' && isStarted && total > 0) {
+      if (id && isStarted && total > 0) {
         prevCompletedCountRef.current = completedCount(transcript, completedSentences);
       } else {
         prevCompletedCountRef.current = -1;
@@ -36,7 +35,7 @@ export function useDictationCompletionModal(
       return;
     }
 
-    if (!id || selectedItem?.type !== 'lesson' || !isStarted || total === 0) {
+    if (!id || !isStarted || total === 0) {
       return;
     }
 
@@ -48,17 +47,14 @@ export function useDictationCompletionModal(
       prevCompletedCountRef.current < total &&
       currentCount === total
     ) {
-      setCleanupModalVariant('lesson');
       setShowCleanupModal(true);
     }
 
     prevCompletedCountRef.current = currentCount;
-  }, [selectedItem?.id, selectedItem?.type, appMode, completedSentences, transcript, isStarted]);
+  }, [selectedItem?.id, appMode, completedSentences, transcript, isStarted]);
 
   return {
     showCleanupModal,
     setShowCleanupModal,
-    cleanupModalVariant,
-    setCleanupModalVariant,
   };
 }

@@ -9,7 +9,7 @@ export type Sentence = {
 // Learning modes
 export type LoopMode = 'none' | 'one';
 export type RepeatCount = 1 | 2 | 3 | 'infinite';
-export type AppMode = 'normal' | 'dictation' | 'flashcard';
+export type AppMode = 'normal' | 'dictation';
 // Pronunciation result
 export type SpokenResult = {
   text: string;
@@ -26,18 +26,13 @@ export type CompletedSentences = Record<number, boolean>;
 // Lesson summary from DB
 export type LessonSummary = {
   id: string;
-  type?: 'audio' | 'flashcard';
   name: string;
   language: string;
   progress: number;
-  /** Line / sentence count from DB (used for deck card counts in sidebar). */
   totalSentences: number;
-  /** Library section: audio lessons vs flashcard decks (independent of whether audio file is present). */
-  kind: 'audio' | 'flashcard';
   isTrashed: boolean;
   /** Whether a media blob exists in IndexedDB (audio or video). */
   hasMedia: boolean;
-  /** For kind=audio: audio vs video lesson; for flashcard unused (always 'audio'). */
   mediaType: 'audio' | 'video';
   /** Sidebar folder membership (null/undefined = root). */
   folderId?: string | null;
@@ -49,7 +44,6 @@ export type LessonSummary = {
 // Lesson detail from DB
 export type Lesson = {
   id: string;
-  type?: 'audio' | 'flashcard';
   name: string;
   language: string;
   mediaFile?: File;
@@ -62,8 +56,6 @@ export type Lesson = {
   isTrashed?: boolean;
 };
 
-export type ContentType = 'lesson' | 'deck';
-
 export interface LessonItem {
   id: string;
   name: string;
@@ -73,33 +65,13 @@ export interface LessonItem {
   mediaType: 'audio' | 'video';
   folderId?: string | null;
   sortKey?: number;
-  type: 'lesson'; // CRITICAL: discriminant vs deck
-}
-
-export interface DeckItem {
-  id: string;
-  name: string;
-  language: 'en';
-  cardCount: number;
-  /** Cards marked Done / total (persisted), same scale as lesson sidebar progress. */
-  progress: number;
-  folderId?: string | null;
-  sortKey?: number;
-  type: 'deck'; // CRITICAL: discriminant vs lesson
-}
-
-export interface TrashItem {
-  id: string;
-  name: string;
-  originalType: 'lesson' | 'deck';
-  language: string;
-  trashedAt?: number;
+  type: 'lesson';
 }
 
 // Expanded sections state
 export type ExpandedSections = Record<string, boolean>;
 
-export type SidebarKind = 'audio' | 'flashcard';
+export type SidebarKind = 'audio';
 /** Stored on folder docs; new folders use `en`. Legacy `de` may still exist in Firestore. */
 export type SidebarLanguage = 'en' | 'de';
 

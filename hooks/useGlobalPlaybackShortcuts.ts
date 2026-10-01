@@ -5,7 +5,7 @@ import { ARROW_SKIP_SECONDS, SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 type ModeChange = (mode: AppMode) => void | Promise<void>;
 
 export function useGlobalPlaybackShortcuts(
-  selectedItemType: 'lesson' | 'deck' | undefined,
+  selectedItemType: 'lesson' | undefined,
   appMode: AppMode,
   toggleHideCaptions: (() => void) | undefined,
   handleModeChange: ModeChange,

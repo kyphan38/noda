@@ -2,19 +2,18 @@
 
 import React, { type RefObject } from 'react';
 import { PanelLeft, Trash2, MoreVertical, Edit2 } from 'lucide-react';
-import type { AppMode, LessonItem, DeckItem } from '@/types';
+import type { AppMode, LessonItem } from '@/types';
 import { cn } from '@/lib/utils';
 
 export type HeaderSelectedItem = {
   id: string;
-  type: 'lesson' | 'deck';
-  data: LessonItem | DeckItem;
+  type: 'lesson';
+  data: LessonItem;
 };
 
 export interface AppHeaderProps {
   isSidebarOpen: boolean;
   onOpenSidebar: () => void;
-  /** When true, hide Normal/Dictation/Shadowing tabs (mobile decks-only UX). */
   isMobile?: boolean;
   selectedItem: HeaderSelectedItem | null;
   appMode: AppMode;
@@ -58,7 +57,7 @@ export function AppHeader({
         )}
       </div>
 
-      {selectedItem?.type === 'lesson' && (
+      {selectedItem && (
         <div className="mode-tabs-container">
           <nav className="mode-tabs" aria-label="Lesson mode">
             {MODE_TABS.map(({ mode, label }) => (
@@ -89,7 +88,7 @@ export function AppHeader({
               onClick={() => setHeaderItemMenuOpen((o) => !o)}
               className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
               aria-expanded={headerItemMenuOpen}
-              aria-label="Lesson or deck actions"
+              aria-label="Lesson actions"
             >
               <MoreVertical size={22} aria-hidden />
             </button>

@@ -5,7 +5,7 @@ Viết ngày 2026-10-01. Làm theo thứ tự các phase bên dưới. Mỗi pha
 
 ---
 
-## Phase 0 - Xoá Decks (flashcard)
+## Phase 0 - Xoá Decks (flashcard) - XONG
 
 Lý do làm trước: bỏ Decks giúp code gọn hơn, các phase sau sửa ít file hơn.
 
@@ -27,9 +27,9 @@ Việc cần làm:
 - Kiểm tra: `npm run lint`, `npm run test:unit`, `npm run build`.
 
 Đã chọn: **xoá hẳn** dữ liệu deck khỏi Firestore (cả bản trong Trash).
-- Viết script `scripts/delete-decks.mjs`: chạy `--dry-run` trước để liệt kê số deck và tên.
-- Trước khi chạy thật, hỏi lại chủ app một lần nữa, vì không lấy lại được.
-- Xoá code trước, xoá dữ liệu sau (để app không bao giờ đọc phải dữ liệu đã xoá dở).
+
+**Xong (2026-10-01), branch `feat/remove-decks`.** Đã kiểm tra Firestore: chỉ có
+12 bài audio, 0 deck, 0 thư mục deck. Vì vậy không cần script xoá dữ liệu.
 
 ---
 
@@ -69,6 +69,8 @@ Cần sửa:
   `sourceText` với cache trước khi trả về.
 
 - **A5. Code chết.** `hooks/useSpeechRecognition.ts` không được dùng ở đâu. Xoá.
+  (Cũng không dùng: `components/TrashSection.tsx`, `TrashCardSkeleton` trong
+  `LoadingSkeleton.tsx`.)
 
 Ý tưởng sau này (chưa làm): ghi âm giọng người học khi shadowing và cho AI chấm
 (so với câu gốc về nhấn âm, nối âm). Đây là tính năng lớn, để sau Phase 2.
@@ -137,7 +139,7 @@ Xem bằng app chạy local (E2E mode) ở 1280x800 và 375x812.
 
 ## Thứ tự làm
 
-1. Phase 0 (xoá Decks)
+1. ~~Phase 0 (xoá Decks)~~ - xong
 2. Phase 1: A1, A5 (nhanh, là bug) -> A2 -> A3
 3. Phase 2 (mode + progress)
 4. Phase 3: U2, U3, U5, U6 làm cùng Phase 2; U1, U4 làm riêng; U7 nếu cần

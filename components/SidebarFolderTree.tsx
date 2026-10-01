@@ -1,13 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { DeckItem, LessonItem, SidebarFolder } from '@/types';
+import type { LessonItem, SidebarFolder } from '@/types';
 import { SidebarFolderRow } from './SidebarFolderRow';
 import { LessonCard } from './LessonCard';
-import { DeckCard } from './DeckCard';
 import { InlineCreateInput } from './InlineCreateInput';
-
-type AnyItem = LessonItem | DeckItem;
 
 function folderKey(id: string): string {
   return `folder:${id}`;
@@ -16,7 +13,6 @@ function folderKey(id: string): string {
 const MAX_VISIBLE_PER_CONTAINER = 10;
 
 function SidebarFolderTreeImpl({
-  kind,
   items,
   folders,
   selectedItemId,
@@ -36,16 +32,14 @@ function SidebarFolderTreeImpl({
   onMoveItem,
   onMoveFolder,
 }: {
-  /** Section discriminant (audio vs flashcard); items/folders are pre-filtered by parent. */
-  kind: 'audio' | 'flashcard';
-  items: AnyItem[];
+  items: LessonItem[];
   folders: SidebarFolder[];
   selectedItemId?: string;
   expandedSections: Record<string, boolean>;
   forcedExpandedFolderIds?: Set<string>;
   disableCaps?: boolean;
   onToggleSection: (section: string, expanded: boolean) => void;
-  onItemSelect: (item: AnyItem) => void;
+  onItemSelect: (item: LessonItem) => void;
   onTrashItem: (id: string) => void;
   onRenameLesson?: (id: string, newName: string) => void;
   activeMenu: string | null;
@@ -57,8 +51,6 @@ function SidebarFolderTreeImpl({
   onMoveItem: (itemId: string, folderId: string | null, sortKey: number) => void | Promise<void>;
   onMoveFolder: (folderId: string, parentId: string | null, sortKey: number) => void | Promise<void>;
 }) {
-  void kind;
-
   type DragPayload =
     | { entity: 'item'; id: string; fromFolderId: string | null }
     | { entity: 'folder'; id: string; fromParentId: string | null };
@@ -157,9 +149,9 @@ function SidebarFolderTreeImpl({
   );
 
   const itemsByFolderId = useMemo(() => {
-    const m = new Map<string | null, AnyItem[]>();
+    const m = new Map<string | null, LessonItem[]>();
     for (const it of items) {
-      const raw = (it as AnyItem).folderId ?? null;
+      const raw = it.folderId ?? null;
       const fid = raw && !foldersById.has(raw) ? null : raw;
       const arr = m.get(fid) ?? [];
       arr.push(it);
@@ -308,27 +300,15 @@ function SidebarFolderTreeImpl({
                   style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                 />
               )}
-              {it.type === 'lesson' ? (
-                <LessonCard
-                  lesson={it as LessonItem}
-                  selectedItemId={selectedItemId}
-                  onItemSelect={onItemSelect as (x: LessonItem) => void}
-                  onTrashItem={onTrashItem}
-                  onRenameLesson={onRenameLesson}
-                  activeMenu={activeMenu}
-                  setActiveMenu={setActiveMenu}
-                />
-              ) : (
-                <DeckCard
-                  deck={it as DeckItem}
-                  selectedItemId={selectedItemId}
-                  onItemSelect={onItemSelect as (x: DeckItem) => void}
-                  onTrashItem={onTrashItem}
-                  onRenameLesson={onRenameLesson}
-                  activeMenu={activeMenu}
-                  setActiveMenu={setActiveMenu}
-                />
-              )}
+              <LessonCard
+                lesson={it}
+                selectedItemId={selectedItemId}
+                onItemSelect={onItemSelect}
+                onTrashItem={onTrashItem}
+                onRenameLesson={onRenameLesson}
+                activeMenu={activeMenu}
+                setActiveMenu={setActiveMenu}
+              />
             </div>
           );
         })}
@@ -530,31 +510,17 @@ function SidebarFolderTreeImpl({
                           style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                         />
                       )}
-                      {it.type === 'lesson' ? (
-                        <div className="ml-4">
-                          <LessonCard
-                            lesson={it as LessonItem}
-                            selectedItemId={selectedItemId}
-                            onItemSelect={onItemSelect as (x: LessonItem) => void}
-                            onTrashItem={onTrashItem}
-                            onRenameLesson={onRenameLesson}
-                            activeMenu={activeMenu}
-                            setActiveMenu={setActiveMenu}
-                          />
-                        </div>
-                      ) : (
-                        <div className="ml-4">
-                          <DeckCard
-                            deck={it as DeckItem}
-                            selectedItemId={selectedItemId}
-                            onItemSelect={onItemSelect as (x: DeckItem) => void}
-                            onTrashItem={onTrashItem}
-                            onRenameLesson={onRenameLesson}
-                            activeMenu={activeMenu}
-                            setActiveMenu={setActiveMenu}
-                          />
-                        </div>
-                      )}
+                      <div className="ml-4">
+                        <LessonCard
+                          lesson={it}
+                          selectedItemId={selectedItemId}
+                          onItemSelect={onItemSelect}
+                          onTrashItem={onTrashItem}
+                          onRenameLesson={onRenameLesson}
+                          activeMenu={activeMenu}
+                          setActiveMenu={setActiveMenu}
+                        />
+                      </div>
                     </div>
                   );
                 })}
@@ -744,31 +710,17 @@ function SidebarFolderTreeImpl({
                                     style={{ top: overTarget.position === 'before' ? 0 : '100%' }}
                                   />
                                 )}
-                                {it.type === 'lesson' ? (
-                                  <div className="ml-10">
-                                    <LessonCard
-                                      lesson={it as LessonItem}
-                                      selectedItemId={selectedItemId}
-                                      onItemSelect={onItemSelect as (x: LessonItem) => void}
-                                      onTrashItem={onTrashItem}
-                                      onRenameLesson={onRenameLesson}
-                                      activeMenu={activeMenu}
-                                      setActiveMenu={setActiveMenu}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="ml-10">
-                                    <DeckCard
-                                      deck={it as DeckItem}
-                                      selectedItemId={selectedItemId}
-                                      onItemSelect={onItemSelect as (x: DeckItem) => void}
-                                      onTrashItem={onTrashItem}
-                                      onRenameLesson={onRenameLesson}
-                                      activeMenu={activeMenu}
-                                      setActiveMenu={setActiveMenu}
-                                    />
-                                  </div>
-                                )}
+                                <div className="ml-10">
+                                  <LessonCard
+                                    lesson={it}
+                                    selectedItemId={selectedItemId}
+                                    onItemSelect={onItemSelect}
+                                    onTrashItem={onTrashItem}
+                                    onRenameLesson={onRenameLesson}
+                                    activeMenu={activeMenu}
+                                    setActiveMenu={setActiveMenu}
+                                  />
+                                </div>
                               </div>
                             );
                           })}
@@ -905,27 +857,15 @@ function SidebarFolderTreeImpl({
                                   <div className="space-y-1">
                                     {tfRender.map((it) => (
                                       <div key={it.id} className="ml-16">
-                                        {it.type === 'lesson' ? (
-                                          <LessonCard
-                                            lesson={it as LessonItem}
-                                            selectedItemId={selectedItemId}
-                                            onItemSelect={onItemSelect as (x: LessonItem) => void}
-                                            onTrashItem={onTrashItem}
-                                            onRenameLesson={onRenameLesson}
-                                            activeMenu={activeMenu}
-                                            setActiveMenu={setActiveMenu}
-                                          />
-                                        ) : (
-                                          <DeckCard
-                                            deck={it as DeckItem}
-                                            selectedItemId={selectedItemId}
-                                            onItemSelect={onItemSelect as (x: DeckItem) => void}
-                                            onTrashItem={onTrashItem}
-                                            onRenameLesson={onRenameLesson}
-                                            activeMenu={activeMenu}
-                                            setActiveMenu={setActiveMenu}
-                                          />
-                                        )}
+                                        <LessonCard
+                                          lesson={it}
+                                          selectedItemId={selectedItemId}
+                                          onItemSelect={onItemSelect}
+                                          onTrashItem={onTrashItem}
+                                          onRenameLesson={onRenameLesson}
+                                          activeMenu={activeMenu}
+                                          setActiveMenu={setActiveMenu}
+                                        />
                                       </div>
                                     ))}
 

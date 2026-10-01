@@ -67,7 +67,7 @@ export function DeleteLessonModal({ lessonId, onCancel, onConfirmDelete }: Delet
           Delete item?
         </h3>
         <p className="text-gray-400 mb-4 text-sm leading-relaxed">
-          This removes the lesson or deck and all saved data from this device. This cannot be undone.
+          This removes the lesson and all saved data from this device. This cannot be undone.
         </p>
         <div className="mb-6 grid gap-2">
           <label htmlFor="noda-delete-lesson-confirm" className="text-sm text-gray-300">
