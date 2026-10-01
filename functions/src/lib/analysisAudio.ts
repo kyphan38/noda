@@ -21,20 +21,10 @@ import * as path from "path";
 
 import { extractAnalysisAudio } from "./sliceAudio";
 
+export { analysisAudioPath } from "./analysisAudioPath";
+
 /** Typed off firebase-admin so this file does not depend on @google-cloud/storage directly. */
 type Bucket = ReturnType<ReturnType<typeof admin.storage>["bucket"]>;
-
-/**
- * Storage path of the analysis copy for `mediaStoragePath`, or null when that
- * path is not inside `users/{uid}/media/` of the caller.
- */
-export function analysisAudioPath(uid: string, mediaStoragePath: string): string | null {
-  const prefix = `users/${uid}/media/`;
-  if (!mediaStoragePath.startsWith(prefix)) return null;
-  const name = mediaStoragePath.slice(prefix.length);
-  if (!name || name.includes("/") || name.includes("..")) return null;
-  return `users/${uid}/analysis-audio/${name}.flac`;
-}
 
 function isNotFound(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { code?: unknown }).code === 404;
