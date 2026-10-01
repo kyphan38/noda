@@ -33,7 +33,10 @@ Việc cần làm:
 
 ---
 
-## Phase 1 - Sửa phần tích hợp AI (shadowing analysis)
+## Phase 1 - Sửa phần tích hợp AI (shadowing analysis) - XONG
+
+**Xong (2026-10-01).** A1, A2, A3, A5 đã merge vào main; Cloud Function đã deploy.
+A4 để lại (chưa cần, vì app chưa cho sửa transcript).
 
 Điểm đang tốt (giữ nguyên): cache-first trong Firestore, hỏi xác nhận trước khi
 gọi Gemini (tốn tiền), structured output + kiểm tra shape, retry một lần khi JSON
@@ -140,6 +143,6 @@ Xem bằng app chạy local (E2E mode) ở 1280x800 và 375x812.
 ## Thứ tự làm
 
 1. ~~Phase 0 (xoá Decks)~~ - xong
-2. Phase 1: A1, A5 (nhanh, là bug) -> A2 -> A3
+2. ~~Phase 1: A1, A5 (nhanh, là bug) -> A2 -> A3~~ - xong
 3. Phase 2 (mode + progress)
 4. Phase 3: U2, U3, U5, U6 làm cùng Phase 2; U1, U4 làm riêng; U7 nếu cần
