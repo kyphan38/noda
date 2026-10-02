@@ -55,8 +55,11 @@ export const SHADOWING_ANALYSIS_FUNCTION_NAME = 'analyzeShadowingPattern';
  *  Raised from 4 to 8: at 4 the prompt had to pick "the most important" junctions and
  *  quietly dropped real ones (weak forms like "if you", "you know"), which is exactly the
  *  detail an upper-intermediate learner is looking for. The notes area scrolls, so length
- *  costs nothing as long as the annotated line above stays pinned. */
-export const SHADOWING_MAX_NOTES = 8;
+ *  costs nothing as long as the annotated line above stays pinned.
+ *  Lowered from 8 to 6 when the mobile panel became an in-flow dock (max 45dvh) above
+ *  the player: past 6 the list no longer fits a phone and is hard to keep in mind while
+ *  shadowing. The prompt drops the smallest changes, not the end of the sentence. */
+export const SHADOWING_MAX_NOTES = 6;
 /** At most one `rhythm` note - the rest of the list is for audible sound changes. */
 export const SHADOWING_MAX_RHYTHM_NOTES = 1;
 
