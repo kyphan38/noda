@@ -91,7 +91,8 @@ export type SidebarFolder = {
 // v1 cache was deleted rather than migrated.
 //
 // v3 has the same shape as v2. It only forces a re-analysis: v2 docs could hold
-// Vietnamese-style `sounds` ("li-đồ") from an ambiguous prompt.
+// Vietnamese-style `sounds` ("li-đồ") from an ambiguous prompt. v3 also adds the
+// optional `notes[].via`.
 
 export const SHADOWING_ANALYSIS_VERSION = 3;
 
@@ -127,7 +128,9 @@ export type ShadowingNote = {
   type: ShadowingNoteType;
   /** The words this note is about; empty for `rhythm` notes. */
   text: string;
-  /** Plain-letter pseudo-spelling, e.g. `had-tuh`. Empty for `rhythm` notes. */
+  /** Intermediate spoken form of a multi-step change, e.g. `I'm gonna`. Absent when single-step. */
+  via?: string;
+  /** English-style respelling, stressed syllable in caps, e.g. `HAD-tuh`. Empty for `rhythm` notes. */
   sounds: string;
   /** Narrow IPA of what is actually heard. Empty for `rhythm` notes. */
   ipa: string;

@@ -45,7 +45,8 @@ const NODA_DB_ID = "(default)";
 /** Analysis shape version. Keep in sync with `SHADOWING_ANALYSIS_VERSION` in types/index.tsx.
  * A cached doc with any other version is ignored and re-analyzed: v1 docs described four
  * independent sections and cannot be converted to v2's chunk/token structure. v3 keeps the
- * v2 shape but re-analyzes v2 docs, whose `sounds` mixed in Vietnamese-style respellings. */
+ * v2 shape (plus an optional `notes[].via`) but re-analyzes v2 docs, whose `sounds` mixed in
+ * Vietnamese-style respellings. */
 const ANALYSIS_VERSION = 3;
 
 /** Gemini budget per attempt. Raised twice as the response grew: v1's 25s, then 40s for the

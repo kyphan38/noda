@@ -132,6 +132,14 @@ describe('normalizeShadowingAnalysis', () => {
       expect(out.notes).toHaveLength(8);
     });
 
+    it('keeps a via step, but drops an empty one or one that repeats the text', () => {
+      const out = normalizeShadowingAnalysis(
+        twoChunks({ notes: [note({ via: 'hadda' }), note({ via: '' }), note({ via: 'Had to' })] }),
+        SOURCE
+      );
+      expect(out.notes.map((n) => n.via)).toEqual(['hadda', undefined, undefined]);
+    });
+
     it('keeps only one rhythm note, blanks its example fields, and moves it last', () => {
       const raw = twoChunks({
         notes: [
