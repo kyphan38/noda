@@ -9,7 +9,7 @@
  *   once before giving up. A silently reworded transcript is the one failure the
  *   learner cannot detect by eye, so it must never be cached.
  * - Field-level slips (a `display` that drifted, a content word marked `weak`,
- *   a ninth note, a Vietnamese-style `sounds`) are repaired or dropped in place.
+ *   a seventh note, a Vietnamese-style `sounds`) are repaired or dropped in place.
  *   These cost a detail, not the whole analysis, and a retry would likely
  *   reproduce them.
  */
@@ -18,7 +18,7 @@
 export class ShadowingShapeError extends Error {}
 
 /** Keep in sync with `SHADOWING_MAX_NOTES` / `SHADOWING_MAX_RHYTHM_NOTES` in constants/index.tsx. */
-const MAX_NOTES = 8;
+const MAX_NOTES = 6;
 const MAX_RHYTHM_NOTES = 1;
 const LEVELS = new Set(["strong", "normal", "weak"]);
 const TONES = new Set(["rise", "fall", "fall-rise", "rise-fall", "flat"]);

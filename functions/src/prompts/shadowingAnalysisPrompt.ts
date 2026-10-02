@@ -33,7 +33,7 @@
 import { Type, type Schema } from "@google/genai";
 
 /** Keep in sync with `SHADOWING_MAX_NOTES` in constants/index.tsx. */
-export const MAX_NOTES = 8;
+export const MAX_NOTES = 6;
 
 export const SHADOWING_ANALYSIS_RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,
@@ -112,8 +112,9 @@ For each token:
 Per chunk also give "tone" (the pitch movement at the end of that chunk) and "toneStrength": "strong" for a clear, committed move, "weak" for a slight continuation rise or a small drop.
 
 ## notes
-Work through the sentence from left to right and cover EVERY junction where the audio differs from a careful word-by-word reading: consonant-to-vowel links, weak forms of function words, swallowed or unreleased stops, assimilated sounds. List them in the order they occur in the sentence, up to ${MAX_NOTES}.
+Work through the sentence from left to right and cover EVERY junction where the audio differs from a careful word-by-word reading: consonant-to-vowel links, weak forms of function words, swallowed or unreleased stops, assimilated sounds. List them in the order they occur in the sentence, at most ${MAX_NOTES}.
 - The learner wants the full picture of what makes this sound native, not only the single most dramatic moment. A short sentence can legitimately produce 5-6 notes; do not stop at two or three because the rest feel small.
+- If you hear more than ${MAX_NOTES} junctions, drop the ones that change the sound least - not the ones at the end of the sentence - and keep the rest in sentence order.
 - Even so, only what is actually audible in THIS recording. Never invent a textbook rule the speaker did not apply, and if the speaker really does articulate a junction cleanly, leave it out - an empty array is a valid answer.
 - At most ONE note of type "rhythm" (about timing, pauses, or pitch), placed last, and only if it changes how the learner should deliver the line.
 - For sound notes ("linking", "reduction", "elision", "assimilation"): "text" = the exact words from the transcript, but if the transcript writes a number in digits, write the spoken words instead (e.g. transcript "24 hours" -> text "twenty-four hours"), "sounds" = an English-style respelling: plain ASCII letters only, syllables split by hyphens, the stressed syllable in CAPS (e.g. "HAD-tuh", "LIH-dl", "TID-bit", "SHEH-ruh"). Never use Vietnamese spelling or any diacritics in "sounds" - no "đ", no tone marks, no "li-đồ" or "thít-bịt": Vietnamese tones and letters carry sounds English does not have. "ipa" = the narrow IPA of what you actually hear. For "rhythm" notes leave "text", "via", "sounds", "ipa" as empty strings.

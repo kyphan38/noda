@@ -127,9 +127,9 @@ describe('normalizeShadowingAnalysis', () => {
       expect(out.notes[0].why).toBe('Đừng bật /d/.');
     });
 
-    it('truncates to the eight-note cap', () => {
+    it('truncates to the six-note cap', () => {
       const out = normalizeShadowingAnalysis(twoChunks({ notes: Array.from({ length: 12 }, () => note()) }), SOURCE);
-      expect(out.notes).toHaveLength(8);
+      expect(out.notes).toHaveLength(6);
     });
 
     it('keeps a via step, but drops an empty one or one that repeats the text', () => {

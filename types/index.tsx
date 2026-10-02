@@ -92,7 +92,7 @@ export type SidebarFolder = {
 //
 // v3 has the same shape as v2. It only forces a re-analysis: v2 docs could hold
 // Vietnamese-style `sounds` ("li-đồ") from an ambiguous prompt. v3 also adds the
-// optional `notes[].via`.
+// optional `notes[].via` and lowers the note cap from 8 to 6.
 
 export const SHADOWING_ANALYSIS_VERSION = 3;
 
@@ -141,7 +141,7 @@ export type ShadowingNote = {
 export type ShadowingPatternAnalysis = {
   /** Thought groups in transcript order; every transcript word appears exactly once. */
   chunks: ShadowingChunk[];
-  /** At most `SHADOWING_MAX_NOTES`, most important first; may be empty. */
+  /** At most `SHADOWING_MAX_NOTES`, in sentence order with any rhythm note last; may be empty. */
   notes: ShadowingNote[];
 };
 
