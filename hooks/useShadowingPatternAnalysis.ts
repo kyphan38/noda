@@ -20,5 +20,11 @@ export function resolveShadowingErrorMessage(e: unknown): string {
   if (code === 'functions/deadline-exceeded') {
     return 'Hết thời gian phân tích, thử lại.';
   }
+  const message = e instanceof Error ? e.message : '';
+  // Function cu co the tra loi ffmpeg tho ve ("killed with signal SIGSEGV") -
+  // dich san truoc khi hien, ke ca khi function moi da bao gon roi.
+  if (/ffmpeg|sigsegv|signal|killed|ffprobe/i.test(message)) {
+    return 'Không đọc được file âm thanh này, thử file khác.';
+  }
   return e instanceof Error ? e.message : 'Không phân tích được câu này.';
 }

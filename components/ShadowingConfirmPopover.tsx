@@ -77,7 +77,7 @@ export function ShadowingConfirmPopover({ onConfirm, onClose, triggerRef }: Shad
       }}
       className="z-[9999] flex flex-col gap-2 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-lg max-w-[220px]"
     >
-      <p className="text-xs text-gray-300">Câu này chưa được AI phân tích. Gọi AI phân tích chứ?</p>
+      <p className="text-xs text-gray-300">Phân tích AI?</p>
       <div className="flex justify-end gap-2">
         <button
           onClick={(e) => {
