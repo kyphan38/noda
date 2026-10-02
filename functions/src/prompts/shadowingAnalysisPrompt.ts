@@ -21,6 +21,9 @@
  * - The `why` cap is 12 words. At 15 the model regularly returned 16-17.
  * - Numbers must be spelled out in `notes[].text`, otherwise a note about
  *   "24 hours" quotes digits while its pseudo-spelling covers only "four hours".
+ * - `via` exists because a multi-step reduction looked wrong without its middle
+ *   step: "I'm going to" -> "ai-muh" reads like an error until "I'm gonna" sits
+ *   between them.
  * - `sounds` is English-style respelling only. The old wording ("a pseudo-spelling
  *   a Vietnamese reader can say") made Gemini mix styles, e.g. "li-đồ" next to
  *   "sheh-ruh". Vietnamese tone marks add a pitch the speaker never used, and "đ"
@@ -78,6 +81,7 @@ export const SHADOWING_ANALYSIS_RESPONSE_SCHEMA: Schema = {
             enum: ["linking", "reduction", "elision", "assimilation", "rhythm"],
           },
           text: { type: Type.STRING },
+          via: { type: Type.STRING },
           sounds: { type: Type.STRING },
           ipa: { type: Type.STRING },
           why: { type: Type.STRING },
@@ -112,7 +116,8 @@ Work through the sentence from left to right and cover EVERY junction where the 
 - The learner wants the full picture of what makes this sound native, not only the single most dramatic moment. A short sentence can legitimately produce 5-6 notes; do not stop at two or three because the rest feel small.
 - Even so, only what is actually audible in THIS recording. Never invent a textbook rule the speaker did not apply, and if the speaker really does articulate a junction cleanly, leave it out - an empty array is a valid answer.
 - At most ONE note of type "rhythm" (about timing, pauses, or pitch), placed last, and only if it changes how the learner should deliver the line.
-- For sound notes ("linking", "reduction", "elision", "assimilation"): "text" = the exact words from the transcript, but if the transcript writes a number in digits, write the spoken words instead (e.g. transcript "24 hours" -> text "twenty-four hours"), "sounds" = an English-style respelling: plain ASCII letters only, syllables split by hyphens, the stressed syllable in CAPS (e.g. "HAD-tuh", "LIH-dl", "TID-bit", "SHEH-ruh"). Never use Vietnamese spelling or any diacritics in "sounds" - no "đ", no tone marks, no "li-đồ" or "thít-bịt": Vietnamese tones and letters carry sounds English does not have. "ipa" = the narrow IPA of what you actually hear. For "rhythm" notes leave "text", "sounds", "ipa" as empty strings.
+- For sound notes ("linking", "reduction", "elision", "assimilation"): "text" = the exact words from the transcript, but if the transcript writes a number in digits, write the spoken words instead (e.g. transcript "24 hours" -> text "twenty-four hours"), "sounds" = an English-style respelling: plain ASCII letters only, syllables split by hyphens, the stressed syllable in CAPS (e.g. "HAD-tuh", "LIH-dl", "TID-bit", "SHEH-ruh"). Never use Vietnamese spelling or any diacritics in "sounds" - no "đ", no tone marks, no "li-đồ" or "thít-bịt": Vietnamese tones and letters carry sounds English does not have. "ipa" = the narrow IPA of what you actually hear. For "rhythm" notes leave "text", "via", "sounds", "ipa" as empty strings.
+- "via": when the change happens in steps, the intermediate spoken form in ordinary English spelling, so the learner can follow the path (e.g. text "I'm going to" -> via "I'm gonna" -> sounds "AIM-uh"; text "want to" -> via "wanna"). Use only a widely known informal form. Empty string when the change is a single step.
 
 ## "why" field - the coaching instruction
 Write in Vietnamese, keeping English words/IPA/phonetics terms as-is. Do NOT explain what the phenomenon is or name the rule - the learner already knows. Tell them what to DO with their mouth, tongue, or breath to copy it. Imperative, concrete, at most 12 words, one sentence. Write proper Vietnamese with full diacritics (tone marks) - never unaccented Vietnamese.

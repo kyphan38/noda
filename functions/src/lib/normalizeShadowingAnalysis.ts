@@ -55,7 +55,7 @@ const letters = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]/g, "")
 
 type RawToken = { w?: unknown; display?: unknown; level?: unknown; linked?: unknown };
 type RawChunk = { tokens?: unknown; tone?: unknown; toneStrength?: unknown };
-type RawNote = { type?: unknown; text?: unknown; sounds?: unknown; ipa?: unknown; why?: unknown };
+type RawNote = { type?: unknown; text?: unknown; via?: unknown; sounds?: unknown; ipa?: unknown; why?: unknown };
 
 export interface NormalizedToken {
   w: string;
@@ -71,6 +71,8 @@ export interface NormalizedChunk {
 export interface NormalizedNote {
   type: "linking" | "reduction" | "elision" | "assimilation" | "rhythm";
   text: string;
+  /** Intermediate spoken form of a multi-step change ("I'm gonna"); omitted when single-step. */
+  via?: string;
   sounds: string;
   ipa: string;
   why: string;
@@ -137,7 +139,12 @@ function normalizeNotes(raw: unknown): NormalizedNote[] {
       rhythm.push({ type, text: "", sounds: "", ipa: "", why });
       continue;
     }
-    sounds.push({ type, text: str(n.text), sounds: respelling(str(n.sounds)), ipa: str(n.ipa), why });
+    const text = str(n.text);
+    const note: NormalizedNote = { type, text, sounds: respelling(str(n.sounds)), ipa: str(n.ipa), why };
+    // A "via" that only repeats the transcript words adds an arrow and no information.
+    const via = respelling(str(n.via));
+    if (via && letters(via) !== letters(text)) note.via = via;
+    sounds.push(note);
   }
 
   // Sound notes stay in sentence order so the list reads alongside the line above;
