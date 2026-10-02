@@ -9,8 +9,9 @@
  *   once before giving up. A silently reworded transcript is the one failure the
  *   learner cannot detect by eye, so it must never be cached.
  * - Field-level slips (a `display` that drifted, a content word marked `weak`,
- *   a fifth note) are repaired or dropped in place. These cost a detail, not the
- *   whole analysis, and a retry would likely reproduce them.
+ *   a ninth note, a Vietnamese-style `sounds`) are repaired or dropped in place.
+ *   These cost a detail, not the whole analysis, and a retry would likely
+ *   reproduce them.
  */
 
 /** Thrown when the response is structurally unusable - the caller retries once. */
@@ -81,6 +82,16 @@ export interface NormalizedAnalysis {
 
 const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 
+/** Any letter outside A-Z, e.g. "đ" or a toned vowel like "ồ". */
+const NON_ASCII_LETTER = /(?![A-Za-z])\p{L}/u;
+
+/**
+ * `sounds` must be an English-style respelling ("LIH-dl"). A Vietnamese-style one
+ * ("li-đồ") teaches tones and letters the speaker never used, so it is dropped
+ * rather than cached - the note still shows its IPA and coaching line.
+ */
+const respelling = (s: string): string => (NON_ASCII_LETTER.test(s) ? "" : s);
+
 function normalizeToken(raw: RawToken): NormalizedToken | null {
   const w = typeof raw.w === "string" ? raw.w.trim() : "";
   if (!w) return null;
@@ -126,7 +137,7 @@ function normalizeNotes(raw: unknown): NormalizedNote[] {
       rhythm.push({ type, text: "", sounds: "", ipa: "", why });
       continue;
     }
-    sounds.push({ type, text: str(n.text), sounds: str(n.sounds), ipa: str(n.ipa), why });
+    sounds.push({ type, text: str(n.text), sounds: respelling(str(n.sounds)), ipa: str(n.ipa), why });
   }
 
   // Sound notes stay in sentence order so the list reads alongside the line above;

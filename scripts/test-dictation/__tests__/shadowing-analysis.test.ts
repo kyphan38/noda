@@ -116,6 +116,17 @@ describe('normalizeShadowingAnalysis', () => {
       ...extra,
     });
 
+    it('drops a Vietnamese-style respelling but keeps the rest of the note', () => {
+      // Seen in the wild: "li-đồ" and "thít-bịt" next to English-style "sheh-ruh".
+      const out = normalizeShadowingAnalysis(
+        twoChunks({ notes: [note({ sounds: 'li-đồ' }), note({ sounds: 'thít-bịt' }), note({ sounds: 'LIH-dl' })] }),
+        SOURCE
+      );
+      expect(out.notes.map((n) => n.sounds)).toEqual(['', '', 'LIH-dl']);
+      expect(out.notes[0].ipa).toBe('/hæd tə/');
+      expect(out.notes[0].why).toBe('Đừng bật /d/.');
+    });
+
     it('truncates to the eight-note cap', () => {
       const out = normalizeShadowingAnalysis(twoChunks({ notes: Array.from({ length: 12 }, () => note()) }), SOURCE);
       expect(out.notes).toHaveLength(8);
