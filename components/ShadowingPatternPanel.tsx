@@ -170,7 +170,7 @@ export function ShadowingPatternPanel({
 
   if (status === 'ready' && analysis && renderable) {
     return (
-      <div onClick={stop} className="flex h-full flex-col gap-2">
+      <div onClick={stop} className="flex h-full min-h-0 flex-col gap-2">
         {Header}
 
         {/* Pinned: the line stays put while the notes below it scroll. */}
