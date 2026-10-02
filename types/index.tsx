@@ -89,8 +89,12 @@ export type SidebarFolder = {
 // had to show them on one annotated line instead of four tabs. Analysis docs are
 // versioned (`SHADOWING_ANALYSIS_VERSION`) and v1 docs are not convertible - the
 // v1 cache was deleted rather than migrated.
+//
+// v3 has the same shape as v2. It only forces a re-analysis: v2 docs could hold
+// Vietnamese-style `sounds` ("li-đồ") from an ambiguous prompt. v3 also adds the
+// optional `notes[].via` and lowers the note cap from 8 to 6.
 
-export const SHADOWING_ANALYSIS_VERSION = 2;
+export const SHADOWING_ANALYSIS_VERSION = 3;
 
 /** How audibly a token is pronounced. `weak` is only ever a function word. */
 export type ShadowingStressLevel = 'strong' | 'normal' | 'weak';
@@ -124,7 +128,9 @@ export type ShadowingNote = {
   type: ShadowingNoteType;
   /** The words this note is about; empty for `rhythm` notes. */
   text: string;
-  /** Plain-letter pseudo-spelling, e.g. `had-tuh`. Empty for `rhythm` notes. */
+  /** Intermediate spoken form of a multi-step change, e.g. `I'm gonna`. Absent when single-step. */
+  via?: string;
+  /** English-style respelling, stressed syllable in caps, e.g. `HAD-tuh`. Empty for `rhythm` notes. */
   sounds: string;
   /** Narrow IPA of what is actually heard. Empty for `rhythm` notes. */
   ipa: string;
@@ -135,7 +141,7 @@ export type ShadowingNote = {
 export type ShadowingPatternAnalysis = {
   /** Thought groups in transcript order; every transcript word appears exactly once. */
   chunks: ShadowingChunk[];
-  /** At most `SHADOWING_MAX_NOTES`, most important first; may be empty. */
+  /** At most `SHADOWING_MAX_NOTES`, in sentence order with any rhythm note last; may be empty. */
   notes: ShadowingNote[];
 };
 

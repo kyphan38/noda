@@ -116,9 +116,28 @@ describe('normalizeShadowingAnalysis', () => {
       ...extra,
     });
 
-    it('truncates to the eight-note cap', () => {
+    it('drops a Vietnamese-style respelling but keeps the rest of the note', () => {
+      // Seen in the wild: "li-đồ" and "thít-bịt" next to English-style "sheh-ruh".
+      const out = normalizeShadowingAnalysis(
+        twoChunks({ notes: [note({ sounds: 'li-đồ' }), note({ sounds: 'thít-bịt' }), note({ sounds: 'LIH-dl' })] }),
+        SOURCE
+      );
+      expect(out.notes.map((n) => n.sounds)).toEqual(['', '', 'LIH-dl']);
+      expect(out.notes[0].ipa).toBe('/hæd tə/');
+      expect(out.notes[0].why).toBe('Đừng bật /d/.');
+    });
+
+    it('truncates to the six-note cap', () => {
       const out = normalizeShadowingAnalysis(twoChunks({ notes: Array.from({ length: 12 }, () => note()) }), SOURCE);
-      expect(out.notes).toHaveLength(8);
+      expect(out.notes).toHaveLength(6);
+    });
+
+    it('keeps a via step, but drops an empty one or one that repeats the text', () => {
+      const out = normalizeShadowingAnalysis(
+        twoChunks({ notes: [note({ via: 'hadda' }), note({ via: '' }), note({ via: 'Had to' })] }),
+        SOURCE
+      );
+      expect(out.notes.map((n) => n.via)).toEqual(['hadda', undefined, undefined]);
     });
 
     it('keeps only one rhythm note, blanks its example fields, and moves it last', () => {

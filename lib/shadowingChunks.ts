@@ -38,7 +38,7 @@ export const NOTE_LABEL: Record<string, string> = {
 };
 
 /**
- * One hue per note type, so a list of 6-8 notes can be scanned by colour instead of
+ * One hue per note type, so a list of up to 6 notes can be scanned by colour instead of
  * read label by label. Written as whole class strings because Tailwind only ships the
  * classes it can see in the source - `bg-${x}-500/15` would compile to nothing.
  */

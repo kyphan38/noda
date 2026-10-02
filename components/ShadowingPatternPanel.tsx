@@ -64,6 +64,12 @@ function NoteRow({ note }: { note: ShadowingNote }) {
         {hasExample && (
           <div className="text-sm leading-snug text-gray-200">
             <span className="font-medium">{note.text}</span>
+            {note.via && (
+              <>
+                <span className="text-gray-400"> → </span>
+                <span className="text-gray-300">{note.via}</span>
+              </>
+            )}
             {note.sounds && <span className="text-gray-400"> → </span>}
             {note.sounds && <span>“{note.sounds}”</span>}
             {note.ipa && <span className="ml-1 font-mono text-[11px] text-gray-500">{note.ipa}</span>}
@@ -170,7 +176,7 @@ export function ShadowingPatternPanel({
 
   if (status === 'ready' && analysis && renderable) {
     return (
-      <div onClick={stop} className="flex h-full flex-col gap-2">
+      <div onClick={stop} className="flex h-full min-h-0 flex-col gap-2">
         {Header}
 
         {/* Pinned: the line stays put while the notes below it scroll. */}

@@ -16,7 +16,7 @@ import {
   DictationInputs,
   CompletedSentences,
 } from '@/types';
-import { findActiveTranscriptIndex } from '@/lib/transcript-scroll';
+import { findActiveTranscriptIndex, scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
 import { useShadowingPatternManager } from '@/hooks/useShadowingPatternManager';
 import { cn } from '@/lib/utils';
 
@@ -190,6 +190,18 @@ export function LessonView({
   useEffect(() => {
     return () => onShadowingPanelOpenChangeRef.current?.(false);
   }, []);
+
+  // Mobile: the dock takes the bottom of the transcript area, which can hide the very sentence
+  // the learner just opened. Re-centre it once the dock has finished growing (300ms transition).
+  useEffect(() => {
+    if (!isMobile || !isShadowingPanelOpen || activeShadowingSentenceId == null) return;
+    const index = transcript.findIndex((s) => s.id === activeShadowingSentenceId);
+    if (index === -1) return;
+    const timer = window.setTimeout(() => {
+      if (scrollContainerRef.current) scrollTranscriptRowIntoView(scrollContainerRef.current, index, 'smooth');
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [isMobile, isShadowingPanelOpen, activeShadowingSentenceId, transcript, scrollContainerRef]);
 
   useEffect(() => {
     setVideoHidden(false);
@@ -372,11 +384,19 @@ export function LessonView({
           </p>
         </div>
       ) : (
-        <div className={cn('flex-1 min-h-0 flex overflow-hidden', isShadowingPanelOpen && 'gap-3')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 flex overflow-hidden',
+            isMobile && 'flex-col',
+            isShadowingPanelOpen && (isMobile ? 'gap-2' : 'gap-3')
+          )}
+        >
           <div
             className={cn(
-              'h-full min-w-0 transition-[width] duration-300 ease-in-out',
-              isShadowingPanelOpen ? 'flex-1' : 'w-full'
+              'min-w-0',
+              isMobile
+                ? 'flex-1 min-h-0'
+                : cn('h-full transition-[width] duration-300 ease-in-out', isShadowingPanelOpen ? 'flex-1' : 'w-full')
             )}
           >
             <MemoTranscript
@@ -404,6 +424,27 @@ export function LessonView({
               onCancelShadowingConfirm={onCancelShadowingConfirm}
             />
           </div>
+          {isMobile && (
+            // Mobile: an in-flow dock between the transcript and the player, not a modal sheet.
+            // The transcript above stays visible and scrollable and the player below stays usable,
+            // so the learner can loop the line and read the analysis at the same time.
+            <div
+              className={cn(
+                'shrink-0 flex flex-col overflow-hidden rounded-xl bg-gray-900 transition-[max-height] duration-300 ease-in-out',
+                isShadowingPanelOpen ? 'max-h-[45dvh] border border-gray-800' : 'max-h-0'
+              )}
+            >
+              {isShadowingPanelOpen && activeShadowingSentenceId != null && (
+                <ShadowingPatternDock
+                  key={activeShadowingSentenceId}
+                  isMobile
+                  entry={getShadowingEntry(activeShadowingSentenceId)}
+                  onClose={closeShadowingPanel}
+                  onRetry={onRetryShadowingAnalysis}
+                />
+              )}
+            </div>
+          )}
           {!isMobile && (
             <div
               className={cn(
@@ -422,40 +463,6 @@ export function LessonView({
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {isMobile && (
-        <div
-          className={cn(
-            'fixed inset-0 z-[215] flex items-end',
-            isShadowingPanelOpen ? '' : 'pointer-events-none'
-          )}
-        >
-          <div
-            className={cn(
-              'absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300',
-              isShadowingPanelOpen ? 'opacity-100' : 'opacity-0'
-            )}
-            onClick={closeShadowingPanel}
-          />
-          <div
-            className={cn(
-              'relative w-full max-h-[70vh] bg-gray-900 border-t border-gray-800 rounded-t-2xl shadow-xl flex flex-col transition-transform duration-300 ease-in-out',
-              isShadowingPanelOpen ? 'translate-y-0' : 'translate-y-full'
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {isShadowingPanelOpen && activeShadowingSentenceId != null && (
-              <ShadowingPatternDock
-                key={activeShadowingSentenceId}
-                isMobile
-                entry={getShadowingEntry(activeShadowingSentenceId)}
-                onClose={closeShadowingPanel}
-                onRetry={onRetryShadowingAnalysis}
-              />
-            )}
-          </div>
         </div>
       )}
 
