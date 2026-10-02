@@ -89,8 +89,11 @@ export type SidebarFolder = {
 // had to show them on one annotated line instead of four tabs. Analysis docs are
 // versioned (`SHADOWING_ANALYSIS_VERSION`) and v1 docs are not convertible - the
 // v1 cache was deleted rather than migrated.
+//
+// v3 has the same shape as v2. It only forces a re-analysis: v2 docs could hold
+// Vietnamese-style `sounds` ("li-đồ") from an ambiguous prompt.
 
-export const SHADOWING_ANALYSIS_VERSION = 2;
+export const SHADOWING_ANALYSIS_VERSION = 3;
 
 /** How audibly a token is pronounced. `weak` is only ever a function word. */
 export type ShadowingStressLevel = 'strong' | 'normal' | 'weak';
