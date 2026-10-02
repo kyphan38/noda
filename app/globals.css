@@ -286,6 +286,32 @@ button:active:not(:disabled) {
 
 html {
   scroll-behavior: smooth;
+  /* Chi cuon doc, khong bao gio cuon ngang o cap trang. Dung `hidden`
+     thay vi `clip` de moi trinh minify CSS deu giu lai. */
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  /* iOS: chan nhay layout khi ban phim chu bat len */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  max-width: 100vw;
+}
+
+/* iOS: bo o sang khi cham, bo do tre 300ms. */
+button,
+.mode-tab {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Duoi 16px la iOS Safari tu zoom khi focus vao input. */
+input,
+select,
+textarea {
+  font-size: 16px;
 }
 
 @media (prefers-reduced-motion: reduce) {
