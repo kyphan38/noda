@@ -1,6 +1,7 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
   title: 'noda',
@@ -8,8 +9,18 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
-    apple: '/branding/noda-icon.svg',
+    apple: '/icons/apple-touch-icon.png',
   },
+  appleWebApp: { capable: true, title: 'noda', statusBarStyle: 'default' },
+};
+
+export const viewport: Viewport = {
+  // Khoa zoom: double-tap zoom tren dien thoai chi gay loi cham.
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#030712',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
@@ -23,10 +34,11 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         />
       </head>
       <body
-        className="min-h-screen font-sans antialiased"
+        className="min-h-screen font-sans overscroll-none antialiased"
         style={{backgroundColor: 'var(--background)', color: 'var(--foreground)'}}
         suppressHydrationWarning
       >
+        <ServiceWorkerRegistrar />
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>
