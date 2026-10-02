@@ -4,13 +4,16 @@
  * validated by hand in the Stage 1 spike (same flags: -ac 1 -ar 16000 -f wav).
  */
 
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import ffmpegPath from "ffmpeg-static";
 import ffmpeg from "fluent-ffmpeg";
 import { randomUUID } from "crypto";
 import * as os from "os";
 import * as path from "path";
 
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+if (!ffmpegPath) {
+  throw new Error("ffmpeg-static did not install a binary for this platform.");
+}
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 export function sliceAudioClip(inputPath: string, startSec: number, endSec: number): Promise<string> {
   const duration = endSec - startSec;

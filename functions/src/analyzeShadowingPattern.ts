@@ -254,6 +254,12 @@ export const analyzeShadowingPattern = onCall(
     } catch (e) {
       if (e instanceof HttpsError) throw e;
       const message = e instanceof Error ? e.message : "Unknown error";
+      // ffmpeg crash (vd "killed with signal SIGSEGV") thi bao tieng Anh tho
+      // hien do len app - log day du o server, bao nguoi dung cau ngan gon.
+      if (/ffmpeg|sigsegv|signal|killed|ffprobe/i.test(message)) {
+        console.error("Shadowing analysis audio processing failed:", message);
+        throw new HttpsError("internal", "Không đọc được file âm thanh này, thử file khác.");
+      }
       throw new HttpsError("internal", message);
     } finally {
       for (const p of [audioPath, clipPath]) {
