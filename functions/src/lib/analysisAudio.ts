@@ -66,14 +66,8 @@ export async function fetchAnalysisAudio(
   const original = bucket.file(mediaStoragePath);
   const [meta] = await original.getMetadata();
   const url = firebaseDownloadUrl(bucket.name, mediaStoragePath, meta.metadata?.firebaseStorageDownloadTokens);
-  if (url) {
-    try {
-      await extractAnalysisAudio(url, localCopy);
-    } catch (e) {
-      removeQuietly(localCopy);
-      throw e;
-    }
-  } else {
+
+  const extractFromDownload = async (): Promise<void> => {
     const localOriginal = path.join(os.tmpdir(), `media-${randomUUID()}-${path.basename(mediaStoragePath)}`);
     try {
       await original.download({ destination: localOriginal });
@@ -84,6 +78,20 @@ export async function fetchAnalysisAudio(
     } finally {
       removeQuietly(localOriginal);
     }
+  };
+
+  if (url) {
+    try {
+      await extractAnalysisAudio(url, localCopy);
+    } catch (e) {
+      // Doc thang qua HTTPS co the crash tuy file (ffmpeg cu tung SIGSEGV) -
+      // tai full ve roi trich xuat local truoc khi bo cuoc.
+      console.warn(`Direct URL extract failed for ${mediaStoragePath}, falling back to download:`, (e as Error).message);
+      removeQuietly(localCopy);
+      await extractFromDownload();
+    }
+  } else {
+    await extractFromDownload();
   }
 
   try {
