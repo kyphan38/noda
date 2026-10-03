@@ -51,6 +51,8 @@ interface LessonViewProps {
   onDictationChange: (sentence: Sentence, value: string) => void;
   onDictationKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => void;
   onDictationRetry: (sentence: Sentence) => void;
+  /** Shadowing: mark the active line done and play the next one (tap version of Enter). */
+  onShadowingNext: () => void;
   mediaRef: React.RefObject<HTMLMediaElement | null>;
   mediaURL: string | null;
   isMobile: boolean;
@@ -91,6 +93,7 @@ export function LessonView({
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
+  onShadowingNext,
   hideCaptions,
   onToggleHideCaptions,
   mediaRef,
@@ -414,6 +417,7 @@ export function LessonView({
               onDictationChange={onDictationChange}
               onDictationKeyDown={onDictationKeyDown}
               onDictationRetry={onDictationRetry}
+              onShadowingNext={onShadowingNext}
               isMobile={isMobile}
               activeShadowingSentenceId={activeShadowingSentenceId}
               isShadowingPanelOpen={isShadowingPanelOpen}

@@ -21,6 +21,7 @@ interface TranscriptProps {
   onDictationChange: (sentence: Sentence, value: string) => void;
   onDictationKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => void;
   onDictationRetry: (sentence: Sentence) => void;
+  onShadowingNext: () => void;
   isMobile?: boolean;
   /** Shadowing-pattern explanation feature (Stage 7: centralized manager, one panel open at a time). */
   activeShadowingSentenceId: number | null;
@@ -47,6 +48,7 @@ export function Transcript({
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
+  onShadowingNext,
   isMobile = false,
   activeShadowingSentenceId,
   isShadowingPanelOpen,
@@ -89,6 +91,7 @@ export function Transcript({
               onDictationChange={onDictationChange}
               onDictationKeyDown={onDictationKeyDown}
               onDictationRetry={onDictationRetry}
+              onShadowingNext={onShadowingNext}
               isMobile={isMobile}
               shadowingEnabled={shadowingAvailable}
               shadowingEntry={getShadowingEntry(sentence.id)}
