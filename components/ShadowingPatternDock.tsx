@@ -7,8 +7,9 @@ import type { ShadowingEntry } from '@/hooks/useShadowingPatternManager';
 interface ShadowingPatternDockProps {
   isMobile: boolean;
   entry: ShadowingEntry;
+  sentenceText: string;
   onClose: () => void;
-  onRetry: () => void;
+  onAnalyze: () => void;
 }
 
 /**
@@ -18,14 +19,15 @@ interface ShadowingPatternDockProps {
  * host has only a max-height, so this is a shrinking flex column instead of `h-full`. The panel itself keeps the
  * annotated line pinned and scrolls only its notes, so this stays `overflow-hidden`.
  */
-export function ShadowingPatternDock({ isMobile, entry, onClose, onRetry }: ShadowingPatternDockProps) {
+export function ShadowingPatternDock({ isMobile, entry, sentenceText, onClose, onAnalyze }: ShadowingPatternDockProps) {
   return (
     <div className={`overflow-hidden ${isMobile ? 'flex min-h-0 flex-col p-2.5' : 'h-full rounded-xl border border-gray-800 bg-gray-900 p-2.5'}`}>
       <ShadowingPatternPanel
         status={entry.status}
         analysis={entry.analysis}
         error={entry.error}
-        onRetry={onRetry}
+        sentenceText={sentenceText}
+        onAnalyze={onAnalyze}
         onClose={onClose}
       />
     </div>
