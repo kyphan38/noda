@@ -608,6 +608,17 @@ export default function NodaApp() {
     media.play().catch(() => {});
   }, [mediaRef, activeSentenceRef, transcriptRef, setCurrentTime, userSeekTargetRef, shadowingCompletedRef, setShadowingCompleted]);
 
+  // Tap version of the Shadowing Enter key: phones and iPads have no Enter key outside a text
+  // field. Same steps as the keyboard path in useGlobalPlaybackShortcuts.
+  const handleShadowingNextTap = useCallback(() => {
+    if (loopTimeoutRef.current) {
+      clearTimeout(loopTimeoutRef.current);
+      isLoopDelayingRef.current = false;
+    }
+    handleShadowingNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loopTimeoutRef/isLoopDelayingRef are stable refs
+  }, [handleShadowingNext]);
+
   useGlobalPlaybackShortcuts(
     selectedItem?.type,
     appMode,
@@ -1076,6 +1087,7 @@ export default function NodaApp() {
                   onDictationChange={handleDictationChange}
                   onDictationKeyDown={handleDictationKeyDown}
                   onDictationRetry={handleDictationRetry}
+                  onShadowingNext={handleShadowingNextTap}
                   hideCaptions={hideCaptions}
                   onToggleHideCaptions={() => setHideCaptions((v) => !v)}
                   mediaRef={mediaRef}

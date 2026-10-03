@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Play, CheckCircle2, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
+import { Play, CheckCircle2, RotateCcw, Sparkles, Loader2, CornerDownLeft } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
 import { DictationControls } from './DictationControls';
 import { ShadowingConfirmPopover } from './ShadowingConfirmPopover';
@@ -28,6 +28,8 @@ interface TranscriptSentenceProps {
   onDictationChange: (sentence: Sentence, value: string) => void;
   onDictationKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => void;
   onDictationRetry: (sentence: Sentence) => void;
+  /** Shadowing: mark this (active) line done and play the next one - the tap version of Enter. */
+  onShadowingNext: () => void;
   isMobile?: boolean;
 }
 
@@ -51,10 +53,30 @@ export function TranscriptSentence({
   onDictationChange,
   onDictationKeyDown,
   onDictationRetry,
+  onShadowingNext,
   isMobile = false,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
   const sparkleRef = useRef<HTMLButtonElement>(null);
+
+  // Touch "next line" button. Dictation: phones only, once the line is typed correctly (the
+  // keyboard's Go key also works). Shadowing: every device - phones and iPads have no Enter key
+  // outside a text field, and on desktop it is a visible hint for the Enter shortcut.
+  const showDictationNext = appMode === 'dictation' && isMobile && isActive && isCompleted;
+  const showShadowingNext = appMode === 'shadowing' && isActive;
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (showShadowingNext) {
+      onShadowingNext();
+      return;
+    }
+    const syntheticEvent = {
+      key: 'Enter',
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as React.KeyboardEvent<HTMLInputElement>;
+    onDictationKeyDown(syntheticEvent, sentence);
+  };
 
   return (
     <div
@@ -104,7 +126,10 @@ export function TranscriptSentence({
         )}
       </div>
 
-      <div className="shrink-0 flex flex-row items-center justify-end gap-1 self-center">
+      {/* Pinned to the FIRST line of the sentence, not centred on the whole row: on a phone a
+          long line wraps to 3 rows and centred icons drift away from the words they act on.
+          The negative margin centres the 40px (32px on sm+) buttons on that first text line. */}
+      <div className="shrink-0 flex flex-row items-center justify-end gap-1 self-start -my-2 sm:-my-1">
         {shadowingEnabled && (
           <button
             ref={sparkleRef}
@@ -133,6 +158,17 @@ export function TranscriptSentence({
             onConfirm={() => onConfirmShadowingGenerate(sentence)}
             onClose={onCancelShadowingConfirm}
           />
+        )}
+        {(showDictationNext || showShadowingNext) && (
+          <button
+            type="button"
+            {...(showShadowingNext ? { 'data-shadowing-next': true } : { 'data-dictation-next': true })}
+            title={showShadowingNext ? 'Done - next sentence (Enter)' : 'Next sentence'}
+            onClick={handleNext}
+            className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-200 transition-colors hover:bg-gray-700 active:bg-gray-700"
+          >
+            <CornerDownLeft className="h-4 w-4" aria-hidden />
+          </button>
         )}
         {showDictationActions && (
           <div

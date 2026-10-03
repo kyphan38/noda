@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
-import { Lightbulb, CornerDownLeft } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
 
@@ -66,16 +66,6 @@ export function DictationControls({
     onDictationKeyDown(syntheticEvent, sentence);
   };
 
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const syntheticEvent = {
-      key: 'Enter',
-      preventDefault: () => {},
-      stopPropagation: () => {},
-    } as unknown as React.KeyboardEvent<DictationKeyTarget>;
-    onDictationKeyDown(syntheticEvent, sentence);
-  };
-
   const syncDom = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
     const aligned = alignDictationInput(value, targetNorm);
     if (value !== aligned) {
@@ -88,23 +78,10 @@ export function DictationControls({
   if (isCompleted) {
     return (
       <div className="flex flex-col">
-        <div className="flex items-start gap-2">
-          <div className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 flex-1 whitespace-pre-wrap break-words text-green-400">
-            {targetNorm}
-          </div>
-          {isMobile && isActive && (
-            <div className="shrink-0 flex items-center">
-              <button
-                type="button"
-                data-dictation-next
-                title="Next sentence"
-                onClick={handleNext}
-                className="rounded-lg border border-gray-700 bg-gray-800 p-2 text-gray-200 active:bg-gray-700"
-              >
-                <CornerDownLeft className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+        {/* The mobile "next sentence" button lives in the row's action column (TranscriptSentence),
+            in line with the rewrite and status icons. */}
+        <div className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 whitespace-pre-wrap break-words text-green-400">
+          {targetNorm}
         </div>
         {isActive && (
           <input
