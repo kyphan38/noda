@@ -964,7 +964,7 @@ export default function NodaApp() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-gray-500/40">
+    <div className="flex h-dvh bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-gray-500/40">
       <div>
         <Sidebar
           isOpen={isSidebarOpen}
@@ -990,7 +990,7 @@ export default function NodaApp() {
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         <div
-          className={`mx-auto w-full p-3 md:p-4 flex flex-col h-full min-h-0 transition-[max-width] duration-300 ${
+          className={`mx-auto w-full p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:p-4 md:pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col h-full min-h-0 transition-[max-width] duration-300 ${
             pageFocusActive ? 'max-w-none' : shadowingPanelWide ? 'max-w-6xl' : 'max-w-4xl'
           }`}
         >
