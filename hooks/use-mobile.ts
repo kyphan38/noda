@@ -30,3 +30,22 @@ export function useMobileViewport(): MobileViewportState {
 
   return state;
 }
+
+/**
+ * True on touch-first devices (phones, iPads), whatever their width. `useMobileViewport`
+ * goes by width, so an iPad (>= 768px) counts as desktop there - but it still has no
+ * Enter key outside a text field, so touch-only controls key off this instead.
+ */
+export function useCoarsePointer(): boolean {
+  const [coarse, setCoarse] = React.useState(false);
+
+  React.useEffect(() => {
+    const mql = window.matchMedia('(pointer: coarse)');
+    const sync = () => setCoarse(mql.matches);
+    mql.addEventListener('change', sync);
+    sync();
+    return () => mql.removeEventListener('change', sync);
+  }, []);
+
+  return coarse;
+}
