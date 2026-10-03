@@ -37,6 +37,12 @@ export class ShadowingRequestTracker {
     return { sentenceId, generation: this.generation, inFlight: this.inFlight };
   }
 
+  /** A token for a read-only lookup: lets the caller drop a late result after a lesson
+   *  switch, without marking the sentence in flight (so `begin` is still free). */
+  watch(sentenceId: number): ShadowingRequestToken {
+    return { sentenceId, generation: this.generation, inFlight: new Set() };
+  }
+
   /** False once the lesson has changed since `begin`; the result must then be dropped. */
   isCurrent(token: ShadowingRequestToken): boolean {
     return token.generation === this.generation;

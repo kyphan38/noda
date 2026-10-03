@@ -357,3 +357,35 @@ textarea {
   background: #6b7280;
 }
 
+
+/*
+ * Quiet scrollbar: thin, invisible until the pointer is over the list. Used on the
+ * transcript, where a long lesson still needs a visible position and a draggable thumb,
+ * but a permanent grey bar beside every line is noise. Touch devices already use overlay
+ * scrollbars, so this only changes desktop. `scrollbar-color` wins over the ::-webkit
+ * rules in Chrome 121+; the ::-webkit rules cover Safari.
+ */
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll-quiet:hover {
+  scrollbar-color: #4b5563 transparent;
+}
+.scroll-quiet::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-quiet::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.scroll-quiet:hover::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+/* No scrollbar at all - for short panels that show a bottom fade instead. */
+.scroll-none {
+  scrollbar-width: none;
+}
+.scroll-none::-webkit-scrollbar {
+  display: none;
+}

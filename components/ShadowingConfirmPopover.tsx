@@ -38,9 +38,8 @@ function usePopoverPosition(triggerRef: React.RefObject<HTMLButtonElement | null
 }
 
 /**
- * Confirm-before-generate popover (cost guard). Anchored to the specific row's sparkle
- * button that triggered it. Only mounts when `confirmingSentenceId === sentence.id`
- * (see TranscriptSentence), so each row renders its own but a local, ephemeral one.
+ * Confirm-before-generate popover (cost guard). Anchored to the player's AI button and
+ * mounted by LessonView only while `confirmingSentenceId` is set.
  */
 export function ShadowingConfirmPopover({ onConfirm, onClose, triggerRef }: ShadowingConfirmPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
