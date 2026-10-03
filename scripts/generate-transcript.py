@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
 ============================================
-NODA TRANSCRIPT GENERATOR (turbo)
+NODA TRANSCRIPT GENERATOR
 ============================================
 Copy tu ~/Downloads/main/converted_script.py, chinh cho quy trinh noda.
 
 Backend  : mlx-whisper (Apple Silicon)
-Model    : whisper-large-v3-turbo (nhanh ~8x so voi large-v3,
-           do dung gan bang; stable-ts can lai gio nen on)
+Model    : whisper-large-v3 (mac dinh). Da thu turbo tren video 43 phut:
+           bia chu o doan nhac mo dau + bo mat loi lap that, chi nhanh
+           hon ~2-3 phut. Van thu duoc bang --model.
 Alignment: stable-ts / faster-whisper large-v3 (forced alignment,
-           LUON BAT - tat di gio se lech)
+           LUON BAT - tat di gio se lech). Tu nao lech > 1s so voi gio
+           goc cua Whisper thi lay gio goc (xem _guard_refined_words).
 Language : English
 SRT mode : word-level timestamps (refined)
            fallback: proportional split
@@ -18,20 +20,23 @@ Filters  : context-aware hallucination filter (chi cat dong rac,
 Splitting: hybrid (punctuation -> clause -> max words, 14 tu/dong)
 
 Khac ban goc:
-  1. Model turbo (kiem tra ton tai tren HF ngay 2026-10-03).
-  2. normalize_audio: backup .bak TRUOC, ghi ra file tam, chi doi ten
-     khi ffmpeg thanh cong - khong bao gio mat file goc.
-  3. extract_wav: that bai in loi ffmpeg that (khong giu kin nua).
-  4. Giu JSON trung gian canh file .srt (.whisper.json) de chinh cach
-     cat cau khong can chay lai whisper. Co --clean-json de xoa.
-  5. Sua comment Layer 4 (merge vao block TRUOC, khong phai block sau).
-  6. validate_srt_timing: phat hien dong de gio nhau (prev_end_ms).
-  7. Kep end >= start + 200ms: khong con block end <= start.
+  1. normalize_audio: backup *_orig_backup TRUOC, ghi ra file tam, chi
+     doi ten khi ffmpeg thanh cong. Da co backup = da normalize -> bo qua
+     (khong ma hoa lai mp3 moi lan chay).
+  2. extract_wav: that bai in loi ffmpeg that (khong giu kin nua).
+  3. Giu JSON canh file .srt: X.whisper.json (gio goc) + X.refined.json
+     (gio stable-ts). --from-json X.whisper.json cat cau lai trong vai
+     giay, khong chay lai whisper/stable-ts. --clean-json de xoa.
+  4. validate_srt_timing: phat hien dong de gio nhau (prev_end_ms).
+  5. Kep end >= start + 200ms nhung KHONG vuot start cau sau.
+  6. Bo dong khong co chu cai/so nao (vd "!" - rac cua Whisper).
+  7. Chan stable-ts keo dai tu qua khoang lang/nhac (lech 1-15s).
   8. --model de doi model tu dong lenh.
 ============================================
 """
 
 import argparse
+import difflib
 import json
 import re
 import shutil
@@ -43,7 +48,7 @@ from pathlib import Path
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-MLX_MODEL = "mlx-community/whisper-large-v3-turbo"
+MLX_MODEL = "mlx-community/whisper-large-v3-mlx"
 STABLE_TS_MODEL = "large-v3"
 INITIAL_PROMPT = ""
 
@@ -67,6 +72,9 @@ END_PADDING_MS         = 150  # buffer after last word's Whisper end timestamp.
                              # start cau sau nen padding khong anh huong.
 MIN_BLOCK_MS           = 200  # block nao ngan hon thi keo dai end ra
 MIN_LINE_WPS           = 1.0  # lines below this words/sec are likely hallucinations
+REFINE_MAX_DRIFT_S     = 1.0  # stable-ts lech hon muc nay so voi Whisper goc -> lay gio goc.
+                             # Do tren video 43 phut: median lech 0s, p95 ~0.4s;
+                             # ~4% dong lech 1-15s (stable-ts nuot khoang lang/nhac).
 
 
 # ── Hallucination patterns (two tiers) ────────────────────────────────────────
@@ -275,6 +283,52 @@ def filter_tail_silence(words: list[dict]) -> list[dict]:
     return words
 
 
+def _norm_word(word: str) -> str:
+    return re.sub(r"[^\w']", "", word.lower())
+
+
+def _guard_refined_words(refined: list[dict], raw: list[dict]) -> list[dict]:
+    """Lay gio goc cua Whisper cho tu nao stable-ts lech qua REFINE_MAX_DRIFT_S.
+
+    stable-ts doi khi keo dai tu dau/cuoi cau qua khoang lang hoac nhac nen
+    (vd "Being up here..." bi dat som 10s). Trong noda, cau do highlight som
+    va dictation phai nghe 10s im lang. Gio goc cua Whisper o nhung cho nay
+    dung hon; 96% tu con lai van giu gio stable-ts.
+    """
+    if not raw:
+        return refined
+    a  = [_norm_word(w["word"]) for w in refined]
+    b  = [_norm_word(w["word"]) for w in raw]
+    sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+
+    out   = [dict(w) for w in refined]
+    fixed = 0
+    for blk in sm.get_matching_blocks():
+        for k in range(blk.size):
+            r, g = out[blk.a + k], raw[blk.b + k]
+            start_off = abs(r["start"] - g["start"]) > REFINE_MAX_DRIFT_S
+            end_off   = abs(r["end"]   - g["end"])   > REFINE_MAX_DRIFT_S
+            if not (start_off or end_off):
+                continue
+            if start_off:
+                r["start"] = g["start"]
+            if end_off:
+                r["end"] = g["end"]
+            # Chi sua 1 dau ma lam tu hong (end <= start) -> lay ca 2 dau goc.
+            if r["end"] <= r["start"]:
+                r["start"], r["end"] = g["start"], g["end"]
+            fixed += 1
+
+    if fixed:
+        print(f"   🛡  Restored Whisper timing for {fixed} word(s) stable-ts moved > {REFINE_MAX_DRIFT_S:.0f}s")
+    return out
+
+
+def _has_text(text: str) -> bool:
+    """Dong chi co dau cau (vd "!") la rac cua Whisper, noda khong nen hien."""
+    return bool(re.search(r"[^\W_]", text))
+
+
 def extract_segments_fallback(json_path: Path) -> list[dict]:
     data = json.loads(json_path.read_text(encoding="utf-8"))
     raw  = data.get("segments", [])
@@ -283,7 +337,7 @@ def extract_segments_fallback(json_path: Path) -> list[dict]:
     for seg in clean:
         text = seg.get("text", "").strip()
         dur  = float(seg.get("end", 0)) - float(seg.get("start", 0))
-        if text and dur > 0:
+        if text and _has_text(text) and dur > 0:
             segs.append({
                 "text":  text,
                 "start": float(seg.get("start", 0)),
@@ -408,10 +462,8 @@ def split_words_into_lines(words: list[dict]) -> list[list[dict]]:
 
     # Layer 4: merge backward-orphans — short blocks followed by a large silence
     # gap indicate Whisper placed words at the wrong timestamp (e.g. "A few"
-    # stranded 8s before the rest of the sentence). Merge them into the PREVIOUS
+    # stranded 8s before the rest of the sentence). Merge them into the next
     # block so they don't appear over silence.
-    # (Ban goc ghi nham "merge into the next block" - code merge vao block
-    # truoc, va do la hanh vi dung.)
     merged = []
     for i, blk in enumerate(final):
         if (merged
@@ -449,6 +501,7 @@ def srt_from_words(words: list[dict], *, skip_slow_filter: bool = False) -> str:
     lines = split_words_into_lines(words)
     if not skip_slow_filter:
         lines = _filter_slow_lines(lines)
+    lines = [ln for ln in lines if _has_text(" ".join(w["word"] for w in ln))]
     # Pre-compute start_ms for each line so we can clamp the previous end.
     line_starts = [sec_to_ms(ln[0]["start"]) if ln else None for ln in lines]
     blocks = []
@@ -460,9 +513,11 @@ def srt_from_words(words: list[dict], *, skip_slow_filter: bool = False) -> str:
         # Clamp to next line's start to prevent overlap.
         next_start   = next((line_starts[j] for j in range(idx, len(lines)) if line_starts[j] is not None), None)
         end_ms       = min(padded_end, next_start) if next_start is not None else padded_end
-        # Kep end LUON sau start it nhat MIN_BLOCK_MS: tu dat gio sai co the
-        # cho end <= start (block hong, noda khong hieu duoc).
+        # Keo end ra it nhat MIN_BLOCK_MS (tranh block end <= start) nhung
+        # khong vuot start cau sau - neu vuot thi lai thanh de gio.
         end_ms = max(end_ms, start_ms + MIN_BLOCK_MS)
+        if next_start is not None and next_start > start_ms:
+            end_ms = min(end_ms, next_start)
         text         = " ".join(w["word"] for w in ln).strip()
         text         = re.sub(r'\s+([.,!?:;])', r'\1', text)
         blocks.append(f"{idx}\n{ms_to_ts(start_ms)} --> {ms_to_ts(end_ms)}\n{text}")
@@ -494,8 +549,10 @@ def srt_from_segments(segments: list[dict]) -> str:
         padded_end_ms = sec_to_ms(seg["end"]) + END_PADDING_MS
         clamped_end_ms = min(padded_end_ms, next_start_ms) if next_start_ms is not None else padded_end_ms
         start_ms = sec_to_ms(seg["start"])
-        # Cung kep nhu srt_from_words: khong block hong.
+        # Cung kep nhu srt_from_words: khong block hong, khong de gio.
         clamped_end_ms = max(clamped_end_ms, start_ms + MIN_BLOCK_MS)
+        if next_start_ms is not None and next_start_ms > start_ms:
+            clamped_end_ms = min(clamped_end_ms, next_start_ms)
         parts = split_segment_proportional(
             ms_to_ts(sec_to_ms(seg["start"])),
             ms_to_ts(clamped_end_ms),
@@ -563,8 +620,11 @@ def validate_srt_timing(content: str) -> list[str]:
 
 
 def json_to_srt(json_path: Path, srt_path: Path, *, words_override: list[dict] | None = None) -> int:
-    raw_words = words_override if words_override else extract_words(json_path)
     is_refined = words_override is not None
+    if is_refined:
+        raw_words = _guard_refined_words(words_override, extract_words(json_path))
+    else:
+        raw_words = extract_words(json_path)
 
     if raw_words:
         words = dedupe_words(raw_words)
@@ -625,11 +685,18 @@ def extract_wav(media_path: Path, wav_path: Path):
 def normalize_audio(media_path: Path) -> Path:
     """Re-encode MP3 as CBR for accurate browser seeking (VBR without Xing header causes seek drift).
 
-    KHONG bao gio xoa file goc truoc: backup .bak, ghi ra file tam, chi doi
-    ten khi ffmpeg thanh cong.
+    KHONG bao gio xoa file goc truoc: backup *_orig_backup, ghi ra file tam,
+    chi doi ten khi ffmpeg thanh cong.
     """
     if media_path.suffix.lower() != ".mp3":
         return media_path
+    # Backup chi ton tai khi lan truoc normalize thanh cong -> khong ma hoa
+    # lai (moi lan ma hoa lai mp3 la mat them chat luong).
+    backup_path = media_path.with_stem(media_path.stem + "_orig_backup")
+    if backup_path.exists():
+        print(f"⏩  Already normalized (backup {backup_path.name} exists)")
+        return media_path
+
     probe = subprocess.run(
         ["ffprobe", "-v", "quiet", "-show_entries", "format=bit_rate",
          "-of", "default=noprint_wrappers=1:nokey=1", str(media_path)],
@@ -639,12 +706,8 @@ def normalize_audio(media_path: Path) -> Path:
     target_kbps = max(128, min(320, round(bitrate / 1000 / 32) * 32)) if bitrate else 128
     print(f"🔧  Normalizing MP3 to CBR {target_kbps}k for accurate seeking …")
 
-    backup_path = media_path.with_stem(media_path.stem + "_orig_backup")
-    if backup_path.exists():
-        print("   ⏩  Backup already exists, keeping it")
-    else:
-        shutil.copy2(media_path, backup_path)
-        print(f"   💾  Original backed up as {backup_path.name}")
+    shutil.copy2(media_path, backup_path)
+    print(f"   💾  Original backed up as {backup_path.name}")
 
     with tempfile.NamedTemporaryFile(
         suffix=".mp3", dir=str(media_path.parent), delete=False
@@ -659,8 +722,10 @@ def normalize_audio(media_path: Path) -> Path:
             print("   ⚠  CBR normalization failed — keeping original")
             for line in err_tail:
                 print(f"      {line.strip()[:160]}")
+            # Xoa backup: lan sau van thu normalize lai.
+            backup_path.unlink(missing_ok=True)
             return media_path
-        # Chi toi day moi thay file goc: goc van con trong .bak du co gi xay ra.
+        # Chi toi day moi thay file goc: goc van con trong backup du co gi xay ra.
         tmp_path.replace(media_path)
     finally:
         tmp_path.unlink(missing_ok=True)
@@ -776,14 +841,18 @@ def transcribe_to_srt(
         count = json_to_srt(json_path, srt_path, words_override=refined)
         print(f"✅  {count} lines → {srt_path}")
 
-        # Giu JSON trung gian canh file .srt: chinh cach cat cau sau nay
-        # khong can chay lai whisper (ton nhieu phut).
+        # Giu ca gio goc lan gio stable-ts canh file .srt: --from-json cat cau
+        # lai trong vai giay, khong chay lai whisper + stable-ts (~20 phut).
         if keep_json:
             kept = srt_path.with_suffix(".whisper.json")
             if json_path.resolve() != kept.resolve():
                 shutil.move(str(json_path), str(kept))
                 json_path = kept
             print(f"   💾  Kept intermediate JSON → {kept.name}")
+            if refined:
+                refined_path = srt_path.with_suffix(".refined.json")
+                refined_path.write_text(json.dumps(refined), encoding="utf-8")
+                print(f"   💾  Kept refined timings → {refined_path.name}")
 
         lines = srt_path.read_text(encoding="utf-8").strip().split("\n\n")
         print("\n   📋  Preview (first 5):")
@@ -914,6 +983,28 @@ def mode_local(*, refine: bool = True, model: str, keep_json: bool = True):
     print(f"📂  Saved in: {output_dir}")
 
 
+# ── Mode 3: Re-cut from kept JSON ─────────────────────────────────────────────
+
+def mode_from_json(whisper_json: Path):
+    """Ghi lai X.srt tu X.whisper.json (+ X.refined.json neu co), khong chay model."""
+    suffix = ".whisper.json"
+    if not whisper_json.name.endswith(suffix) or not whisper_json.exists():
+        sys.exit(f"❌  Need an existing *{suffix} file, got: {whisper_json}")
+    base         = whisper_json.name[:-len(suffix)]
+    srt_path     = whisper_json.with_name(base + ".srt")
+    refined_path = whisper_json.with_name(base + ".refined.json")
+
+    refined = None
+    if refined_path.exists():
+        refined = json.loads(refined_path.read_text(encoding="utf-8"))
+        print(f"📂  Using refined timings: {refined_path.name}")
+    else:
+        print("⚠️   No .refined.json - using raw Whisper timings")
+
+    count = json_to_srt(whisper_json, srt_path, words_override=refined)
+    print(f"✅  {count} lines → {srt_path}")
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _print_results(media: Path, srt: Path):
@@ -933,20 +1024,26 @@ def ask(prompt, choices):
 # ── Entry ─────────────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None):
-    parser = argparse.ArgumentParser(description="NODA transcript generator (turbo)")
+    parser = argparse.ArgumentParser(description="NODA transcript generator")
     parser.add_argument("--no-refine", action="store_true",
                         help="skip stable-ts refinement (KHONG NEN - gio se lech)")
     parser.add_argument("--model", default=MLX_MODEL,
                         help=f"mlx_whisper model (default: {MLX_MODEL})")
     parser.add_argument("--clean-json", action="store_true",
                         help="xoa JSON trung gian sau khi xong (mac dinh GIU lai)")
+    parser.add_argument("--from-json", type=Path, metavar="X.whisper.json",
+                        help="cat cau lai tu JSON da giu, ghi de X.srt (khong chay model)")
     args = parser.parse_args(argv)
+
+    if args.from_json:
+        mode_from_json(args.from_json)
+        return
 
     refine = not args.no_refine
 
     print("============================================")
-    print("🎧  NODA TRANSCRIPT GENERATOR (turbo)")
-    print("    mlx-whisper • large-v3-turbo • Apple Silicon")
+    print("🎧  NODA TRANSCRIPT GENERATOR")
+    print(f"    mlx-whisper • {args.model.split('/')[-1]} • Apple Silicon")
     if not refine:
         print("    ⚡ stable-ts refinement SKIPPED (gio co the lech!)")
     print("============================================\n")
