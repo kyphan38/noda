@@ -464,12 +464,16 @@ def split_words_into_lines(words: list[dict]) -> list[list[dict]]:
     # gap indicate Whisper placed words at the wrong timestamp (e.g. "A few"
     # stranded 8s before the rest of the sentence). Merge them into the next
     # block so they don't appear over silence.
+    # Khoi ngan ket thuc bang . ! ? la cau hoan chinh ("Wow.", "Bye bye!"),
+    # khong phai tu bi dat sai gio -> giu rieng. Ghep vao se ra dong keo dai
+    # qua 5-13s im lang (noda highlight som, dictation nghe im lang).
     merged = []
     for i, blk in enumerate(final):
         if (merged
                 and len(merged[-1]) < MIN_WORDS_PER_BLOCK
                 and blk
                 and merged[-1]
+                and _word_text(merged[-1][-1])[-1:] not in SENTENCE_END_CHARS
                 and blk[0]["start"] - merged[-1][-1]["end"] > SILENCE_GAP_THRESHOLD):
             merged[-1].extend(blk)
         else:
@@ -726,6 +730,8 @@ def normalize_audio(media_path: Path) -> Path:
             backup_path.unlink(missing_ok=True)
             return media_path
         # Chi toi day moi thay file goc: goc van con trong backup du co gi xay ra.
+        # File tam tao ra voi quyen 0600 -> lay lai quyen cua file goc.
+        shutil.copymode(backup_path, tmp_path)
         tmp_path.replace(media_path)
     finally:
         tmp_path.unlink(missing_ok=True)
