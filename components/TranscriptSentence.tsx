@@ -1,9 +1,7 @@
-import React, { useRef } from 'react';
-import { Play, CheckCircle2, RotateCcw, Sparkles, Loader2, CornerDownLeft } from 'lucide-react';
+import React from 'react';
+import { CheckCircle2, RotateCcw, CornerDownLeft } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
 import { DictationControls } from './DictationControls';
-import { ShadowingConfirmPopover } from './ShadowingConfirmPopover';
-import type { ShadowingEntry } from '@/hooks/useShadowingPatternManager';
 
 interface TranscriptSentenceProps {
   sentence: Sentence;
@@ -11,14 +9,8 @@ interface TranscriptSentenceProps {
   isActive: boolean;
   isPast: boolean;
   appMode: AppMode;
-  /** Shadowing-pattern explanation feature (Stage 7: side panel / bottom sheet, not inline). */
-  shadowingEnabled: boolean;
-  shadowingEntry: ShadowingEntry;
+  /** This row's shadowing-pattern panel is open (opened from the player's AI button). */
   isShadowingOpen: boolean;
-  isConfirmingShadowing: boolean;
-  onSparkleClick: (sentence: Sentence) => void;
-  onConfirmShadowingGenerate: (sentence: Sentence) => void;
-  onCancelShadowingConfirm: () => void;
   /** When true (listen / shadowing), caption text is visually hidden but layout stays. */
   hideCaptions?: boolean;
   dictationInput: string;
@@ -31,6 +23,8 @@ interface TranscriptSentenceProps {
   /** Shadowing: mark this (active) line done and play the next one - the tap version of Enter. */
   onShadowingNext: () => void;
   isMobile?: boolean;
+  /** Touch-first device (phone or iPad): no Enter key outside a text field. */
+  touchControls?: boolean;
 }
 
 export function TranscriptSentence({
@@ -39,13 +33,7 @@ export function TranscriptSentence({
   isActive,
   isPast,
   appMode,
-  shadowingEnabled,
-  shadowingEntry,
   isShadowingOpen,
-  isConfirmingShadowing,
-  onSparkleClick,
-  onConfirmShadowingGenerate,
-  onCancelShadowingConfirm,
   hideCaptions,
   dictationInput,
   isCompleted,
@@ -55,18 +43,18 @@ export function TranscriptSentence({
   onDictationRetry,
   onShadowingNext,
   isMobile = false,
+  touchControls = false,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
-  const sparkleRef = useRef<HTMLButtonElement>(null);
 
-  // Touch "next line" button. Dictation: phones only, once the line is typed correctly (the
-  // keyboard's Go key also works). Shadowing: every device - phones and iPads have no Enter key
-  // outside a text field, and on desktop it is a visible hint for the Enter shortcut.
+  // Touch "next line" button - only where there is no Enter key to press. Dictation: phones,
+  // once the line is typed correctly (the keyboard's Go key also works). Shadowing: phones and
+  // iPads; on a computer Enter does the same and the button would only add clutter.
   const showDictationNext = appMode === 'dictation' && isMobile && isActive && isCompleted;
-  const showShadowingNext = appMode === 'shadowing' && isActive;
+  const showShadowingNext = appMode === 'shadowing' && touchControls && isActive;
   // The slot is reserved on every row where the button can appear, so showing it does not
   // narrow the text column and re-wrap the sentence (same idea as the rewrite slot).
-  const reserveNextSlot = appMode === 'shadowing' || (appMode === 'dictation' && isMobile);
+  const reserveNextSlot = (appMode === 'shadowing' && touchControls) || (appMode === 'dictation' && isMobile);
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (showShadowingNext) {
@@ -137,35 +125,6 @@ export function TranscriptSentence({
           long line wraps to 3 rows and centred icons drift away from the words they act on.
           The negative margin centres the 40px (32px on sm+) buttons on that first text line. */}
       <div className="shrink-0 flex flex-row items-center justify-end gap-1 self-start -my-2 sm:-my-1">
-        {shadowingEnabled && (
-          <button
-            ref={sparkleRef}
-            type="button"
-            title="Explain shadowing pattern"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSparkleClick(sentence);
-            }}
-            className={`flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${
-              isShadowingOpen
-                ? 'border-gray-600 bg-gray-800 text-gray-100'
-                : 'border-transparent text-gray-500 hover:border-gray-700 hover:bg-gray-800 hover:text-gray-200 active:bg-gray-700'
-            }`}
-          >
-            {shadowingEntry.status === 'loading' ? (
-              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" aria-hidden />
-            ) : (
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
-            )}
-          </button>
-        )}
-        {isConfirmingShadowing && (
-          <ShadowingConfirmPopover
-            triggerRef={sparkleRef}
-            onConfirm={() => onConfirmShadowingGenerate(sentence)}
-            onClose={onCancelShadowingConfirm}
-          />
-        )}
         {reserveNextSlot && !(showDictationNext || showShadowingNext) && (
           <div className="h-10 w-10 sm:h-8 sm:w-8 shrink-0" aria-hidden />
         )}
@@ -206,13 +165,7 @@ export function TranscriptSentence({
           data-dictation-status-slot
           className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center"
         >
-          {isActive && (
-            <Play
-              data-dictation-status-icon
-              className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400 fill-current animate-pulse"
-              aria-hidden
-            />
-          )}
+          {/* No "playing" icon on the active row: its green box and text already say it. */}
           {!isActive && appMode === 'shadowing' && isCompleted && (
             <CheckCircle2
               data-shadowing-done-icon

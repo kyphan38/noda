@@ -37,6 +37,9 @@ export interface UseShadowingPatternManagerResult {
   confirmingSentenceId: number | null;
   getEntry: (sentenceId: number) => ShadowingEntry;
   handleSparkleClick: (sentence: ShadowingSentenceRef) => void;
+  /** Free Firestore read: marks the sentence `ready` if an analysis is already cached.
+   *  Never calls Gemini, never opens the panel, never shows a loading state. */
+  peekCache: (sentence: ShadowingSentenceRef) => void;
   confirmGenerate: (sentence: ShadowingSentenceRef) => void;
   cancelConfirm: () => void;
   close: () => void;
@@ -83,6 +86,8 @@ export function useShadowingPatternManager(
   /** Sentences already attempted in the background; a failed prefetch is never retried
    *  on its own, it just falls back to the normal confirm-then-generate flow. */
   const prefetchedIdsRef = useRef<Set<number>>(new Set());
+  /** Sentences already looked up by `peekCache` - one Firestore read each per lesson visit. */
+  const peekedIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     transcriptRef.current = transcript;
@@ -95,6 +100,7 @@ export function useShadowingPatternManager(
     requestsRef.current.reset();
     entriesRef.current = {};
     prefetchedIdsRef.current = new Set();
+    peekedIdsRef.current = new Set();
     setEntries({});
     setActiveSentenceId(null);
     setIsPanelOpen(false);
@@ -253,6 +259,30 @@ export function useShadowingPatternManager(
     [runGenerate]
   );
 
+  const peekCache = useCallback(
+    (sentence: ShadowingSentenceRef) => {
+      if (!lessonId) return;
+      if (peekedIdsRef.current.has(sentence.id)) return;
+      if (entriesRef.current[sentence.id]) return; // already known: loading, ready or error
+      peekedIdsRef.current.add(sentence.id);
+      const requests = requestsRef.current;
+      // `watch`, not `begin`: a click during the peek must still start its own lookup.
+      const generationToken = requests.watch(sentence.id);
+      void getShadowingAnalysisFirestore(lessonId, sentence.id)
+        .then((cached) => {
+          if (!requests.isCurrent(generationToken)) return;
+          if (entriesRef.current[sentence.id]) return;
+          if (cached && isRenderableAnalysis(cached.analysis)) {
+            setEntry(sentence.id, { status: 'ready', analysis: cached.analysis, error: null });
+          }
+        })
+        .catch(() => {
+          // Harmless: the button simply shows no "cached" dot.
+        });
+    },
+    [lessonId, setEntry]
+  );
+
   const handleSparkleClick = useCallback(
     (sentence: ShadowingSentenceRef) => {
       // Only one confirm popover at a time.
@@ -324,6 +354,7 @@ export function useShadowingPatternManager(
     confirmingSentenceId,
     getEntry,
     handleSparkleClick,
+    peekCache,
     confirmGenerate,
     cancelConfirm,
     close,
