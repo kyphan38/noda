@@ -3,12 +3,9 @@
 import React from 'react';
 import { Sentence, AppMode, DictationInputs, CompletedSentences } from '@/types';
 import { MemoTranscriptSentence } from './TranscriptSentence';
-import type { ShadowingEntry } from '@/hooks/useShadowingPatternManager';
 
 interface TranscriptProps {
   transcript: Sentence[];
-  lessonId: string | null;
-  mediaStoragePath: string | null;
   currentTime: number;
   appMode: AppMode;
   hideCaptions?: boolean;
@@ -23,20 +20,16 @@ interface TranscriptProps {
   onDictationRetry: (sentence: Sentence) => void;
   onShadowingNext: () => void;
   isMobile?: boolean;
-  /** Shadowing-pattern explanation feature (Stage 7: centralized manager, one panel open at a time). */
+  /** Touch-first device (phone or iPad): show tap buttons for what a keyboard does elsewhere. */
+  touchControls?: boolean;
+  /** The sentence whose shadowing-pattern panel is open, to outline its row. The panel is
+   *  opened from the player's AI button, not from the rows. */
   activeShadowingSentenceId: number | null;
   isShadowingPanelOpen: boolean;
-  confirmingShadowingSentenceId: number | null;
-  getShadowingEntry: (sentenceId: number) => ShadowingEntry;
-  onSparkleClick: (sentence: Sentence) => void;
-  onConfirmShadowingGenerate: (sentence: Sentence) => void;
-  onCancelShadowingConfirm: () => void;
 }
 
 export function Transcript({
   transcript,
-  lessonId,
-  mediaStoragePath,
   currentTime,
   appMode,
   hideCaptions,
@@ -50,18 +43,10 @@ export function Transcript({
   onDictationRetry,
   onShadowingNext,
   isMobile = false,
+  touchControls = false,
   activeShadowingSentenceId,
   isShadowingPanelOpen,
-  confirmingShadowingSentenceId,
-  getShadowingEntry,
-  onSparkleClick,
-  onConfirmShadowingGenerate,
-  onCancelShadowingConfirm,
 }: TranscriptProps) {
-  // Hidden during dictation and caption-hidden (blind listening) modes - the analysis text
-  // would reveal the answer/transcript those modes are trying to keep hidden.
-  const shadowingAvailable = appMode !== 'dictation' && !hideCaptions && !!lessonId && !!mediaStoragePath;
-
   return (
     <div className="h-full min-h-0 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden flex flex-col">
       <div
@@ -93,13 +78,8 @@ export function Transcript({
               onDictationRetry={onDictationRetry}
               onShadowingNext={onShadowingNext}
               isMobile={isMobile}
-              shadowingEnabled={shadowingAvailable}
-              shadowingEntry={getShadowingEntry(sentence.id)}
+              touchControls={touchControls}
               isShadowingOpen={isShadowingPanelOpen && activeShadowingSentenceId === sentence.id}
-              isConfirmingShadowing={confirmingShadowingSentenceId === sentence.id}
-              onSparkleClick={onSparkleClick}
-              onConfirmShadowingGenerate={onConfirmShadowingGenerate}
-              onCancelShadowingConfirm={onCancelShadowingConfirm}
             />
           );
         })}

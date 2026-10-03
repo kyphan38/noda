@@ -14,6 +14,8 @@ import {
   Infinity,
   Maximize2,
   Minimize2,
+  AudioLines,
+  Loader2,
 } from 'lucide-react';
 import { RepeatCount } from '@/types';
 import {
@@ -26,6 +28,19 @@ import {
 import { formatTime } from '@/lib/utils';
 import { MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE } from '@/constants';
 import { usePlaybackTime, type PlaybackClock } from '@/lib/playbackClock';
+
+/** The one AI (shadowing pattern) button: always about the sentence currently playing. */
+export interface PlayerAiButton {
+  onClick: () => void;
+  /** The panel is open on the current sentence. */
+  active: boolean;
+  loading: boolean;
+  /** An analysis for the current sentence is already cached - opening it is free. */
+  cached: boolean;
+  disabled: boolean;
+  /** Anchor for the confirm-before-generate popover. */
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+}
 
 interface PlayerProps {
   isPlaying: boolean;
@@ -48,6 +63,8 @@ interface PlayerProps {
   showFocusToggle?: boolean;
   focusMode?: boolean;
   onToggleFocusMode?: () => void;
+  /** Shown only where the analysis is available (not in Dictation, not with captions hidden). */
+  ai?: PlayerAiButton;
 }
 
 const toolBtn =
@@ -228,6 +245,7 @@ export function Player({
   showFocusToggle = false,
   focusMode = false,
   onToggleFocusMode,
+  ai,
 }: PlayerProps) {
   const currentTime = usePlaybackTime(clock);
   const [showSpeedPopover, setShowSpeedPopover] = useState(false);
@@ -282,6 +300,29 @@ export function Player({
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5">
+        {ai && (
+          <button
+            ref={ai.triggerRef}
+            type="button"
+            data-shadowing-ai
+            onClick={ai.onClick}
+            disabled={ai.disabled}
+            className={`${toolBtn} relative disabled:pointer-events-none disabled:opacity-40 ${
+              ai.active ? 'bg-gray-800 text-white' : ''
+            }`}
+            aria-label="Analyze this sentence (A)"
+            title={ai.cached ? 'Shadowing pattern - already analyzed (A)' : 'Shadowing pattern for this sentence (A)'}
+          >
+            {ai.loading ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <AudioLines className="h-4 w-4 shrink-0" aria-hidden />
+            )}
+            {ai.cached && !ai.loading && (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+            )}
+          </button>
+        )}
         <button
           ref={speedBtnRef}
           type="button"

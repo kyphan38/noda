@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Loader2, RotateCcw, Sparkles, X } from 'lucide-react';
+import { AudioLines, Loader2, RotateCcw, X } from 'lucide-react';
 import { NOTE_LABEL, TONE_ARROW, isRenderableAnalysis, noteBadgeClass } from '@/lib/shadowingChunks';
 import type { ShadowingChunk, ShadowingNote, ShadowingPatternAnalysis } from '@/types';
 import type { ShadowingPatternStatus } from '@/hooks/useShadowingPatternAnalysis';
@@ -111,8 +111,9 @@ export function ShadowingPatternPanel({
 
   const Header = (
     <div className="flex shrink-0 items-center gap-1 border-b border-gray-800 px-1 pb-1">
-      <div className="flex items-center gap-1.5 pl-1 pr-2 text-xs font-medium text-emerald-400">
-        <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      {/* Same plain icon as the player's AI button that opens this panel. */}
+      <div className="flex items-center gap-1.5 pl-1 pr-2 text-xs font-medium text-gray-300">
+        <AudioLines className="h-3.5 w-3.5 shrink-0" aria-hidden />
         <span className="hidden sm:inline">Shadowing pattern</span>
       </div>
       <div className="ml-auto shrink-0">

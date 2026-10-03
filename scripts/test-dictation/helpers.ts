@@ -212,7 +212,9 @@ export async function getRewriteStatusCenterDeltaY(page: Page, index: number): P
   return page.evaluate((i: number) => {
     const row = document.querySelector(`[data-index="${i}"]`);
     const rewrite = row?.querySelector('[data-dictation-rewrite]');
-    const status = row?.querySelector('[data-dictation-status-icon]');
+    // The slot, not the icon: the active row shows no status icon (its box marks it),
+    // but the slot keeps its place in the action column.
+    const status = row?.querySelector('[data-dictation-status-slot]');
     if (!rewrite || !status) return null;
     const r = rewrite.getBoundingClientRect();
     const s = status.getBoundingClientRect();
