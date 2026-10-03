@@ -191,7 +191,9 @@ export function ShadowingPatternPanel({
         </div>
 
         {analysis.notes.length > 0 && (
-          <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto border-t border-gray-800 px-1 pt-2.5 pb-1">
+          // No scrollbar: the list is short. The bottom fade says "more below" instead, and the
+          // extra bottom padding lets the last note scroll clear of the fade.
+          <div className="scroll-none flex flex-1 flex-col gap-2.5 overflow-y-auto border-t border-gray-800 px-1 pt-2.5 pb-5 [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
             {analysis.notes.map((note, i) => (
               <NoteRow key={i} note={note} />
             ))}
