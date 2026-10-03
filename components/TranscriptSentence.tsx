@@ -64,6 +64,9 @@ export function TranscriptSentence({
   // outside a text field, and on desktop it is a visible hint for the Enter shortcut.
   const showDictationNext = appMode === 'dictation' && isMobile && isActive && isCompleted;
   const showShadowingNext = appMode === 'shadowing' && isActive;
+  // The slot is reserved on every row where the button can appear, so showing it does not
+  // narrow the text column and re-wrap the sentence (same idea as the rewrite slot).
+  const reserveNextSlot = appMode === 'shadowing' || (appMode === 'dictation' && isMobile);
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (showShadowingNext) {
@@ -114,10 +117,14 @@ export function TranscriptSentence({
             isMobile={isMobile}
           />
         ) : (
+          // Same size and weight whether active or not: the line must wrap the same way in both
+          // states. Ctrl-replay seeks 0.1s before the start (pre-roll), so the row flips to
+          // inactive and back; a bigger/bolder active font made a 2-line sentence jump to 1 line
+          // and back on every replay. Colour and the row box carry the highlight instead.
           <p
             className={`
               font-sans text-[15px] sm:text-base leading-relaxed
-              ${isActive ? 'text-emerald-400 font-medium sm:text-lg' : isPast ? 'text-gray-300' : 'text-gray-100'}
+              ${isActive ? 'text-emerald-400' : isPast ? 'text-gray-300' : 'text-gray-100'}
               ${hideCaptions ? 'invisible select-none' : ''}
             `}
           >
@@ -158,6 +165,9 @@ export function TranscriptSentence({
             onConfirm={() => onConfirmShadowingGenerate(sentence)}
             onClose={onCancelShadowingConfirm}
           />
+        )}
+        {reserveNextSlot && !(showDictationNext || showShadowingNext) && (
+          <div className="h-10 w-10 sm:h-8 sm:w-8 shrink-0" aria-hidden />
         )}
         {(showDictationNext || showShadowingNext) && (
           <button
