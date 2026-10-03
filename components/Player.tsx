@@ -29,17 +29,15 @@ import { formatTime } from '@/lib/utils';
 import { MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE } from '@/constants';
 import { usePlaybackTime, type PlaybackClock } from '@/lib/playbackClock';
 
-/** The one AI (shadowing pattern) button: always about the sentence currently playing. */
+/** Opens/closes the shadowing pattern panel, which follows the sentence being played. */
 export interface PlayerAiButton {
   onClick: () => void;
-  /** The panel is open on the current sentence. */
+  /** The panel is open. */
   active: boolean;
   loading: boolean;
   /** An analysis for the current sentence is already cached - opening it is free. */
   cached: boolean;
   disabled: boolean;
-  /** Anchor for the confirm-before-generate popover. */
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 interface PlayerProps {
@@ -302,7 +300,6 @@ export function Player({
       <div className="flex shrink-0 items-center gap-0.5">
         {ai && (
           <button
-            ref={ai.triggerRef}
             type="button"
             data-shadowing-ai
             onClick={ai.onClick}
@@ -310,8 +307,9 @@ export function Player({
             className={`${toolBtn} relative disabled:pointer-events-none disabled:opacity-40 ${
               ai.active ? 'bg-gray-800 text-white' : ''
             }`}
-            aria-label="Analyze this sentence (A)"
-            title={ai.cached ? 'Shadowing pattern - already analyzed (A)' : 'Shadowing pattern for this sentence (A)'}
+            aria-label={ai.active ? 'Hide shadowing pattern (A)' : 'Show shadowing pattern (A)'}
+            aria-pressed={ai.active}
+            title={ai.cached ? 'Shadowing pattern - this sentence is analyzed (A)' : 'Shadowing pattern (A)'}
           >
             {ai.loading ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />

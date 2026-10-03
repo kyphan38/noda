@@ -28,13 +28,13 @@ export const TONE_ARROW: Record<ShadowingChunk['tone'], string> = {
   flat: '→',
 };
 
-/** Vietnamese labels for the note badges. */
+/** Labels for the note badges. */
 export const NOTE_LABEL: Record<string, string> = {
-  linking: 'nối âm',
-  reduction: 'giảm âm',
-  elision: 'nuốt âm',
-  assimilation: 'biến âm',
-  rhythm: 'nhịp',
+  linking: 'linking',
+  reduction: 'reduction',
+  elision: 'elision',
+  assimilation: 'assimilation',
+  rhythm: 'rhythm',
 };
 
 /**

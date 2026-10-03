@@ -10,7 +10,10 @@ interface ShadowingPatternPanelProps {
   status: ShadowingPatternStatus;
   analysis: ShadowingPatternAnalysis | null;
   error: string | null;
-  onRetry: () => void;
+  /** The sentence the panel is on - it follows playback, so say which one it is. */
+  sentenceText: string;
+  /** Paid analysis of this sentence: the "Analyze with AI" button and Retry. */
+  onAnalyze: () => void;
   onClose: () => void;
 }
 
@@ -98,7 +101,8 @@ export function ShadowingPatternPanel({
   status,
   analysis,
   error,
-  onRetry,
+  sentenceText,
+  onAnalyze,
   onClose,
 }: ShadowingPatternPanelProps) {
   // Stop clicks inside the panel from bubbling to the sentence row's onSentenceClick.
@@ -124,7 +128,7 @@ export function ShadowingPatternPanel({
             onClose();
           }}
           className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-800 hover:text-gray-300"
-          title="Đóng"
+          title="Close"
         >
           <X className="h-4 w-4" aria-hidden />
         </button>
@@ -132,13 +136,51 @@ export function ShadowingPatternPanel({
     </div>
   );
 
+  // Not analyzed yet (or still checking): show the plain sentence so it is clear which one
+  // the panel is following.
+  const sentenceLine = <p className="shrink-0 px-1 text-[15px] leading-relaxed text-gray-300">{sentenceText}</p>;
+
+  if (status === 'checking') {
+    return (
+      <div onClick={stop} className="flex flex-col gap-2">
+        {Header}
+        {sentenceLine}
+        <Loader2 className="mx-1 mb-2 h-4 w-4 animate-spin text-gray-600" aria-label="Checking" />
+      </div>
+    );
+  }
+
+  if (status === 'idle') {
+    return (
+      <div onClick={stop} className="flex flex-col gap-2">
+        {Header}
+        {sentenceLine}
+        <div className="flex items-center justify-between gap-3 border-t border-gray-800 px-1 pt-2 pb-1">
+          <span className="text-[13px] text-gray-500">Not analyzed yet.</span>
+          <button
+            type="button"
+            data-shadowing-analyze
+            onClick={(e) => {
+              e.stopPropagation();
+              onAnalyze();
+            }}
+            className="shrink-0 rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-900 transition-colors hover:bg-white"
+          >
+            Analyze with AI
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (status === 'loading') {
     return (
       <div onClick={stop} className="flex flex-col gap-2">
         {Header}
-        <div className="flex items-center gap-2 px-2 pb-2 text-sm text-gray-400">
+        {sentenceLine}
+        <div className="flex items-center gap-2 border-t border-gray-800 px-1 pt-2 pb-1 text-sm text-gray-400">
           <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
-          Đang phân tích âm thanh…
+          Analyzing the audio… (10-20s)
         </div>
       </div>
     );
@@ -148,7 +190,7 @@ export function ShadowingPatternPanel({
     return (
       <div onClick={stop} className="flex flex-col gap-2">
         {Header}
-        <div className="px-2 pb-2 text-sm text-red-400">Kết quả phân tích không đọc được.</div>
+        <div className="px-2 pb-2 text-sm text-red-400">Could not read the analysis result.</div>
       </div>
     );
   }
@@ -158,12 +200,12 @@ export function ShadowingPatternPanel({
       <div onClick={stop} className="flex flex-col gap-2">
         {Header}
         <div className="flex items-center justify-between gap-3 px-2 pb-2 text-sm text-red-400">
-          <span>{error || 'Không phân tích được câu này.'}</span>
+          <span>{error || 'Could not analyze this sentence.'}</span>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onRetry();
+              onAnalyze();
             }}
             className="flex shrink-0 items-center gap-1 rounded-md border border-red-500/30 px-2 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10"
           >
@@ -203,7 +245,7 @@ export function ShadowingPatternPanel({
         {/* A clean read is a real result, not an empty state - say so instead of showing nothing. */}
         {analysis.notes.length === 0 && (
           <div className="shrink-0 border-t border-gray-800 px-1 pt-2 text-[13px] text-gray-500">
-            Câu này người nói đọc rõ, không có chỗ nối hay nuốt âm đáng chú ý.
+            The speaker says this one clearly - no linking or dropped sounds worth noting.
           </div>
         )}
       </div>

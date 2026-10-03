@@ -110,7 +110,7 @@ async function callGeminiWithRetry(sourceText: string, base64ClipAudio: string):
     return await callGeminiOnce(sourceText, base64ClipAudio);
   } catch (e) {
     if (isGeminiTimeoutError(e)) {
-      throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
+      throw new HttpsError("deadline-exceeded", "Analysis timed out, try again.");
     }
     if (!isRetryable(e)) throw e;
 
@@ -120,11 +120,11 @@ async function callGeminiWithRetry(sourceText: string, base64ClipAudio: string):
       return await callGeminiOnce(sourceText, base64ClipAudio);
     } catch (e2) {
       if (isGeminiTimeoutError(e2)) {
-        throw new HttpsError("deadline-exceeded", "Hết thời gian phân tích, thử lại.");
+        throw new HttpsError("deadline-exceeded", "Analysis timed out, try again.");
       }
       if (isRetryable(e2)) {
         console.error("Shadowing analysis unusable after retry:", (e2 as Error).message);
-        throw new HttpsError("internal", "Gemini trả kết quả không dùng được, thử lại.");
+        throw new HttpsError("internal", "Gemini returned an unusable result, try again.");
       }
       throw e2;
     }
@@ -260,7 +260,7 @@ export const analyzeShadowingPattern = onCall(
       // hien do len app - log day du o server, bao nguoi dung cau ngan gon.
       if (/ffmpeg|sigsegv|signal|killed|ffprobe/i.test(message)) {
         console.error("Shadowing analysis audio processing failed:", message);
-        throw new HttpsError("internal", "Không đọc được file âm thanh này, thử file khác.");
+        throw new HttpsError("internal", "Could not read this audio file, try another file.");
       }
       throw new HttpsError("internal", message);
     } finally {
