@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Player, type PlayerAiButton } from './Player';
 import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
 import { ShadowingPatternDock } from './ShadowingPatternDock';
-import { ShadowingConfirmPopover } from './ShadowingConfirmPopover';
 import { ResumePrompt } from './ResumePrompt';
 import type { ResumeTarget } from '@/lib/progress';
 import type { PlaybackClock } from '@/lib/playbackClock';
@@ -166,44 +165,68 @@ export function LessonView({
   const {
     activeSentenceId: activeShadowingSentenceId,
     isPanelOpen: isShadowingPanelOpen,
-    confirmingSentenceId: confirmingShadowingSentenceId,
     getEntry: getShadowingEntry,
-    handleSparkleClick: onSparkleClick,
-    peekCache: peekShadowingCache,
-    confirmGenerate: onConfirmShadowingGenerate,
-    cancelConfirm: onCancelShadowingConfirm,
+    open: openShadowingPanel,
     close: closeShadowingPanel,
-    retry: retryShadowingAnalysis,
+    show: showShadowingSentence,
+    analyze: analyzeShadowingSentence,
   } = useShadowingPatternManager(lessonId, mediaStoragePath, transcript);
   const activeShadowingSentence =
     activeShadowingSentenceId != null
       ? transcript.find((s) => s.id === activeShadowingSentenceId)
       : undefined;
-  const onRetryShadowingAnalysis = useCallback(() => {
-    if (activeShadowingSentence) retryShadowingAnalysis(activeShadowingSentence);
-  }, [activeShadowingSentence, retryShadowingAnalysis]);
+  const onAnalyzeShadowingSentence = useCallback(() => {
+    if (activeShadowingSentence) analyzeShadowingSentence(activeShadowingSentence);
+  }, [activeShadowingSentence, analyzeShadowingSentence]);
 
-  // One AI button on the player instead of a sparkle on every row: it always analyzes the
-  // sentence that is playing (or about to play, in a gap). Hidden where the analysis would
-  // give away text the mode keeps hidden (Dictation, captions off) and in focus mode, which
-  // has no room for the panel.
+  // The player's AI button opens and closes the panel; while open, the panel follows the
+  // sentence being played. Hidden where the analysis would give away text the mode keeps
+  // hidden (Dictation, captions off) and in focus mode, which has no room for the panel.
   const touchControls = useCoarsePointer() || isMobile;
   const shadowingAvailable =
     mode !== 'dictation' && !hideCaptions && !!lessonId && !!mediaStoragePath && !focusActive;
-  const aiTriggerRef = useRef<HTMLButtonElement>(null);
-  const currentAiSentence = shadowingAvailable ? activeSentence : undefined;
 
-  // Free cache check as the learner moves through the lesson, so the button can show
-  // "already analyzed" before it is pressed.
+  // The sentence the panel follows. Only a sentence that is really playing replaces it: at a
+  // sentence's end (the loop's pause) and during Ctrl's 0.1s pre-roll the time sits in a gap,
+  // where `activeSentence` already points at the NEXT sentence - following that would flick
+  // the panel to the next line and back on every loop.
+  const playingSentenceId =
+    activeSentence && currentTime >= activeSentence.start && currentTime < activeSentence.end
+      ? activeSentence.id
+      : null;
+  const [followedSentenceId, setFollowedSentenceId] = useState<number | null>(null);
   useEffect(() => {
-    if (currentAiSentence) peekShadowingCache(currentAiSentence);
-  }, [currentAiSentence, peekShadowingCache]);
+    if (playingSentenceId != null) setFollowedSentenceId(playingSentenceId);
+  }, [playingSentenceId]);
+  useEffect(() => {
+    setFollowedSentenceId(null);
+  }, [lesson.id]);
+  const followedSentence = useMemo(
+    () =>
+      (followedSentenceId != null ? transcript.find((s) => s.id === followedSentenceId) : undefined) ??
+      activeSentence,
+    [followedSentenceId, transcript, activeSentence]
+  );
+  const currentAiSentence = shadowingAvailable ? followedSentence : undefined;
+
+  // Free cache lookup for the current sentence (open or not, so the button can show
+  // "already analyzed"); with the panel open, also move the panel to it.
+  useEffect(() => {
+    if (currentAiSentence) showShadowingSentence(currentAiSentence, { follow: isShadowingPanelOpen });
+  }, [currentAiSentence, isShadowingPanelOpen, showShadowingSentence]);
+
+  // Leaving Shadowing/Listen (or hiding captions) closes the panel rather than leaving it on
+  // a sentence the mode is meant to hide.
+  useEffect(() => {
+    if (!shadowingAvailable && isShadowingPanelOpen) closeShadowingPanel();
+  }, [shadowingAvailable, isShadowingPanelOpen, closeShadowingPanel]);
 
   const onAiClick = useCallback(() => {
-    if (currentAiSentence) onSparkleClick(currentAiSentence);
-  }, [currentAiSentence, onSparkleClick]);
+    if (isShadowingPanelOpen) closeShadowingPanel();
+    else if (currentAiSentence) openShadowingPanel(currentAiSentence);
+  }, [isShadowingPanelOpen, currentAiSentence, closeShadowingPanel, openShadowingPanel]);
 
-  // "A" opens the analysis of the current sentence, like the player button.
+  // "A" toggles the panel, like the player button.
   useEffect(() => {
     if (!shadowingAvailable) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -224,19 +247,14 @@ export function LessonView({
       shadowingAvailable
         ? {
             onClick: onAiClick,
-            active: isShadowingPanelOpen && activeShadowingSentenceId === currentAiSentence?.id,
+            active: isShadowingPanelOpen,
             loading: currentAiEntry?.status === 'loading',
             cached: currentAiEntry?.status === 'ready',
             disabled: !currentAiSentence,
-            triggerRef: aiTriggerRef,
           }
         : undefined,
-    [shadowingAvailable, onAiClick, isShadowingPanelOpen, activeShadowingSentenceId, currentAiSentence, currentAiEntry]
+    [shadowingAvailable, onAiClick, isShadowingPanelOpen, currentAiSentence, currentAiEntry]
   );
-  const confirmingShadowingSentence =
-    confirmingShadowingSentenceId != null
-      ? transcript.find((s) => s.id === confirmingShadowingSentenceId)
-      : undefined;
 
   // Tell the page shell to widen a bit while the panel is open, so the 60/40 split isn't
   // cramped. Mirrors the `onFocusModeChange` ref pattern above.
@@ -252,17 +270,23 @@ export function LessonView({
     return () => onShadowingPanelOpenChangeRef.current?.(false);
   }, []);
 
-  // Mobile: the dock takes the bottom of the transcript area, which can hide the very sentence
-  // the learner just opened. Re-centre it once the dock has finished growing (300ms transition).
+  // Mobile: the dock takes the bottom of the transcript area, which can hide the sentence it
+  // is about. Re-centre that row once the dock has finished growing (300ms transition). Only
+  // on opening: after that the panel follows playback and the normal auto-scroll keeps the
+  // playing row in view.
+  const activeShadowingSentenceIdRef = React.useRef(activeShadowingSentenceId);
+  activeShadowingSentenceIdRef.current = activeShadowingSentenceId;
   useEffect(() => {
-    if (!isMobile || !isShadowingPanelOpen || activeShadowingSentenceId == null) return;
-    const index = transcript.findIndex((s) => s.id === activeShadowingSentenceId);
-    if (index === -1) return;
+    if (!isMobile || !isShadowingPanelOpen) return;
     const timer = window.setTimeout(() => {
-      if (scrollContainerRef.current) scrollTranscriptRowIntoView(scrollContainerRef.current, index, 'smooth');
+      const index = transcript.findIndex((s) => s.id === activeShadowingSentenceIdRef.current);
+      if (index !== -1 && scrollContainerRef.current) {
+        scrollTranscriptRowIntoView(scrollContainerRef.current, index, 'smooth');
+      }
     }, 320);
     return () => window.clearTimeout(timer);
-  }, [isMobile, isShadowingPanelOpen, activeShadowingSentenceId, transcript, scrollContainerRef]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run on open only, not on every followed sentence
+  }, [isMobile, isShadowingPanelOpen]);
 
   useEffect(() => {
     setVideoHidden(false);
@@ -495,8 +519,9 @@ export function LessonView({
                   key={activeShadowingSentenceId}
                   isMobile
                   entry={getShadowingEntry(activeShadowingSentenceId)}
+                  sentenceText={activeShadowingSentence?.text ?? ''}
                   onClose={closeShadowingPanel}
-                  onRetry={onRetryShadowingAnalysis}
+                  onAnalyze={onAnalyzeShadowingSentence}
                 />
               )}
             </div>
@@ -513,8 +538,9 @@ export function LessonView({
                   key={activeShadowingSentenceId}
                   isMobile={false}
                   entry={getShadowingEntry(activeShadowingSentenceId)}
+                  sentenceText={activeShadowingSentence?.text ?? ''}
                   onClose={closeShadowingPanel}
-                  onRetry={onRetryShadowingAnalysis}
+                  onAnalyze={onAnalyzeShadowingSentence}
                 />
               )}
             </div>
@@ -547,13 +573,7 @@ export function LessonView({
             onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
             ai={aiButton}
           />
-          {confirmingShadowingSentence && aiButton && (
-            <ShadowingConfirmPopover
-              triggerRef={aiTriggerRef}
-              onConfirm={() => onConfirmShadowingGenerate(confirmingShadowingSentence)}
-              onClose={onCancelShadowingConfirm}
-            />
-          )}
+
         </div>
       )}
     </div>

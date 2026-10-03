@@ -10,7 +10,10 @@ interface ShadowingPatternPanelProps {
   status: ShadowingPatternStatus;
   analysis: ShadowingPatternAnalysis | null;
   error: string | null;
-  onRetry: () => void;
+  /** The sentence the panel is on - it follows playback, so say which one it is. */
+  sentenceText: string;
+  /** Paid analysis of this sentence: the "Phân tích AI" button and Retry. */
+  onAnalyze: () => void;
   onClose: () => void;
 }
 
@@ -98,7 +101,8 @@ export function ShadowingPatternPanel({
   status,
   analysis,
   error,
-  onRetry,
+  sentenceText,
+  onAnalyze,
   onClose,
 }: ShadowingPatternPanelProps) {
   // Stop clicks inside the panel from bubbling to the sentence row's onSentenceClick.
@@ -132,13 +136,51 @@ export function ShadowingPatternPanel({
     </div>
   );
 
+  // Not analyzed yet (or still checking): show the plain sentence so it is clear which one
+  // the panel is following.
+  const sentenceLine = <p className="shrink-0 px-1 text-[15px] leading-relaxed text-gray-300">{sentenceText}</p>;
+
+  if (status === 'checking') {
+    return (
+      <div onClick={stop} className="flex flex-col gap-2">
+        {Header}
+        {sentenceLine}
+        <Loader2 className="mx-1 mb-2 h-4 w-4 animate-spin text-gray-600" aria-label="Đang kiểm tra" />
+      </div>
+    );
+  }
+
+  if (status === 'idle') {
+    return (
+      <div onClick={stop} className="flex flex-col gap-2">
+        {Header}
+        {sentenceLine}
+        <div className="flex items-center justify-between gap-3 border-t border-gray-800 px-1 pt-2 pb-1">
+          <span className="text-[13px] text-gray-500">Chưa có phân tích.</span>
+          <button
+            type="button"
+            data-shadowing-analyze
+            onClick={(e) => {
+              e.stopPropagation();
+              onAnalyze();
+            }}
+            className="shrink-0 rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-900 transition-colors hover:bg-white"
+          >
+            Phân tích AI
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (status === 'loading') {
     return (
       <div onClick={stop} className="flex flex-col gap-2">
         {Header}
-        <div className="flex items-center gap-2 px-2 pb-2 text-sm text-gray-400">
+        {sentenceLine}
+        <div className="flex items-center gap-2 border-t border-gray-800 px-1 pt-2 pb-1 text-sm text-gray-400">
           <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
-          Đang phân tích âm thanh…
+          Đang phân tích âm thanh… (10-20 giây)
         </div>
       </div>
     );
@@ -163,7 +205,7 @@ export function ShadowingPatternPanel({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onRetry();
+              onAnalyze();
             }}
             className="flex shrink-0 items-center gap-1 rounded-md border border-red-500/30 px-2 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10"
           >
