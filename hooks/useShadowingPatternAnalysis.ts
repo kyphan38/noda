@@ -1,4 +1,5 @@
-export type ShadowingPatternStatus = 'idle' | 'loading' | 'ready' | 'error';
+/** `checking` = the free cache lookup is running; `idle` = no analysis yet (offer the button). */
+export type ShadowingPatternStatus = 'idle' | 'checking' | 'loading' | 'ready' | 'error';
 
 /**
  * Turn a caught error into the specific Vietnamese message the panel should show.

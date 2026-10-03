@@ -34,16 +34,13 @@ export interface ShadowingSentenceRef {
 export interface UseShadowingPatternManagerResult {
   activeSentenceId: number | null;
   isPanelOpen: boolean;
-  confirmingSentenceId: number | null;
   getEntry: (sentenceId: number) => ShadowingEntry;
-  handleSparkleClick: (sentence: ShadowingSentenceRef) => void;
-  /** Free Firestore read: marks the sentence `ready` if an analysis is already cached.
-   *  Never calls Gemini, never opens the panel, never shows a loading state. */
-  peekCache: (sentence: ShadowingSentenceRef) => void;
-  confirmGenerate: (sentence: ShadowingSentenceRef) => void;
-  cancelConfirm: () => void;
+  open: (sentence: ShadowingSentenceRef) => void;
   close: () => void;
-  retry: (sentence: ShadowingSentenceRef) => void;
+  /** Look up the cached analysis for free; with `follow`, also point the panel at it. */
+  show: (sentence: ShadowingSentenceRef, options: { follow: boolean }) => void;
+  /** Paid Gemini analysis - only from an explicit button press. */
+  analyze: (sentence: ShadowingSentenceRef) => void;
 }
 
 /**
@@ -56,14 +53,14 @@ export interface UseShadowingPatternManagerResult {
  * keeps running in the background and lands in the cache, so reopening an already-viewed
  * sentence later in the same session is instant (no refetch, no loading flicker).
  *
- * Cost guard: tapping the sparkle icon on a sentence that has never been analyzed does NOT
- * immediately call the (paid) Gemini analysis. It first does a cheap, silent Firestore cache
- * peek; a hit opens instantly at $0. A miss surfaces `confirmingSentenceId` so the caller can
- * show a confirmation popover - only `confirmGenerate` actually triggers the Cloud Function.
+ * The panel follows the sentence being played (`show` with `follow`). Cost guard: following
+ * never calls the (paid) Gemini analysis. It only does a free Firestore cache lookup; a hit
+ * shows instantly at $0, a miss leaves the entry `idle` and the panel offers a
+ * "Phân tích AI" button. Only that button (`analyze`) triggers the Cloud Function.
  *
  * Prefetch: analysis takes 10-20s and almost all of that is Gemini reasoning about the audio,
  * which measurement showed cannot be cut without the answers getting worse. So the wait is
- * hidden rather than shortened - opening one sentence starts `SHADOWING_PREFETCH_COUNT` of the
+ * hidden rather than shortened - analyzing one sentence starts `SHADOWING_PREFETCH_COUNT` of the
  * following ones in the background, and by the time the learner moves on they are already
  * cached. Prefetch only ever fires from a deliberate user action, never from another prefetch:
  * cascading would quietly analyze (and bill for) an entire lesson.
@@ -76,7 +73,6 @@ export function useShadowingPatternManager(
   const [entries, setEntries] = useState<Record<number, ShadowingEntry>>({});
   const [activeSentenceId, setActiveSentenceId] = useState<number | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [confirmingSentenceId, setConfirmingSentenceId] = useState<number | null>(null);
   /** In-flight requests for the open lesson; reset on lesson switch so late results are dropped. */
   const requestsRef = useRef(new ShadowingRequestTracker());
   /** Mirrors `entries` so the prefetch path can read current state without being
@@ -86,8 +82,6 @@ export function useShadowingPatternManager(
   /** Sentences already attempted in the background; a failed prefetch is never retried
    *  on its own, it just falls back to the normal confirm-then-generate flow. */
   const prefetchedIdsRef = useRef<Set<number>>(new Set());
-  /** Sentences already looked up by `peekCache` - one Firestore read each per lesson visit. */
-  const peekedIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     transcriptRef.current = transcript;
@@ -100,11 +94,9 @@ export function useShadowingPatternManager(
     requestsRef.current.reset();
     entriesRef.current = {};
     prefetchedIdsRef.current = new Set();
-    peekedIdsRef.current = new Set();
     setEntries({});
     setActiveSentenceId(null);
     setIsPanelOpen(false);
-    setConfirmingSentenceId(null);
   }, [lessonId]);
 
   const getEntry = useCallback(
@@ -115,14 +107,6 @@ export function useShadowingPatternManager(
   const setEntry = useCallback((sentenceId: number, entry: ShadowingEntry) => {
     entriesRef.current = { ...entriesRef.current, [sentenceId]: entry };
     setEntries((prev) => ({ ...prev, [sentenceId]: entry }));
-  }, []);
-
-  const close = useCallback(() => {
-    setIsPanelOpen(false);
-  }, []);
-
-  const cancelConfirm = useCallback(() => {
-    setConfirmingSentenceId(null);
   }, []);
 
   /**
@@ -242,122 +226,69 @@ export function useShadowingPatternManager(
     [lessonId, mediaStoragePath, prefetchAfter, setEntry]
   );
 
-  const confirmGenerate = useCallback(
-    (sentence: ShadowingSentenceRef) => {
-      setConfirmingSentenceId(null);
-      setActiveSentenceId(sentence.id);
-      setIsPanelOpen(true);
-      runGenerate(sentence);
-    },
-    [runGenerate]
-  );
+  /** Open the panel on `sentence`. The panel then follows the current sentence via `show`. */
+  const open = useCallback((sentence: ShadowingSentenceRef) => {
+    setActiveSentenceId(sentence.id);
+    setIsPanelOpen(true);
+  }, []);
 
-  const retry = useCallback(
-    (sentence: ShadowingSentenceRef) => {
-      runGenerate(sentence);
-    },
-    [runGenerate]
-  );
+  const close = useCallback(() => {
+    setIsPanelOpen(false);
+  }, []);
 
-  const peekCache = useCallback(
-    (sentence: ShadowingSentenceRef) => {
+  /**
+   * Point the open panel at `sentence` and look up its cached analysis (free Firestore
+   * read, never Gemini). Also used with the panel closed, so the player button can show
+   * "already analyzed". A miss leaves the entry `idle`: the panel then offers the
+   * "Phân tích AI" button, and only that button spends money.
+   *
+   * Deliberately no prefetch here. Following the playback through cached sentences must
+   * not keep buying the next ones; prefetch only follows an explicit "Phân tích AI".
+   */
+  const show = useCallback(
+    (sentence: ShadowingSentenceRef, { follow }: { follow: boolean }) => {
+      if (follow) setActiveSentenceId(sentence.id);
       if (!lessonId) return;
-      if (peekedIdsRef.current.has(sentence.id)) return;
-      if (entriesRef.current[sentence.id]) return; // already known: loading, ready or error
-      peekedIdsRef.current.add(sentence.id);
+      if (entriesRef.current[sentence.id]) return; // known: checking, loading, ready, idle or error
       const requests = requestsRef.current;
-      // `watch`, not `begin`: a click during the peek must still start its own lookup.
-      const generationToken = requests.watch(sentence.id);
+      // `watch`, not `begin`: pressing "Phân tích AI" during the lookup must start its request.
+      const token = requests.watch(sentence.id);
+      setEntry(sentence.id, { status: 'checking', analysis: null, error: null });
       void getShadowingAnalysisFirestore(lessonId, sentence.id)
         .then((cached) => {
-          if (!requests.isCurrent(generationToken)) return;
-          if (entriesRef.current[sentence.id]) return;
-          if (cached && isRenderableAnalysis(cached.analysis)) {
-            setEntry(sentence.id, { status: 'ready', analysis: cached.analysis, error: null });
-          }
+          if (!requests.isCurrent(token)) return;
+          if (entriesRef.current[sentence.id]?.status !== 'checking') return;
+          setEntry(
+            sentence.id,
+            cached && isRenderableAnalysis(cached.analysis)
+              ? { status: 'ready', analysis: cached.analysis, error: null }
+              : IDLE_ENTRY
+          );
         })
-        .catch(() => {
-          // Harmless: the button simply shows no "cached" dot.
+        .catch((e) => {
+          console.warn('Shadowing cache lookup failed (harmless):', e);
+          if (!requests.isCurrent(token)) return;
+          if (entriesRef.current[sentence.id]?.status === 'checking') setEntry(sentence.id, IDLE_ENTRY);
         });
     },
     [lessonId, setEntry]
   );
 
-  const handleSparkleClick = useCallback(
+  /** The explicit, paid analysis - the panel's "Phân tích AI" and "Retry" buttons. */
+  const analyze = useCallback(
     (sentence: ShadowingSentenceRef) => {
-      // Only one confirm popover at a time.
-      setConfirmingSentenceId((prev) => (prev !== null && prev !== sentence.id ? null : prev));
-
-      // Toggle off if this sentence's panel is already the one open.
-      if (activeSentenceId === sentence.id && isPanelOpen) {
-        close();
-        return;
-      }
-
-      const cachedEntry = entries[sentence.id];
-      if (cachedEntry?.status === 'ready') {
-        setActiveSentenceId(sentence.id);
-        setIsPanelOpen(true);
-        prefetchAfter(sentence.id);
-        return;
-      }
-
-      // Already in flight - usually a prefetch for this very sentence. Show the panel and
-      // let the running request land in it rather than ignoring the click.
-      const requests = requestsRef.current;
-      if (requests.isLoading(sentence.id)) {
-        setActiveSentenceId(sentence.id);
-        setIsPanelOpen(true);
-        return;
-      }
-      if (!lessonId || !mediaStoragePath) {
-        setEntry(sentence.id, { status: 'error', analysis: null, error: 'Bài này chưa có audio trên cloud.' });
-        setActiveSentenceId(sentence.id);
-        setIsPanelOpen(true);
-        return;
-      }
-
-      // Silent cache peek - never counts as the costly Gemini call.
-      const token = requests.begin(sentence.id);
-      if (!token) return;
-      setEntry(sentence.id, { status: 'loading', analysis: null, error: null });
-
-      (async () => {
-        try {
-          const cached = await getShadowingAnalysisFirestore(lessonId, sentence.id);
-          if (!requests.isCurrent(token)) return;
-          if (cached && isRenderableAnalysis(cached.analysis)) {
-            setEntry(sentence.id, { status: 'ready', analysis: cached.analysis, error: null });
-            setActiveSentenceId(sentence.id);
-            setIsPanelOpen(true);
-            prefetchAfter(sentence.id);
-          } else {
-            setEntry(sentence.id, { status: 'idle', analysis: null, error: null });
-            setConfirmingSentenceId(sentence.id);
-          }
-        } catch (e) {
-          console.error('Shadowing pattern cache check failed:', e);
-          if (!requests.isCurrent(token)) return;
-          setEntry(sentence.id, { status: 'idle', analysis: null, error: null });
-          setConfirmingSentenceId(sentence.id);
-        } finally {
-          requests.end(token);
-        }
-      })();
+      runGenerate(sentence);
     },
-    [activeSentenceId, isPanelOpen, entries, lessonId, mediaStoragePath, close, prefetchAfter, setEntry]
+    [runGenerate]
   );
 
   return {
     activeSentenceId,
     isPanelOpen,
-    confirmingSentenceId,
     getEntry,
-    handleSparkleClick,
-    peekCache,
-    confirmGenerate,
-    cancelConfirm,
+    open,
     close,
-    retry,
+    show,
+    analyze,
   };
 }
