@@ -22,7 +22,7 @@ const IDLE_ENTRY: ShadowingEntry = { status: 'idle', analysis: null, error: null
  * practice means the deployed Cloud Function is still on the previous analysis version.
  * Worth naming precisely: this is a single-user app whose owner can fix it by deploying.
  */
-const STALE_SERVER_ERROR = 'Server còn bản phân tích cũ - deploy lại Cloud Function rồi thử lại.';
+const STALE_SERVER_ERROR = 'The server still has the old analysis version - redeploy the Cloud Function and try again.';
 
 export interface ShadowingSentenceRef {
   id: number;
@@ -56,7 +56,7 @@ export interface UseShadowingPatternManagerResult {
  * The panel follows the sentence being played (`show` with `follow`). Cost guard: following
  * never calls the (paid) Gemini analysis. It only does a free Firestore cache lookup; a hit
  * shows instantly at $0, a miss leaves the entry `idle` and the panel offers a
- * "Phân tích AI" button. Only that button (`analyze`) triggers the Cloud Function.
+ * "Analyze with AI" button. Only that button (`analyze`) triggers the Cloud Function.
  *
  * Prefetch: analysis takes 10-20s and almost all of that is Gemini reasoning about the audio,
  * which measurement showed cannot be cut without the answers getting worse. So the wait is
@@ -180,14 +180,14 @@ export function useShadowingPatternManager(
   const runGenerate = useCallback(
     (sentence: ShadowingSentenceRef) => {
       if (!lessonId || !mediaStoragePath) {
-        setEntry(sentence.id, { status: 'error', analysis: null, error: 'Bài này chưa có audio trên cloud.' });
+        setEntry(sentence.id, { status: 'error', analysis: null, error: 'This lesson has no audio in the cloud yet.' });
         return;
       }
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         setEntry(sentence.id, {
           status: 'error',
           analysis: null,
-          error: 'Bạn đang offline - cần mạng để phân tích.',
+          error: 'You are offline - analysis needs a connection.',
         });
         return;
       }
@@ -240,10 +240,10 @@ export function useShadowingPatternManager(
    * Point the open panel at `sentence` and look up its cached analysis (free Firestore
    * read, never Gemini). Also used with the panel closed, so the player button can show
    * "already analyzed". A miss leaves the entry `idle`: the panel then offers the
-   * "Phân tích AI" button, and only that button spends money.
+   * "Analyze with AI" button, and only that button spends money.
    *
    * Deliberately no prefetch here. Following the playback through cached sentences must
-   * not keep buying the next ones; prefetch only follows an explicit "Phân tích AI".
+   * not keep buying the next ones; prefetch only follows an explicit "Analyze with AI".
    */
   const show = useCallback(
     (sentence: ShadowingSentenceRef, { follow }: { follow: boolean }) => {
@@ -251,7 +251,7 @@ export function useShadowingPatternManager(
       if (!lessonId) return;
       if (entriesRef.current[sentence.id]) return; // known: checking, loading, ready, idle or error
       const requests = requestsRef.current;
-      // `watch`, not `begin`: pressing "Phân tích AI" during the lookup must start its request.
+      // `watch`, not `begin`: pressing "Analyze with AI" during the lookup must start its request.
       const token = requests.watch(sentence.id);
       setEntry(sentence.id, { status: 'checking', analysis: null, error: null });
       void getShadowingAnalysisFirestore(lessonId, sentence.id)
@@ -274,7 +274,7 @@ export function useShadowingPatternManager(
     [lessonId, setEntry]
   );
 
-  /** The explicit, paid analysis - the panel's "Phân tích AI" and "Retry" buttons. */
+  /** The explicit, paid analysis - the panel's "Analyze with AI" and "Retry" buttons. */
   const analyze = useCallback(
     (sentence: ShadowingSentenceRef) => {
       runGenerate(sentence);
