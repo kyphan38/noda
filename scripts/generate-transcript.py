@@ -32,6 +32,8 @@ Khac ban goc:
   6. Bo dong khong co chu cai/so nao (vd "!" - rac cua Whisper).
   7. Chan stable-ts keo dai tu qua khoang lang/nhac (lech 1-15s).
   8. --model de doi model tu dong lenh.
+  9. Keo end theo am luong that: neu tieng noi con keo dai sau end thi
+     keo end toi khi tat (toi da +400ms, khong vuot start cau sau).
 ============================================
 """
 
@@ -71,6 +73,10 @@ END_PADDING_MS         = 150  # buffer after last word's Whisper end timestamp.
                              # trong plan). Noi nhanh thi end da bi kep vao
                              # start cau sau nen padding khong anh huong.
 MIN_BLOCK_MS           = 200  # block nao ngan hon thi keo dai end ra
+END_SNAP_MAX_MS        = 400  # keo end toi da bao nhieu khi audio con tieng noi
+END_SNAP_TAIL_MS       = 30   # noda dung o end - 0.03s -> chua them dung khoang do
+SPEECH_DB_ABOVE_FLOOR  = 12   # frame to hon nen (percentile 30) bao nhieu dB = co tieng
+END_SNAP_GAP_FRAMES    = 6    # khoang lang <= 60ms giua am cuoi van tinh la con tieng
 MIN_LINE_WPS           = 1.0  # lines below this words/sec are likely hallucinations
 REFINE_MAX_DRIFT_S     = 1.0  # stable-ts lech hon muc nay so voi Whisper goc -> lay gio goc.
                              # Do tren video 43 phut: median lech 0s, p95 ~0.4s;
@@ -482,6 +488,65 @@ def split_words_into_lines(words: list[dict]) -> list[list[dict]]:
     return merged
 
 
+# ── Speech mask (am luong that) ──────────────────────────────────────────────
+
+def load_speech_mask(media_path: Path | None):
+    """Mang bool, 1 phan tu = 10ms: True khi frame do co tieng (to hon nen).
+
+    stable-ts hay dat end cua tu cuoi som 0.1-0.3s; padding co dinh khong du
+    bu, noda (dung o end - 0.03s) cat cut am cuoi khi dictation. Do am luong
+    that de biet tieng noi tat luc nao. Loi gi cung tra None (bo qua buoc nay).
+    """
+    if media_path is None or not media_path.exists():
+        return None
+    try:
+        import numpy as np
+    except ImportError:
+        return None
+    proc = subprocess.run(
+        ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(media_path),
+         "-ar", "16000", "-ac", "1", "-f", "s16le", "-"],
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout:
+        return None
+    x = np.frombuffer(proc.stdout, dtype=np.int16).astype(np.float32)
+    frame = 160  # 10ms @ 16kHz
+    n = len(x) // frame
+    if n == 0:
+        return None
+    rms = np.sqrt(np.mean(x[: n * frame].reshape(n, frame) ** 2, axis=1)) + 1e-6
+    db = 20 * np.log10(rms)
+    return db > np.percentile(db, 30) + SPEECH_DB_ABOVE_FLOOR
+
+
+def _snap_end_to_speech(end_ms: float, limit_ms: float | None, speech) -> float:
+    """Keo end qua phan am cuoi con keo dai, toi da END_SNAP_MAX_MS, khong qua limit_ms."""
+    if speech is None:
+        return end_ms
+    cap = end_ms + END_SNAP_MAX_MS
+    if limit_ms is not None:
+        cap = min(cap, limit_ms)
+    i = int(end_ms // 10)
+    if i >= len(speech) or not speech[i]:
+        return end_ms  # end da nam trong khoang lang: giu nguyen
+    # Bo qua khoang lang ngan (<= END_SNAP_GAP_FRAMES): phu am cuoi nhu "k-s"
+    # trong "cortex" co mot quang tat rat ngan truoc khi bat lai.
+    t = end_ms
+    while t < cap and i < len(speech):
+        if speech[i]:
+            t += 10
+            i += 1
+            continue
+        ahead = speech[i + 1 : i + 1 + END_SNAP_GAP_FRAMES]
+        if not ahead.any():
+            break
+        step = int(ahead.argmax()) + 1
+        t += 10 * step
+        i += step
+    return min(t + END_SNAP_TAIL_MS, cap)
+
+
 # ── SRT builders ──────────────────────────────────────────────────────────────
 
 def _filter_slow_lines(lines: list[list[dict]]) -> list[list[dict]]:
@@ -501,7 +566,7 @@ def _filter_slow_lines(lines: list[list[dict]]) -> list[list[dict]]:
     return result
 
 
-def srt_from_words(words: list[dict], *, skip_slow_filter: bool = False) -> str:
+def srt_from_words(words: list[dict], *, skip_slow_filter: bool = False, speech=None) -> str:
     lines = split_words_into_lines(words)
     if not skip_slow_filter:
         lines = _filter_slow_lines(lines)
@@ -522,6 +587,8 @@ def srt_from_words(words: list[dict], *, skip_slow_filter: bool = False) -> str:
         end_ms = max(end_ms, start_ms + MIN_BLOCK_MS)
         if next_start is not None and next_start > start_ms:
             end_ms = min(end_ms, next_start)
+        limit = next_start if next_start is not None and next_start > start_ms else None
+        end_ms = _snap_end_to_speech(end_ms, limit, speech)
         text         = " ".join(w["word"] for w in ln).strip()
         text         = re.sub(r'\s+([.,!?:;])', r'\1', text)
         blocks.append(f"{idx}\n{ms_to_ts(start_ms)} --> {ms_to_ts(end_ms)}\n{text}")
@@ -623,7 +690,13 @@ def validate_srt_timing(content: str) -> list[str]:
     return warnings
 
 
-def json_to_srt(json_path: Path, srt_path: Path, *, words_override: list[dict] | None = None) -> int:
+def json_to_srt(
+    json_path: Path,
+    srt_path: Path,
+    *,
+    words_override: list[dict] | None = None,
+    media_path: Path | None = None,
+) -> int:
     is_refined = words_override is not None
     if is_refined:
         raw_words = _guard_refined_words(words_override, extract_words(json_path))
@@ -636,7 +709,10 @@ def json_to_srt(json_path: Path, srt_path: Path, *, words_override: list[dict] |
 
         if words:
             print(f"   ✔  Word-level{' (refined)' if is_refined else ''}: {len(words)} words")
-            content = srt_from_words(words, skip_slow_filter=is_refined)
+            speech = load_speech_mask(media_path)
+            if speech is None:
+                print("   ⚠  No audio for end-snap - keeping padded ends")
+            content = srt_from_words(words, skip_slow_filter=is_refined, speech=speech)
         else:
             print("   ⚠  All words filtered — segment fallback")
             segments = extract_segments_fallback(json_path)
@@ -844,7 +920,7 @@ def transcribe_to_srt(
         return False
     try:
         refined = _refine_timestamps(media_path, json_path) if refine else None
-        count = json_to_srt(json_path, srt_path, words_override=refined)
+        count = json_to_srt(json_path, srt_path, words_override=refined, media_path=media_path)
         print(f"✅  {count} lines → {srt_path}")
 
         # Giu ca gio goc lan gio stable-ts canh file .srt: --from-json cat cau
@@ -991,7 +1067,17 @@ def mode_local(*, refine: bool = True, model: str, keep_json: bool = True):
 
 # ── Mode 3: Re-cut from kept JSON ─────────────────────────────────────────────
 
-def mode_from_json(whisper_json: Path):
+def _find_media(folder: Path, base: str) -> Path | None:
+    """File media cung ten: canh JSON (YouTube mode) hoac thu muc cha (local mode, JSON trong subs/)."""
+    for d in (folder, folder.parent):
+        for ext in sorted(MEDIA_EXTENSIONS):
+            cand = d / f"{base}{ext}"
+            if cand.exists():
+                return cand
+    return None
+
+
+def mode_from_json(whisper_json: Path, media_path: Path | None = None):
     """Ghi lai X.srt tu X.whisper.json (+ X.refined.json neu co), khong chay model."""
     suffix = ".whisper.json"
     if not whisper_json.name.endswith(suffix) or not whisper_json.exists():
@@ -1007,7 +1093,10 @@ def mode_from_json(whisper_json: Path):
     else:
         print("⚠️   No .refined.json - using raw Whisper timings")
 
-    count = json_to_srt(whisper_json, srt_path, words_override=refined)
+    media_path = media_path or _find_media(whisper_json.parent, base)
+    if media_path:
+        print(f"🎧  Audio for end-snap: {media_path}")
+    count = json_to_srt(whisper_json, srt_path, words_override=refined, media_path=media_path)
     print(f"✅  {count} lines → {srt_path}")
 
 
@@ -1039,10 +1128,12 @@ def main(argv: list[str] | None = None):
                         help="xoa JSON trung gian sau khi xong (mac dinh GIU lai)")
     parser.add_argument("--from-json", type=Path, metavar="X.whisper.json",
                         help="cat cau lai tu JSON da giu, ghi de X.srt (khong chay model)")
+    parser.add_argument("--media", type=Path,
+                        help="file audio/video cho --from-json (mac dinh: tim cung ten canh JSON)")
     args = parser.parse_args(argv)
 
     if args.from_json:
-        mode_from_json(args.from_json)
+        mode_from_json(args.from_json, args.media)
         return
 
     refine = not args.no_refine
