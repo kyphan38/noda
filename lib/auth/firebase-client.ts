@@ -13,9 +13,23 @@ import { Functions, getFunctions } from "firebase/functions";
 
 import { DB_ID } from "@/lib/firebase-db-id";
 
+/**
+ * On the real domain, authDomain is the app's own host (vercel.json proxies
+ * /__/auth/* to firebaseapp.com). With firebaseapp.com, Safari on iPhone and
+ * iPad blocks its storage as third-party, so Google sign-in never reports back
+ * (auth/popup-closed-by-user). localhost and *.vercel.app previews keep
+ * firebaseapp.com: they have no redirect URI in the Google OAuth client.
+ */
+function resolveAuthDomain(fallback: string | undefined): string | undefined {
+  if (typeof window === "undefined") return fallback;
+  const { protocol, host, hostname } = window.location;
+  if (protocol !== "https:" || hostname.endsWith(".vercel.app")) return fallback;
+  return host;
+}
+
 function readFirebaseConfig(): FirebaseOptions {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
-  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim();
+  const authDomain = resolveAuthDomain(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim());
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
   const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim();

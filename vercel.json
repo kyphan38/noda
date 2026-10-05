@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/__/auth/:path*", "destination": "https://kyphan38-noda-app.firebaseapp.com/__/auth/:path*" }
+  ]
+}
