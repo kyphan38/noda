@@ -126,7 +126,7 @@ export function AppHeader({
                 <button
                   type="button"
                   onClick={onDeleteCurrent}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-sm font-medium text-gray-100 hover:bg-gray-700 hover:text-white flex items-center gap-2"
                 >
                   <Trash2 size={14} aria-hidden /> Delete
                 </button>

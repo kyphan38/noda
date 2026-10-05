@@ -60,8 +60,8 @@ export function DeleteLessonModal({ lessonId, onCancel, onConfirmDelete }: Delet
         className="app-modal-panel bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-          <Trash2 className="w-6 h-6 text-red-500" />
+        <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+          <Trash2 className="w-6 h-6 text-gray-100" />
         </div>
         <h3 id="noda-delete-lesson-title" className="text-xl font-bold text-white mb-2">
           Delete item?

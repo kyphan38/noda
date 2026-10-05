@@ -80,7 +80,7 @@ export function DictationControls({
       <div className="flex flex-col">
         {/* The mobile "next sentence" button lives in the row's action column (TranscriptSentence),
             in line with the rewrite and status icons. */}
-        <div className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 whitespace-pre-wrap break-words text-green-400">
+        <div className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 whitespace-pre-wrap break-words text-gray-100">
           {targetNorm}
         </div>
         {isActive && (
@@ -129,15 +129,15 @@ export function DictationControls({
                   {isActive && i === inputNorm.length && (
                     <span
                       aria-hidden
-                      className="border-l border-emerald-400 animate-pulse"
+                      className="border-l border-gray-100 animate-pulse"
                     />
                   )}
                   {typed === undefined ? (
                     <span className="text-gray-500">{'*'}</span>
                   ) : typed === ch ? (
-                    <span className="text-emerald-500">{ch}</span>
+                    <span className="text-gray-100">{ch}</span>
                   ) : (
-                    <span className="text-red-400/80">{typed}</span>
+                    <span className="text-gray-500 line-through">{typed}</span>
                   )}
                 </React.Fragment>
               );
@@ -154,15 +154,15 @@ export function DictationControls({
                   {isActive && spaceIdx === inputNorm.length && (
                     <span
                       aria-hidden
-                      className="border-l border-emerald-400 animate-pulse"
+                      className="border-l border-gray-100 animate-pulse"
                     />
                   )}
                   {spaceTyped === undefined ? (
                     <span className="text-gray-500">{' '}</span>
                   ) : spaceTyped === ' ' ? (
-                    <span className="text-emerald-500">{' '}</span>
+                    <span className="text-gray-100">{' '}</span>
                   ) : (
-                    <span className="text-red-400/80">{'\u00a0'}</span>
+                    <span className="text-gray-500 underline">{'\u00a0'}</span>
                   )}
                 </React.Fragment>
               );
@@ -180,7 +180,7 @@ export function DictationControls({
         {isActive && inputNorm.length >= targetNorm.length && targetNorm.length > 0 && (
           <span
             aria-hidden
-            className="border-l border-emerald-400 animate-pulse"
+            className="border-l border-gray-100 animate-pulse"
           />
         )}
       </div>
@@ -212,7 +212,7 @@ export function DictationControls({
             data-dictation-hint
             title="Hint - fill next character"
             onClick={handleHint}
-            className="shrink-0 h-10 w-10 flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800/60 text-amber-400 active:bg-gray-700"
+            className="shrink-0 h-10 w-10 flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800/60 text-gray-100 active:bg-gray-700"
           >
             <Lightbulb className="h-4 w-4" />
           </button>

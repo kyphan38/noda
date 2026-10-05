@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition outline-none select-none focus-visible:border-gray-400/60 focus-visible:ring-3 focus-visible:ring-gray-400/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-red-500/50 aria-invalid:ring-3 aria-invalid:ring-red-500/25 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition outline-none select-none focus-visible:border-gray-400/60 focus-visible:ring-3 focus-visible:ring-gray-400/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-gray-100 aria-invalid:ring-3 aria-invalid:ring-gray-500/25 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -17,9 +17,9 @@ const buttonVariants = cva(
         ghost:
           "text-gray-100 hover:bg-gray-800/80 aria-expanded:bg-gray-800/80 aria-expanded:text-gray-100",
         destructive:
-          "bg-red-500/15 text-red-300 hover:bg-red-500/25 focus-visible:border-red-500/40 focus-visible:ring-red-500/20",
+          "bg-gray-800 font-medium text-gray-100 hover:bg-gray-700 focus-visible:border-gray-500 focus-visible:ring-gray-500/20",
         danger:
-          "border-transparent bg-red-600 text-white hover:bg-red-500 focus-visible:border-red-400 focus-visible:ring-red-500/35",
+          "border-transparent bg-gray-100 text-gray-900 hover:bg-white focus-visible:border-gray-400 focus-visible:ring-gray-500/35",
         link: "border-transparent text-gray-200 underline-offset-4 hover:underline",
       },
       size: {

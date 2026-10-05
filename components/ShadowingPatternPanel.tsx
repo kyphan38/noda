@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AudioLines, Loader2, RotateCcw, X } from 'lucide-react';
+import { AudioLines, RotateCcw, X } from 'lucide-react';
 import { NOTE_LABEL, TONE_ARROW, isRenderableAnalysis, noteBadgeClass } from '@/lib/shadowingChunks';
 import type { ShadowingChunk, ShadowingNote, ShadowingPatternAnalysis } from '@/types';
 import type { ShadowingPatternStatus } from '@/hooks/useShadowingPatternAnalysis';
@@ -45,7 +45,7 @@ function Chunk({ chunk }: { chunk: ShadowingChunk }) {
           {token.display}
         </span>
       ))}
-      <span className={`ml-1 text-emerald-400 ${chunk.toneStrength === 'weak' ? 'opacity-50' : ''}`}>
+      <span className={`ml-1 text-gray-300 ${chunk.toneStrength === 'weak' ? 'opacity-50' : ''}`}>
         {chunk.toneStrength === 'weak' ? `(${arrow})` : arrow}
       </span>
     </span>
@@ -145,7 +145,7 @@ export function ShadowingPatternPanel({
       <div onClick={stop} className="flex flex-col gap-2">
         {Header}
         {sentenceLine}
-        <Loader2 className="mx-1 mb-2 h-4 w-4 animate-spin text-gray-600" aria-label="Checking" />
+        <span className="mx-1 mb-2 inline-block h-2 w-2 animate-pulse rounded-full bg-gray-600" role="img" aria-label="Checking" />
       </div>
     );
   }
@@ -179,7 +179,7 @@ export function ShadowingPatternPanel({
         {Header}
         {sentenceLine}
         <div className="flex items-center gap-2 border-t border-gray-800 px-1 pt-2 pb-1 text-sm text-gray-400">
-          <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+          <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
           Analyzing the audio… (10-20s)
         </div>
       </div>
@@ -190,7 +190,7 @@ export function ShadowingPatternPanel({
     return (
       <div onClick={stop} className="flex flex-col gap-2">
         {Header}
-        <div className="px-2 pb-2 text-sm text-red-400">Could not read the analysis result.</div>
+        <div className="px-2 pb-2 text-sm font-medium text-gray-100">Could not read the analysis result.</div>
       </div>
     );
   }
@@ -199,7 +199,7 @@ export function ShadowingPatternPanel({
     return (
       <div onClick={stop} className="flex flex-col gap-2">
         {Header}
-        <div className="flex items-center justify-between gap-3 px-2 pb-2 text-sm text-red-400">
+        <div className="flex items-center justify-between gap-3 px-2 pb-2 text-sm font-medium text-gray-100">
           <span>{error || 'Could not analyze this sentence.'}</span>
           <button
             type="button"
@@ -207,7 +207,7 @@ export function ShadowingPatternPanel({
               e.stopPropagation();
               onAnalyze();
             }}
-            className="flex shrink-0 items-center gap-1 rounded-md border border-red-500/30 px-2 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10"
+            className="flex shrink-0 items-center gap-1 rounded-md border border-gray-600 px-2 py-1 text-xs font-medium text-gray-100 transition-colors hover:bg-gray-800"
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden />
             Retry

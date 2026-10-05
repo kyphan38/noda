@@ -43,11 +43,11 @@ export const NOTE_LABEL: Record<string, string> = {
  * classes it can see in the source - `bg-${x}-500/15` would compile to nothing.
  */
 export const NOTE_BADGE_CLASS: Record<string, string> = {
-  linking: 'bg-emerald-500/15 text-emerald-300',
-  reduction: 'bg-sky-500/15 text-sky-300',
-  elision: 'bg-amber-500/15 text-amber-300',
-  assimilation: 'bg-fuchsia-500/15 text-fuchsia-300',
-  rhythm: 'bg-violet-500/15 text-violet-300',
+  linking: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  reduction: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  elision: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  assimilation: 'bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300',
+  rhythm: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
 };
 const NOTE_BADGE_FALLBACK = 'bg-gray-700/40 text-gray-300';
 

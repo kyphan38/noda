@@ -77,7 +77,7 @@ export function TranscriptSentence({
         group flex cursor-pointer items-baseline gap-2 sm:gap-4 rounded-xl px-2 sm:px-3 py-2.5 sm:py-3 mb-1.5 transition duration-200
         ${
           isActive
-            ? 'border border-emerald-400/30 bg-emerald-400/10 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]'
+            ? 'border border-gray-600 bg-gray-800'
             : 'hover:bg-gray-800 active:bg-gray-800 border border-transparent'
         }
         ${isShadowingOpen ? 'ring-1 ring-gray-500/60 bg-gray-800/40' : ''}
@@ -86,7 +86,7 @@ export function TranscriptSentence({
       <span
         className={`
           font-mono text-xs sm:text-sm shrink-0 w-7 sm:w-10 text-right tabular-nums self-baseline
-          ${isActive ? 'text-emerald-400 font-bold' : isPast ? 'text-gray-600' : 'text-gray-500'}
+          ${isActive ? 'text-gray-50 font-bold' : isPast ? 'text-gray-600' : 'text-gray-500'}
         `}
       >
         {index + 1}.
@@ -108,11 +108,11 @@ export function TranscriptSentence({
           // Same size and weight whether active or not: the line must wrap the same way in both
           // states. Ctrl-replay seeks 0.1s before the start (pre-roll), so the row flips to
           // inactive and back; a bigger/bolder active font made a 2-line sentence jump to 1 line
-          // and back on every replay. Colour and the row box carry the highlight instead.
+          // and back on every replay. The row box carries the highlight instead.
           <p
             className={`
               font-sans text-[15px] sm:text-base leading-relaxed
-              ${isActive ? 'text-emerald-400' : isPast ? 'text-gray-300' : 'text-gray-100'}
+              ${isActive ? 'text-gray-50' : isPast ? 'text-gray-300' : 'text-gray-100'}
               ${hideCaptions ? 'invisible select-none' : ''}
             `}
           >
@@ -165,11 +165,11 @@ export function TranscriptSentence({
           data-dictation-status-slot
           className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center"
         >
-          {/* No "playing" icon on the active row: its green box and text already say it. */}
+          {/* No "playing" icon on the active row: its box already says it. */}
           {!isActive && appMode === 'shadowing' && isCompleted && (
             <CheckCircle2
               data-shadowing-done-icon
-              className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500/80"
+              className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400"
               aria-label="Shadowed"
             />
           )}

@@ -120,7 +120,7 @@ export function LessonCard({
               {lesson.name}
               {!lesson.hasMedia && (
                 <span title="Media file missing" className="ml-0.5 inline-flex align-middle">
-                  <AlertTriangle size={11} className="inline shrink-0 text-amber-500" />
+                  <AlertTriangle size={11} className="inline shrink-0 text-gray-400" />
                 </span>
               )}
             </h4>
@@ -170,7 +170,7 @@ export function LessonCard({
                     setActiveMenu(null);
                     onTrashItem(lesson.id);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm font-medium text-gray-100 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
                 >
                   <Trash2 size={14} /> Delete
                 </button>

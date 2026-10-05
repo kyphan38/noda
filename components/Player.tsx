@@ -15,7 +15,6 @@ import {
   Maximize2,
   Minimize2,
   AudioLines,
-  Loader2,
 } from 'lucide-react';
 import { RepeatCount } from '@/types';
 import {
@@ -312,12 +311,12 @@ export function Player({
             title={ai.cached ? 'Shadowing pattern - this sentence is analyzed (A)' : 'Shadowing pattern (A)'}
           >
             {ai.loading ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
             ) : (
               <AudioLines className="h-4 w-4 shrink-0" aria-hidden />
             )}
             {ai.cached && !ai.loading && (
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gray-100" aria-hidden />
             )}
           </button>
         )}

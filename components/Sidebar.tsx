@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Music2,
@@ -15,6 +15,7 @@ import {
 import { LessonSummary, ExpandedSections, LessonItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
 import type { UseFoldersResult } from '@/hooks/useFolders';
+import { themeStore, type Theme } from '@/lib/theme';
 
 function TrashedItemRow({
   item,
@@ -121,7 +122,7 @@ function TrashedItemRow({
                     setMenuOpen(false);
                     onDeleteForever(item.id);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm font-medium text-gray-100 hover:bg-gray-700 hover:text-white flex items-center gap-2 transition-colors"
                 >
                   <Trash2 size={14} aria-hidden />
                   Delete
@@ -270,7 +271,7 @@ function SidebarImpl({
             <div className="flex items-center gap-1">
               <button
                 onClick={onLogout}
-                className="text-gray-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+                className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
                 title="Logout"
               >
                 <LogOut size={18} />
@@ -341,7 +342,7 @@ function SidebarImpl({
                     <button
                       type="button"
                       onClick={() => onDeleteForeverMany(trashed.map((t) => t.id))}
-                      className="shrink-0 px-2 py-1 mr-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                      className="shrink-0 px-2 py-1 mr-1 text-xs font-medium text-gray-100 hover:text-white hover:bg-gray-800 rounded transition-colors"
                       title="Permanently delete all trashed items"
                     >
                       Remove all
@@ -364,9 +365,38 @@ function SidebarImpl({
             )}
           </div>
 
+          <ThemeRow />
         </div>
       </div>
     </>
+  );
+}
+
+const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
+
+/** Theme, per device. The current choice is ink and medium; the others are faint and tappable. */
+function ThemeRow() {
+  const theme = useSyncExternalStore(themeStore.subscribe, themeStore.get, themeStore.getServer);
+  return (
+    <div
+      className="flex items-center gap-4 border-t border-gray-800 px-4 py-3 text-xs"
+      role="radiogroup"
+      aria-label="Theme"
+    >
+      <span className="font-bold uppercase tracking-wider text-gray-500">Theme</span>
+      {THEMES.map((t) => (
+        <button
+          key={t}
+          type="button"
+          role="radio"
+          aria-checked={theme === t}
+          onClick={() => themeStore.set(t)}
+          className={theme === t ? 'font-medium text-gray-100' : 'text-gray-500 hover:text-gray-300'}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
   );
 }
 

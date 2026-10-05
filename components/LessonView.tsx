@@ -433,7 +433,7 @@ export function LessonView({
           />
           {hevcWarning && (
             <div
-              className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-xs text-amber-200 px-3 text-center pointer-events-none rounded-2xl"
+              className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-xs font-medium text-gray-100 px-3 text-center pointer-events-none rounded-2xl"
               role="status"
             >
               This file may not decode as video on this browser (e.g. HEVC). Audio still plays.
@@ -462,7 +462,7 @@ export function LessonView({
         >
           <p
             className={`font-sans text-base sm:text-lg leading-relaxed ${
-              hideCaptions ? 'invisible select-none' : 'text-emerald-400 font-medium'
+              hideCaptions ? 'invisible select-none' : 'text-gray-50 font-medium'
             }`}
           >
             {activeSentence ? activeSentence.text : ''}

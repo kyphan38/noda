@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Music2, FileText, Loader2, X, Check } from 'lucide-react';
+import { Music2, FileText, X, Check } from 'lucide-react';
 import { isLessonNameTaken } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -333,7 +333,7 @@ export function NewLessonModal({
           >
             {isSaving ? (
               <>
-                <Loader2 className="animate-spin shrink-0" size={22} aria-hidden />
+                <span className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
                 {uploadPercent !== null && uploadPercent < 100 ? `Uploading… ${uploadPercent}%` : 'Saving…'}
               </>
             ) : (
