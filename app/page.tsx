@@ -960,7 +960,7 @@ export default function NodaApp() {
   }
 
   if (authState !== 'authenticated') {
-    return <LoginView appName="noda" subtitle="Dictation and listening" />;
+    return <LoginView appName="noda" subtitle="Listen, write, then speak." />;
   }
 
   return (

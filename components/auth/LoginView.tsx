@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/auth/firebase-client";
 
@@ -42,50 +39,36 @@ export function LoginView({ appName, subtitle }: LoginViewProps) {
     }
   };
 
+  // Same login screen as every ws/app app (after hodi): icon, name, one short
+  // line, one outlined "Continue with Google" button. No Google logo.
+  // gray-100 is ink and gray-800 the hairline in both themes (globals.css).
   return (
-    <div
-      className="flex min-h-[100dvh] items-center justify-center px-6"
+    <main
+      className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col items-center justify-center gap-8 px-5 pb-[12dvh] text-center"
       style={{ backgroundColor: "var(--background)" }}
     >
-      <section className="w-full max-w-sm space-y-8 text-center">
-        <div className="space-y-2">
-          <Image
-            src="/branding/noda-icon.svg"
-            alt={`${appName} icon`}
-            width={40}
-            height={40}
-            className="mx-auto rounded-xl p-1"
-            style={{
-              border: "1px solid color-mix(in srgb, var(--border), transparent 20%)",
-              backgroundColor: "color-mix(in srgb, var(--muted), transparent 40%)",
-            }}
-          />
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--foreground)" }}>
-            {appName}
-          </h1>
-          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-            {subtitle ?? "Private workspace. Continue with your Google account."}
-          </p>
+      <div className="flex flex-col items-center gap-4">
+        <Image src="/branding/noda-icon.svg" alt="" width={40} height={40} />
+        <div>
+          <h1 className="text-xl font-medium tracking-tight text-gray-100">{appName}</h1>
+          {subtitle ? <p className="mt-1 text-sm text-gray-500">{subtitle}</p> : null}
         </div>
+      </div>
 
-        <Button
-          type="button"
-          variant="default"
-          className="h-11 w-full text-sm font-semibold"
-          disabled={loading}
-          onClick={() => void onGoogleSignIn()}
-        >
-          {loading ? "Signing in..." : "Continue with Google"}
-        </Button>
+      <button
+        type="button"
+        onClick={() => void onGoogleSignIn()}
+        disabled={loading}
+        className="w-full max-w-xs rounded-full border border-gray-800 px-4 py-3 text-sm text-gray-100 transition-colors hover:bg-gray-100/[0.06] disabled:opacity-40"
+      >
+        {loading ? "Signing in…" : "Continue with Google"}
+      </button>
 
-        {error ? (
-          <Alert variant="destructive">
-            <AlertCircle className="size-4" />
-            <AlertTitle>Sign-in failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-      </section>
-    </div>
+      {error ? (
+        <p role="alert" className="max-w-xs text-sm text-gray-400">
+          {error}
+        </p>
+      ) : null}
+    </main>
   );
 }
