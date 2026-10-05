@@ -17,8 +17,8 @@ Thứ tự trong 4 app: **làm noda cuối cùng**. Đây là ca khó nhất vì
 | Database | `noda-db` |
 | Dữ liệu | `users/yjzds6g7Y6VjmwtgW4QTnUqaX0F2/lessons` (5 doc) + `shadowingAnalysis` lồng bên trong (24 doc) + `sidebarFolders` |
 | Auth | Google, allowlist theo **UID** hoặc email |
-| **Storage** | **CÓ** — `users/{uid}/media/...`, bucket `kyphan38-apps.firebasestorage.app` |
-| Functions | `analyzeShadowingPattern` — `onCall`, region `us-central1`, secrets `GEMINI_API_KEY` + `ALLOWED_USER_UID` |
+| **Storage** | **CÓ** - `users/{uid}/media/...`, bucket `kyphan38-apps.firebasestorage.app` |
+| Functions | `analyzeShadowingPattern` - `onCall`, region `us-central1`, secrets `GEMINI_API_KEY` + `ALLOWED_USER_UID` |
 | FCM | không dùng |
 | Deploy | static export (`output: 'export'`), không có CI, không có Hosting config |
 | Indexes | không có composite index nào |
@@ -31,7 +31,7 @@ Số liệu Storage đã đếm ngày 2026-09-02, trên bucket dùng chung:
 ```
 
 **Nhưng noda chỉ còn 5 lesson.** Nghĩa là phần lớn trong 81 file là rác của
-những lesson đã xoá. Xem bước 6a — chỉ nên chép những file còn được tham chiếu.
+những lesson đã xoá. Xem bước 6a - chỉ nên chép những file còn được tham chiếu.
 
 ---
 
@@ -51,20 +51,20 @@ Kết quả được ghi thẳng vào Firestore và **không bao giờ tạo l�
 Hệ quả: **chép file sang bucket mới là chưa đủ.** URL cũ chứa tên bucket cũ và
 token cũ. Chép xong mà không đụng tới `mediaUrl` thì:
 - Cloud Function vẫn chạy tốt (nó đi theo `mediaPath`)
-- Nhưng **bấm play sẽ không ra tiếng** — và sẽ hỏng vĩnh viễn khi xoá project cũ
+- Nhưng **bấm play sẽ không ra tiếng** - và sẽ hỏng vĩnh viễn khi xoá project cũ
 
 ### Hai cách chữa
 
-**Cách A — sửa code (nên làm).** Bỏ hẳn việc tin vào `mediaUrl` lưu sẵn. Khi mở
+**Cách A - sửa code (nên làm).** Bỏ hẳn việc tin vào `mediaUrl` lưu sẵn. Khi mở
 lesson thì gọi `getDownloadURL(ref(storage, lesson.mediaPath))` để lấy URL tươi,
 chỉ dùng `mediaUrl` làm dự phòng cho dữ liệu cũ.
 
 - Sửa ở `hooks/useLessonLogic.ts:276-282`.
-- Ưu: sau này đổi bucket, đổi project, xoay token — không bao giờ hỏng nữa.
+- Ưu: sau này đổi bucket, đổi project, xoay token - không bao giờ hỏng nữa.
 - Nhược: thêm một lượt gọi mạng mỗi lần mở lesson. Với 5 lesson thì không đáng kể.
 - Vẫn nên tiếp tục **ghi** `mediaUrl` khi upload, để không phải sửa schema.
 
-**Cách B — viết lại dữ liệu.** Sau khi chép file, sinh URL mới cho từng lesson
+**Cách B - viết lại dữ liệu.** Sau khi chép file, sinh URL mới cho từng lesson
 rồi `update` lại trường `mediaUrl`.
 
 Chỉ có 5 lesson nên cách B cũng nhanh. Nhưng cách B chỉ chữa lần này; lần sau
@@ -80,7 +80,7 @@ Chỉ có 5 lesson nên cách B cũng nhanh. Nhưng cách B chỉ chữa lần n
 2. Authentication → Sign-in method → bật **Google**.
 3. Firestore Database → Create database:
    - Database ID giữ **`(default)`**
-   - Location **`asia-southeast1`** — không đổi được về sau
+   - Location **`asia-southeast1`** - không đổi được về sau
    - **Production mode**
 4. **Storage → Get started** → tạo bucket mặc định.
    - Cùng location **`asia-southeast1`**
@@ -120,14 +120,14 @@ FIREBASE_ADMIN_CLIENT_EMAIL=...   (file JSON mới)
 FIREBASE_ADMIN_PRIVATE_KEY="..."  (file JSON mới)
 ```
 
-`NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` lần này **thật sự quan trọng** — noda dùng
+`NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` lần này **thật sự quan trọng** - noda dùng
 Storage. Sai một chữ là upload hỏng.
 
 Mẹo gà-và-trứng: `allowed-user.ts` cho qua khi khớp UID **hoặc** email. Tạm bỏ
 dòng `NEXT_PUBLIC_ALLOWED_USER_UID` để đăng nhập lần đầu, lấy UID rồi điền lại.
 
 Ba biến `FIREBASE_ADMIN_*` cũ (service account dùng chung của `kyphan38-apps`)
-**giữ lại tạm** dưới tên `OLD_FIREBASE_ADMIN_*` — script copy cần chúng để đọc
+**giữ lại tạm** dưới tên `OLD_FIREBASE_ADMIN_*` - script copy cần chúng để đọc
 nguồn.
 
 ---
@@ -139,7 +139,7 @@ nguồn.
 | `.firebaserc:3` | `kyphan38-apps` → `kyphan38-noda-app` |
 | `lib/firebase-db-id.ts:13` | `DB_ID = "noda-db"` → `"(default)"`, viết lại comment |
 | `functions/src/analyzeShadowingPattern.ts:38` | `NODA_DB_ID = "noda-db"` → `"(default)"` |
-| `functions/src/analyzeShadowingPattern.ts:185` | giữ `getFirestore(admin.app(), NODA_DB_ID)` — vẫn đúng |
+| `functions/src/analyzeShadowingPattern.ts:185` | giữ `getFirestore(admin.app(), NODA_DB_ID)` - vẫn đúng |
 | `firebase.json` | `firestore` từ **mảng** về **object** |
 | `scripts/copy-to-noda-db.mjs` | thay bằng script mới ở bước 6 |
 | `hooks/useLessonLogic.ts:276-282` | Cách A ở mục 1 (lấy URL tươi từ `mediaPath`) |
@@ -204,7 +204,7 @@ Chú ý: **đường dẫn có chứa UID**, mà UID đổi. Nên đích phải 
 việc này.
 
 Nếu muốn chép cả bucket thì `gcloud storage rsync -r`, nhưng khi đó vẫn phải đổi
-đoạn UID trong đường dẫn — không có cách nào tránh.
+đoạn UID trong đường dẫn - không có cách nào tránh.
 
 ### 6c. Deploy `storage.rules`
 
@@ -239,8 +239,8 @@ Kiểm tra Console → Firestore → Rules: phải thấy `shadowingAnalysis` v�
 
 Viết `scripts/copy-to-new-project.mjs`, dựa trên `copy-to-noda-db.mjs`. Ba điểm khác:
 
-1. **Hai service account** — nguồn `OLD_FIREBASE_ADMIN_*`, đích `FIREBASE_ADMIN_*`.
-2. **Đổi UID** — `--from-uid` / `--to-uid`.
+1. **Hai service account** - nguồn `OLD_FIREBASE_ADMIN_*`, đích `FIREBASE_ADMIN_*`.
+2. **Đổi UID** - `--from-uid` / `--to-uid`.
 3. **Viết lại `mediaPath` và `mediaUrl`** cho từng lesson:
    - `mediaPath`: thay đoạn `users/<uid cũ>/` bằng `users/<uid mới>/`
    - `mediaUrl`: sinh lại từ bucket mới. Đọc token của object mới bằng Admin SDK
@@ -255,7 +255,7 @@ Viết `scripts/copy-to-new-project.mjs`, dựa trên `copy-to-noda-db.mjs`. Ba 
 Script cũ đã xử lý đệ quy, giữ nguyên phần đó.
 
 Chép `lessons` (5) + `shadowingAnalysis` (24) + `sidebarFolders`.
-**Không** chép nguyên doc `users/{uid}` — nó từng dùng chung với cogi/logi.
+**Không** chép nguyên doc `users/{uid}` - nó từng dùng chung với cogi/logi.
 
 ```bash
 node --env-file=.env.local scripts/copy-to-new-project.mjs \
@@ -295,7 +295,7 @@ region **`us-central1`**.
 
 > Region phải khớp với client (`lib/auth/firebase-client.ts:106`). Hàm hiện
 > **không đặt region**, nên mặc định là `us-central1`. Đây là dịp tốt để đổi sang
-> `asia-southeast1` cho gần — nhưng nếu đổi thì **phải sửa cả hai chỗ cùng lúc**.
+> `asia-southeast1` cho gần - nhưng nếu đổi thì **phải sửa cả hai chỗ cùng lúc**.
 > Nếu muốn chắc ăn thì cứ để nguyên `us-central1` lần này, đổi region sau.
 
 ### 8c. Kiểm tra function đọc được file
@@ -355,7 +355,7 @@ Repo này không có Hosting config, không có CI, không có script deploy. C�
 - [ ] Bỏ `OLD_FIREBASE_ADMIN_*` khỏi `.env.local`
 
 **Chỉ sau khi cả 3 app xong** mới tính tới việc xoá project `kyphan38-apps`.
-Nhớ là 1175 MB file media rác vẫn nằm đó — xoá project là mất hết. Nếu còn tiếc
+Nhớ là 1175 MB file media rác vẫn nằm đó - xoá project là mất hết. Nếu còn tiếc
 thì tải về máy trước.
 
 ---

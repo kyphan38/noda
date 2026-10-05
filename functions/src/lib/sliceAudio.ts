@@ -1,5 +1,5 @@
 /**
- * ffmpeg wrapper — cuts [startSec, endSec) out of a local media file and
+ * ffmpeg wrapper - cuts [startSec, endSec) out of a local media file and
  * downmixes it to mono 16kHz WAV, matching the manual ffmpeg invocation
  * validated by hand in the Stage 1 spike (same flags: -ac 1 -ar 16000 -f wav).
  */

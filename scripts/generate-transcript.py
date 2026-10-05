@@ -57,7 +57,7 @@ INITIAL_PROMPT = ""
 PREPEND_PUNCTUATIONS = "\"'¿([{-"
 APPEND_PUNCTUATIONS  = "\"'.,。，!！?？:：\")]}、"
 SENTENCE_END_CHARS   = {'.', '!', '?'}
-CLAUSE_SPLIT_CHARS   = {',', ';', ':', '–', '—'}
+CLAUSE_SPLIT_CHARS   = {',', ';', ':', '\N{EN DASH}', '\N{EM DASH}'}
 CLAUSE_CONJUNCTIONS  = {
     "and", "but", "or", "so", "yet", "because", "although", "though",
     "while", "when", "where", "which", "who", "that", "if", "since",
@@ -357,7 +357,7 @@ def extract_segments_fallback(json_path: Path) -> list[dict]:
 #
 # Three layers:
 #   1. Split on sentence-ending punctuation (. ! ?) and silence gaps
-#   2. If a chunk exceeds MAX_WORDS, split at clause boundaries (, ; : — and conjunctions)
+#   2. If a chunk exceeds MAX_WORDS, split at clause boundaries (, ; : en or em dash, and conjunctions)
 #   3. If still too long, hard-split at MAX_WORDS
 #
 
@@ -466,7 +466,7 @@ def split_words_into_lines(words: list[dict]) -> list[list[dict]]:
     for chunk in raw_chunks:
         final.extend(_split_long_chunk(chunk))
 
-    # Layer 4: merge backward-orphans — short blocks followed by a large silence
+    # Layer 4: merge backward-orphans - short blocks followed by a large silence
     # gap indicate Whisper placed words at the wrong timestamp (e.g. "A few"
     # stranded 8s before the rest of the sentence). Merge them into the next
     # block so they don't appear over silence.
@@ -679,11 +679,11 @@ def validate_srt_timing(content: str) -> list[str]:
         if word_count > 2 and wps < MIN_LINE_WPS:
             warnings.append(
                 f"Line {idx}: {wps:.1f} wps ({word_count} words in {duration_s:.1f}s)"
-                f" — suspiciously slow, possible hallucination"
+                f" - suspiciously slow, possible hallucination"
             )
 
         if wps > 9:
-            warnings.append(f"Line {idx}: {wps:.1f} wps — suspiciously fast")
+            warnings.append(f"Line {idx}: {wps:.1f} wps - suspiciously fast")
 
         prev_end_ms = end_ms
 
@@ -714,12 +714,12 @@ def json_to_srt(
                 print("   ⚠  No audio for end-snap - keeping padded ends")
             content = srt_from_words(words, skip_slow_filter=is_refined, speech=speech)
         else:
-            print("   ⚠  All words filtered — segment fallback")
+            print("   ⚠  All words filtered - segment fallback")
             segments = extract_segments_fallback(json_path)
             content  = srt_from_segments(segments)
     else:
         segments = extract_segments_fallback(json_path)
-        print(f"   ⚠  No word timestamps — fallback ({len(segments)} segments)")
+        print(f"   ⚠  No word timestamps - fallback ({len(segments)} segments)")
         content = srt_from_segments(segments)
 
     warnings = validate_srt_timing(content)
@@ -799,7 +799,7 @@ def normalize_audio(media_path: Path) -> Path:
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
             err_tail = (proc.stderr or "").strip().splitlines()[-5:]
-            print("   ⚠  CBR normalization failed — keeping original")
+            print("   ⚠  CBR normalization failed - keeping original")
             for line in err_tail:
                 print(f"      {line.strip()[:160]}")
             # Xoa backup: lan sau van thu normalize lai.
@@ -859,7 +859,7 @@ def _get_stable_ts_model():
     try:
         import stable_whisper
     except ImportError:
-        print("   ⚠  stable-ts not installed — using raw Whisper timestamps")
+        print("   ⚠  stable-ts not installed - using raw Whisper timestamps")
         print("   💡  pip install stable-ts faster-whisper")
         return None
     print("🔧  Loading stable-ts model …")
@@ -902,7 +902,7 @@ def _refine_timestamps(media_path: Path, json_path: Path) -> list[dict] | None:
         print(f"   ✔  Refined {len(words)} word timestamps")
         return words
 
-    print("   ⚠  Refinement produced no words — keeping raw timestamps")
+    print("   ⚠  Refinement produced no words - keeping raw timestamps")
     return None
 
 

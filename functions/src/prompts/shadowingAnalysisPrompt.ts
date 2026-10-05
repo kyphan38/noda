@@ -121,9 +121,9 @@ Work through the sentence from left to right and cover EVERY junction where the 
 - "via": when the change happens in steps, the intermediate spoken form in ordinary English spelling, so the learner can follow the path (e.g. text "I'm going to" -> via "I'm gonna" -> sounds "AIM-uh"; text "want to" -> via "wanna"). Use only a widely known informal form. Empty string when the change is a single step.
 
 ## "why" field - the coaching instruction
-Write in Vietnamese, keeping English words/IPA/phonetics terms as-is. Do NOT explain what the phenomenon is or name the rule - the learner already knows. Tell them what to DO with their mouth, tongue, or breath to copy it. Imperative, concrete, at most 12 words, one sentence. Write proper Vietnamese with full diacritics (tone marks) - never unaccented Vietnamese.
+Write in Vietnamese, keeping English words/IPA/phonetics terms as-is. Do NOT explain what the phenomenon is or name the rule - the learner already knows. Tell them what to DO with their mouth, tongue, or breath to copy it. Imperative, concrete, at most 12 words, one sentence. Write proper Vietnamese with full diacritics (tone marks) - never unaccented Vietnamese. Never use the em dash character; use a comma or a colon instead.
 Bad (explains theory): "/d/ bị mất tiếng bật và 'to' giảm thành schwa."
-Good (coaches action): "Đừng bật /d/ — chạm lưỡi rồi trượt thẳng sang 'tuh', gọn trong một nhịp."
+Good (coaches action): "Đừng bật /d/: chạm lưỡi rồi trượt thẳng sang 'tuh', gọn trong một nhịp."
 
 Respond only in the requested JSON structure.`;
 }
