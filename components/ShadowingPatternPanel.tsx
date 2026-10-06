@@ -245,7 +245,7 @@ export function ShadowingPatternPanel({
         {/* A clean read is a real result, not an empty state - say so instead of showing nothing. */}
         {analysis.notes.length === 0 && (
           <div className="shrink-0 border-t border-gray-800 px-1 pt-2 text-[13px] text-gray-500">
-            The speaker says this one clearly - no linking or dropped sounds worth noting.
+            Said clearly. Nothing to note.
           </div>
         )}
       </div>

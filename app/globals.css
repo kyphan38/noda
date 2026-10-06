@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* dark: theo Theme (data-theme), "system" thì theo máy. */
+/* dark: follows Theme (data-theme); "system" follows the device. */
 @custom-variant dark {
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     @slot;
@@ -12,10 +12,10 @@
   }
 }
 
-/* noda viết class gray-* / slate-* / white cứng, vốn chỉ cho nền tối. Trỏ
-   chúng vào biến theo theme: dark giữ nguyên dáng cũ (xám trung tính R=G=B
-   của ws/app/DESIGN.md), light là dải đảo ngược - gray-950 là nền trang,
-   gray-100 là mực. Không phải sửa từng class. */
+/* noda hardcodes gray-* / slate-* / white classes, made for a dark page.
+   Point them at theme variables: dark keeps the old look (neutral R=G=B grays
+   from ws/app/DESIGN.md), light inverts the scale - gray-950 is the page,
+   gray-100 is ink. No class needs editing. */
 @theme inline {
   --color-white: var(--g-white);
   --color-gray-50: var(--g-50);
@@ -92,7 +92,7 @@
   }
 }
 
-/* Chọn tay: thắng cài đặt của máy. */
+/* Manual choice beats the device setting. */
 :root[data-theme="dark"] {
   --g-white: #ffffff;
   --g-50: #f0f0f0;
@@ -358,7 +358,7 @@ html {
   z-index: 100;
 }
 
-/* Chỉ xám (DESIGN.md): lỗi là khối đảo màu + chữ đậm, chữ trong toast nói phần còn lại. */
+/* Gray only (DESIGN.md): an error is an inverted block + bold text; the toast text says the rest. */
 .toast-success,
 .toast-info {
   background: var(--g-800);
@@ -400,11 +400,11 @@ button:active:not(:disabled) {
 
 html {
   scroll-behavior: smooth;
-  /* Chi cuon doc, khong bao gio cuon ngang o cap trang. Dung `hidden`
-     thay vi `clip` de moi trinh minify CSS deu giu lai. */
+  /* Vertical scroll only, never horizontal at page level. `hidden`, not
+     `clip`, so every CSS minifier keeps it. */
   overflow-x: hidden;
   overscroll-behavior-x: none;
-  /* iOS: chan nhay layout khi ban phim chu bat len */
+  /* iOS: stop layout jumps when the keyboard opens */
   -webkit-text-size-adjust: 100%;
 }
 
@@ -421,7 +421,7 @@ button,
   touch-action: manipulation;
 }
 
-/* Duoi 16px la iOS Safari tu zoom khi focus vao input. */
+/* Below 16px, iOS Safari zooms in when an input gets focus. */
 input,
 select,
 textarea {

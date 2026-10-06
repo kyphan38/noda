@@ -1,10 +1,9 @@
 import type { MetadataRoute } from 'next';
 
-// basePath khi deploy (next.config.ts doc tu env BASE_PATH). De trong thi
-// chay o goc domain nhu hien tai.
+// Deploy basePath (next.config.ts reads BASE_PATH). Empty = served at the domain root.
 const basePath = process.env.BASE_PATH?.trim() || '';
 
-// Static export bat buoc route phai la force-static.
+// Static export requires force-static routes.
 export const dynamic = 'force-static';
 
 export default function manifest(): MetadataRoute.Manifest {

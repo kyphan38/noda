@@ -53,8 +53,7 @@ export function CleanupModal({ isOpen, onKeep, onMoveToTrash }: CleanupModalProp
           Lesson complete!
         </h3>
         <p className="text-gray-400 mb-6 text-sm leading-relaxed">
-          You&apos;ve finished dictation and shadowing for every sentence. Keep the lesson to
-          review later, or move it to the trash. You can restore it from the trash.
+          Keep it to review, or move it to trash.
         </p>
         <div className="flex flex-col gap-3">
           <Button

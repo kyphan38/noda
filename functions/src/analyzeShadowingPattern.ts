@@ -46,8 +46,8 @@ const NODA_DB_ID = "(default)";
  * A cached doc with any other version is ignored and re-analyzed: v1 docs described four
  * independent sections and cannot be converted to v2's chunk/token structure. v3 keeps the
  * v2 shape (plus an optional `notes[].via`) but re-analyzes v2 docs, whose `sounds` mixed in
- * Vietnamese-style respellings. */
-const ANALYSIS_VERSION = 3;
+ * accented, non-English respellings. v4 keeps the shape and re-analyzes so `why` is English. */
+const ANALYSIS_VERSION = 4;
 
 /** Gemini budget per attempt. Raised twice as the response grew: v1's 25s, then 40s for the
  * v2 schema (19.6s worst case measured), and now 55s because sweeping every junction instead
@@ -256,8 +256,8 @@ export const analyzeShadowingPattern = onCall(
     } catch (e) {
       if (e instanceof HttpsError) throw e;
       const message = e instanceof Error ? e.message : "Unknown error";
-      // ffmpeg crash (vd "killed with signal SIGSEGV") thi bao tieng Anh tho
-      // hien do len app - log day du o server, bao nguoi dung cau ngan gon.
+      // An ffmpeg crash (e.g. "killed with signal SIGSEGV") is raw and unreadable.
+      // Log it in full on the server; show the user one short line.
       if (/ffmpeg|sigsegv|signal|killed|ffprobe/i.test(message)) {
         console.error("Shadowing analysis audio processing failed:", message);
         throw new HttpsError("internal", "Could not read this audio file, try another file.");

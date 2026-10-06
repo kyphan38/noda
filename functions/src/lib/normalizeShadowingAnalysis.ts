@@ -9,7 +9,7 @@
  *   once before giving up. A silently reworded transcript is the one failure the
  *   learner cannot detect by eye, so it must never be cached.
  * - Field-level slips (a `display` that drifted, a content word marked `weak`,
- *   a seventh note, a Vietnamese-style `sounds`) are repaired or dropped in place.
+ *   a seventh note, an accented `sounds`) are repaired or dropped in place.
  *   These cost a detail, not the whole analysis, and a retry would likely
  *   reproduce them.
  */
@@ -84,12 +84,12 @@ export interface NormalizedAnalysis {
 
 const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 
-/** Any letter outside A-Z, e.g. "đ" or a toned vowel like "ồ". */
+/** Any letter outside A-Z, e.g. an accented vowel or an IPA symbol. */
 const NON_ASCII_LETTER = /(?![A-Za-z])\p{L}/u;
 
 /**
- * `sounds` must be an English-style respelling ("LIH-dl"). A Vietnamese-style one
- * ("li-đồ") teaches tones and letters the speaker never used, so it is dropped
+ * `sounds` must be an English-style respelling ("LIH-dl"). An accented one
+ * teaches sounds and pitch the speaker never used, so it is dropped
  * rather than cached - the note still shows its IPA and coaching line.
  */
 const respelling = (s: string): string => (NON_ASCII_LETTER.test(s) ? "" : s);
