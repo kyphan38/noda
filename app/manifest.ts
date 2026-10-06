@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'noda',
     short_name: 'noda',
     description: 'noda - audio dictation and listening app.',
-    // Mo thang vao man hinh chinh. Do la ly do app ton tai.
+    // Open straight into the main screen. That is why the app exists.
     start_url: `${basePath}/`,
     scope: `${basePath}/`,
     display: 'standalone',

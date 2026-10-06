@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // Khoa zoom: double-tap zoom tren dien thoai chi gay loi cham.
+  // Zoom locked: double-tap zoom on a phone only causes mistaps.
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
