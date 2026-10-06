@@ -91,10 +91,13 @@ export type SidebarFolder = {
 // v1 cache was deleted rather than migrated.
 //
 // v3 has the same shape as v2. It only forces a re-analysis: v2 docs could hold
-// Vietnamese-style `sounds` ("li-đồ") from an ambiguous prompt. v3 also adds the
+// accented, non-English `sounds` from an ambiguous prompt. v3 also adds the
 // optional `notes[].via` and lowers the note cap from 8 to 6.
+//
+// v4 has the same shape as v3. It forces a re-analysis so `why` is in English
+// (v3 wrote it in Vietnamese).
 
-export const SHADOWING_ANALYSIS_VERSION = 3;
+export const SHADOWING_ANALYSIS_VERSION = 4;
 
 /** How audibly a token is pronounced. `weak` is only ever a function word. */
 export type ShadowingStressLevel = 'strong' | 'normal' | 'weak';

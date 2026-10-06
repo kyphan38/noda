@@ -112,19 +112,19 @@ describe('normalizeShadowingAnalysis', () => {
       text: 'had to',
       sounds: 'had-tuh',
       ipa: '/hæd tə/',
-      why: 'Đừng bật /d/.',
+      why: "Don't release the /d/.",
       ...extra,
     });
 
-    it('drops a Vietnamese-style respelling but keeps the rest of the note', () => {
-      // Seen in the wild: "li-đồ" and "thít-bịt" next to English-style "sheh-ruh".
+    it('drops an accented respelling but keeps the rest of the note', () => {
+      // Seen in the wild: accented respellings next to English-style "sheh-ruh".
       const out = normalizeShadowingAnalysis(
-        twoChunks({ notes: [note({ sounds: 'li-đồ' }), note({ sounds: 'thít-bịt' }), note({ sounds: 'LIH-dl' })] }),
+        twoChunks({ notes: [note({ sounds: 'lï-dl' }), note({ sounds: 'ʃeh-ruh' }), note({ sounds: 'LIH-dl' })] }),
         SOURCE
       );
       expect(out.notes.map((n) => n.sounds)).toEqual(['', '', 'LIH-dl']);
       expect(out.notes[0].ipa).toBe('/hæd tə/');
-      expect(out.notes[0].why).toBe('Đừng bật /d/.');
+      expect(out.notes[0].why).toBe("Don't release the /d/.");
     });
 
     it('truncates to the six-note cap', () => {
@@ -143,8 +143,8 @@ describe('normalizeShadowingAnalysis', () => {
     it('keeps only one rhythm note, blanks its example fields, and moves it last', () => {
       const raw = twoChunks({
         notes: [
-          note({ type: 'rhythm', why: 'Cụm cuối hạ giọng dứt khoát.' }),
-          note({ type: 'rhythm', why: 'Nói cụm giữa nhanh hơn.' }),
+          note({ type: 'rhythm', why: 'Drop your pitch firmly on the last chunk.' }),
+          note({ type: 'rhythm', why: 'Say the middle chunk faster.' }),
           note(),
         ],
       });
