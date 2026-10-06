@@ -1,11 +1,10 @@
 // ============================================================
-// noda - Dang ky service worker
+// noda - Service worker registration
 //
-// Copy tu fina/src/lib/sw.ts. File nay KHONG import gi ca, co y.
+// Copied from fina/src/lib/sw.ts. This file imports nothing, on purpose.
 //
-// Dung duong dan tuong doi de chay dung ca khi deploy duoi basePath
-// (next.config.ts doc tu env BASE_PATH): dang ky 'sw.js' tu trang hien tai
-// thi trinh duyet tu phan giai ve {basePath}/sw.js voi scope {basePath}/.
+// A relative path works under a basePath too (next.config.ts reads BASE_PATH):
+// 'sw.js' resolves to {basePath}/sw.js with scope {basePath}/.
 // ============================================================
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -13,8 +12,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   try {
     return await navigator.serviceWorker.register('sw.js');
   } catch {
-    // Safari private mode va mot vai ngu canh khac tu choi. App van chay,
-    // chi la khong co cache offline.
+    // Safari private mode and some other contexts refuse. The app still
+    // works, just without the offline cache.
     return null;
   }
 }

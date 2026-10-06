@@ -84,8 +84,8 @@ export async function fetchAnalysisAudio(
     try {
       await extractAnalysisAudio(url, localCopy);
     } catch (e) {
-      // Doc thang qua HTTPS co the crash tuy file (ffmpeg cu tung SIGSEGV) -
-      // tai full ve roi trich xuat local truoc khi bo cuoc.
+      // Reading over HTTPS can crash on some files (older ffmpeg hit SIGSEGV),
+      // so download the whole file and extract locally before giving up.
       console.warn(`Direct URL extract failed for ${mediaStoragePath}, falling back to download:`, (e as Error).message);
       removeQuietly(localCopy);
       await extractFromDownload();

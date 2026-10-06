@@ -1,28 +1,26 @@
 // ============================================================
 // noda - Service worker
 //
-// Copy tu fina/public/sw.js, rut gon cho static export (output: 'export'):
-// khong co push, chi cache vo app cho nhanh va mo duoc offline.
+// Copied from fina/public/sw.js, trimmed for static export (output: 'export'):
+// no push, only an app-shell cache for speed and offline start.
 //
-// BASE lay tu vi tri file sw.js de chay dung ca khi deploy duoi basePath
-// (next.config.ts doc tu env BASE_PATH).
+// BASE comes from where sw.js is served, so a basePath works too
+// (next.config.ts reads BASE_PATH).
 // ============================================================
 
 const CACHE_VERSION = 'noda-v1';
 
-// Thu muc chua sw.js: '/sw.js' -> '', '/foo/sw.js' -> '/foo'.
+// Folder of sw.js: '/sw.js' -> '', '/foo/sw.js' -> '/foo'.
 const BASE = new URL('./', self.location.href).pathname.replace(/\/$/, '');
 const HOME = `${BASE}/`;
 
 // --- Cache -------------------------------------------------
 //
-// /_next/static/*  cache-first vinh vien. Ten file co hash noi dung, nen
-//                  ban build moi la ten file moi - khong bao gio cu.
-// HTML             network-first. Cache-first o day la cach chac chan nhat
-//                  de mot hom nao do nguoi dung nhin vao build tuan truoc
-//                  ma khong hieu vi sao.
-// API / Firestore  KHONG dung vao. Du lieu khong bao gio duoc phuc vu tu
-//                  ban cu.
+// /_next/static/*  cache-first forever. File names hash their content, so a
+//                  new build means new names - never stale.
+// HTML             network-first. Cache-first here would one day show last
+//                  week's build with no clue why.
+// API / Firestore  not touched. Data is never served from an old copy.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

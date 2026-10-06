@@ -276,7 +276,7 @@ export const uploadLessonMediaToFirebase = async (
  * when Storage is unreachable, so this can only ever improve on the old
  * behaviour, never regress it.
  *
- * See PLAN-project-split.md section 1 ("Cái bẫy lớn nhất: mediaUrl").
+ * See PLAN-project-split.md section 1 (the mediaUrl trap).
  */
 export const resolveLessonMediaUrl = async (
   lesson: Pick<LessonRecord, 'mediaPath' | 'mediaUrl'>
