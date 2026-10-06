@@ -436,7 +436,7 @@ export function LessonView({
               className="absolute inset-0 flex items-center justify-center bg-slate-950/80 text-xs font-medium text-gray-100 px-3 text-center pointer-events-none rounded-2xl"
               role="status"
             >
-              This file may not decode as video on this browser (e.g. HEVC). Audio still plays.
+              Video can&apos;t play here. Audio still works.
             </div>
           )}
         </div>

@@ -270,9 +270,8 @@ export function NewLessonModal({
               </div>
               <p className="text-lg font-medium text-white mb-1">Upload audio or video</p>
               <p className="text-sm text-gray-400 mb-2">MP3, WAV, M4A, MP4, WebM - click or drop here</p>
-              <p className="text-xs text-gray-500 mb-4 text-left max-w-md mx-auto leading-relaxed">
-                Up to 200MB. For large videos, export a lower resolution or audio-only (e.g. MP3) in
-                HandBrake, FFmpeg, or your editor so seeking stays smooth.
+              <p className="text-xs text-gray-500 mb-4">
+                Up to 200MB. Big video? Use audio-only (MP3).
               </p>
               <input
                 type="file"

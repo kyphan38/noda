@@ -21,9 +21,6 @@ export default function GlobalError({
       <body className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-950 p-6 text-gray-100 antialiased">
         <div className="max-w-md text-center space-y-2">
           <h1 className="text-xl font-bold text-white">Something went wrong</h1>
-          <p className="text-sm text-gray-400">
-            A critical error occurred in the app shell. Try again or go back home.
-          </p>
         </div>
         <div className="flex flex-wrap justify-center gap-3">
           <Button type="button" onClick={() => reset()}>
