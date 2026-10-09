@@ -65,7 +65,7 @@ interface PlayerProps {
 }
 
 const toolBtn =
-  'flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white active:bg-gray-700';
+  'flex h-10 w-10 @max-xs:w-9 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white active:bg-gray-700';
 
 function usePopoverPosition(
   triggerRef: React.RefObject<HTMLButtonElement | null>,
@@ -255,168 +255,172 @@ export function Player({
   const closeRepeat = useCallback(() => setShowRepeatPopover(false), []);
 
   return (
-    <div
-      className="flex h-14 sm:h-12 shrink-0 items-center gap-2 rounded-2xl border border-gray-800 bg-gray-900 px-2.5 font-sans sm:gap-3 sm:px-3"
-      role="group"
-      aria-label="Playback controls"
-    >
-      <button
-        type="button"
-        onClick={onPlayPause}
-        className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-colors hover:bg-white active:scale-95 active:bg-gray-300"
-        aria-label={isPlaying ? 'Pause' : 'Play'}
-        title={isPlaying ? 'Pause' : 'Play'}
+    // Container query: two rows (seek bar above the buttons) whenever the bar itself is
+    // narrower than 32rem, so it fits any phone width without per-device rules.
+    <div className="@container shrink-0">
+      <div
+        className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-2xl border border-gray-800 bg-gray-900 px-2.5 py-2 font-sans @lg:h-14 @lg:flex-nowrap @lg:py-0 sm:gap-3 sm:px-3 sm:@lg:h-12"
+        role="group"
+        aria-label="Playback controls"
       >
-        {isPlaying ? (
-          <Pause className="h-4 w-4 fill-current" aria-hidden />
-        ) : (
-          <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden />
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={onPlayPause}
+          className="flex h-10 w-10 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-900 transition-colors hover:bg-white active:scale-95 active:bg-gray-300"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+          title={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4 fill-current" aria-hidden />
+          ) : (
+            <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden />
+          )}
+        </button>
 
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-        <span className="w-9 shrink-0 text-right font-mono text-xs tabular-nums text-gray-400 sm:w-10 sm:text-sm">
-          {formatTime(currentTime)}
-        </span>
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          step={0.01}
-          value={currentTime}
-          disabled={seekDisabled}
-          onChange={(e) => onSeek(parseFloat(e.target.value))}
-          aria-label="Seek"
-          className={`h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-gray-300 sm:h-2 ${
-            seekDisabled ? 'pointer-events-none cursor-not-allowed opacity-50' : ''
-          }`}
-        />
-        <span className="w-9 shrink-0 font-mono text-xs tabular-nums text-gray-400 sm:w-10 sm:text-sm">
-          {formatTime(duration)}
-        </span>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-0.5">
-        {ai && (
-          <button
-            type="button"
-            data-shadowing-ai
-            onClick={ai.onClick}
-            disabled={ai.disabled}
-            className={`${toolBtn} relative disabled:pointer-events-none disabled:opacity-40 ${
-              ai.active ? 'bg-gray-800 text-white' : ''
+        <div className="order-first flex w-full min-w-0 flex-none items-center gap-1.5 @lg:order-none @lg:w-auto @lg:flex-1 sm:gap-2">
+          <span className="w-9 shrink-0 text-right font-mono text-xs tabular-nums text-gray-400 sm:w-10 sm:text-sm">
+            {formatTime(currentTime)}
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.01}
+            value={currentTime}
+            disabled={seekDisabled}
+            onChange={(e) => onSeek(parseFloat(e.target.value))}
+            aria-label="Seek"
+            className={`h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-gray-300 sm:h-2 ${
+              seekDisabled ? 'pointer-events-none cursor-not-allowed opacity-50' : ''
             }`}
-            aria-label={ai.active ? 'Hide shadowing pattern (A)' : 'Show shadowing pattern (A)'}
-            aria-pressed={ai.active}
-            title={ai.cached ? 'Shadowing pattern - this sentence is analyzed (A)' : 'Shadowing pattern (A)'}
-          >
-            {ai.loading ? (
-              <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
-            ) : (
-              <AudioLines className="h-4 w-4 shrink-0" aria-hidden />
-            )}
-            {ai.cached && !ai.loading && (
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gray-100" aria-hidden />
-            )}
-          </button>
-        )}
-        <button
-          ref={speedBtnRef}
-          type="button"
-          onClick={() => {
-            setShowSpeedPopover((v) => !v);
-            setShowRepeatPopover(false);
-          }}
-          className={`${toolBtn} ${showSpeedPopover ? 'bg-gray-800 text-white' : ''}`}
-          aria-label={`Playback speed ${playbackRate.toFixed(1)}×`}
-          title={`Playback speed (${playbackRate.toFixed(1)}×)`}
-        >
-          <Gauge className="h-4 w-4 shrink-0" aria-hidden />
-        </button>
-        {showSpeedPopover && (
-          <SpeedPopover
-            speed={playbackRate}
-            onChange={onSpeedChange}
-            onClose={closeSpeed}
-            triggerRef={speedBtnRef}
           />
-        )}
+          <span className="w-9 shrink-0 font-mono text-xs tabular-nums text-gray-400 sm:w-10 sm:text-sm">
+            {formatTime(duration)}
+          </span>
+        </div>
 
-        <button
-          ref={repeatBtnRef}
-          type="button"
-          data-repeat-trigger
-          onClick={() => {
-            setShowRepeatPopover((v) => !v);
-            setShowSpeedPopover(false);
-          }}
-          className={`${toolBtn} ${
-            isRepeatCountActive(repeatCount)
-              ? 'text-white bg-gray-700/60 hover:bg-gray-700'
-              : ''
-          } ${showRepeatPopover ? 'bg-gray-800' : ''}`}
-          aria-label={repeatCountAriaLabel(repeatCount)}
-          title={repeatCountTitle(repeatCount)}
-        >
-          <Repeat className="h-4 w-4 shrink-0" aria-hidden />
-        </button>
-        {showRepeatPopover && (
-          <RepeatPopover
-            count={repeatCount}
-            onChange={onRepeatCountChange}
-            onClose={closeRepeat}
-            triggerRef={repeatBtnRef}
-          />
-        )}
-
-        {showVideoToggle && onToggleVideoHidden && (
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-0.5 @lg:flex-none @lg:justify-start">
+          {ai && (
+            <button
+              type="button"
+              data-shadowing-ai
+              onClick={ai.onClick}
+              disabled={ai.disabled}
+              className={`${toolBtn} relative disabled:pointer-events-none disabled:opacity-40 ${
+                ai.active ? 'bg-gray-800 text-white' : ''
+              }`}
+              aria-label={ai.active ? 'Hide shadowing pattern (A)' : 'Show shadowing pattern (A)'}
+              aria-pressed={ai.active}
+              title={ai.cached ? 'Shadowing pattern - this sentence is analyzed (A)' : 'Shadowing pattern (A)'}
+            >
+              {ai.loading ? (
+                <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
+              ) : (
+                <AudioLines className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+              {ai.cached && !ai.loading && (
+                <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gray-100" aria-hidden />
+              )}
+            </button>
+          )}
           <button
+            ref={speedBtnRef}
             type="button"
-            onClick={onToggleVideoHidden}
-            className={toolBtn}
-            aria-label={videoHidden ? 'Show video' : 'Hide video'}
-            title={videoHidden ? 'Show video' : 'Hide video'}
+            onClick={() => {
+              setShowSpeedPopover((v) => !v);
+              setShowRepeatPopover(false);
+            }}
+            className={`${toolBtn} ${showSpeedPopover ? 'bg-gray-800 text-white' : ''}`}
+            aria-label={`Playback speed ${playbackRate.toFixed(1)}×`}
+            title={`Playback speed (${playbackRate.toFixed(1)}×)`}
           >
-            {videoHidden ? (
-              <VideoOff className="h-4 w-4 shrink-0" aria-hidden />
-            ) : (
-              <Video className="h-4 w-4 shrink-0" aria-hidden />
-            )}
+            <Gauge className="h-4 w-4 shrink-0" aria-hidden />
           </button>
-        )}
+          {showSpeedPopover && (
+            <SpeedPopover
+              speed={playbackRate}
+              onChange={onSpeedChange}
+              onClose={closeSpeed}
+              triggerRef={speedBtnRef}
+            />
+          )}
 
-        {showCaptionsToggle && onToggleCaptions && (
           <button
+            ref={repeatBtnRef}
             type="button"
-            onClick={onToggleCaptions}
-            className={toolBtn}
-            aria-label={captionsHidden ? 'Show captions' : 'Hide captions'}
-            title={captionsHidden ? 'Show captions' : 'Hide captions'}
+            data-repeat-trigger
+            onClick={() => {
+              setShowRepeatPopover((v) => !v);
+              setShowSpeedPopover(false);
+            }}
+            className={`${toolBtn} ${
+              isRepeatCountActive(repeatCount)
+                ? 'text-white bg-gray-700/60 hover:bg-gray-700'
+                : ''
+            } ${showRepeatPopover ? 'bg-gray-800' : ''}`}
+            aria-label={repeatCountAriaLabel(repeatCount)}
+            title={repeatCountTitle(repeatCount)}
           >
-            {captionsHidden ? (
-              <EyeOff className="h-4 w-4 shrink-0" aria-hidden />
-            ) : (
-              <Eye className="h-4 w-4 shrink-0" aria-hidden />
-            )}
+            <Repeat className="h-4 w-4 shrink-0" aria-hidden />
           </button>
-        )}
+          {showRepeatPopover && (
+            <RepeatPopover
+              count={repeatCount}
+              onChange={onRepeatCountChange}
+              onClose={closeRepeat}
+              triggerRef={repeatBtnRef}
+            />
+          )}
 
-        {showFocusToggle && onToggleFocusMode && (
-          <button
-            type="button"
-            onClick={onToggleFocusMode}
-            className={`${toolBtn} ${focusMode ? 'bg-gray-800 text-white' : ''}`}
-            aria-label={focusMode ? 'Exit focus mode' : 'Enter focus mode'}
-            title={focusMode ? 'Exit focus mode' : 'Focus mode'}
-          >
-            {focusMode ? (
-              <Minimize2 className="h-4 w-4 shrink-0" aria-hidden />
-            ) : (
-              <Maximize2 className="h-4 w-4 shrink-0" aria-hidden />
-            )}
-          </button>
-        )}
+          {showVideoToggle && onToggleVideoHidden && (
+            <button
+              type="button"
+              onClick={onToggleVideoHidden}
+              className={toolBtn}
+              aria-label={videoHidden ? 'Show video' : 'Hide video'}
+              title={videoHidden ? 'Show video' : 'Hide video'}
+            >
+              {videoHidden ? (
+                <VideoOff className="h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <Video className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+            </button>
+          )}
 
+          {showCaptionsToggle && onToggleCaptions && (
+            <button
+              type="button"
+              onClick={onToggleCaptions}
+              className={toolBtn}
+              aria-label={captionsHidden ? 'Show captions' : 'Hide captions'}
+              title={captionsHidden ? 'Show captions' : 'Hide captions'}
+            >
+              {captionsHidden ? (
+                <EyeOff className="h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <Eye className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+            </button>
+          )}
+
+          {showFocusToggle && onToggleFocusMode && (
+            <button
+              type="button"
+              onClick={onToggleFocusMode}
+              className={`${toolBtn} ${focusMode ? 'bg-gray-800 text-white' : ''}`}
+              aria-label={focusMode ? 'Exit focus mode' : 'Enter focus mode'}
+              title={focusMode ? 'Exit focus mode' : 'Focus mode'}
+            >
+              {focusMode ? (
+                <Minimize2 className="h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <Maximize2 className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+            </button>
+          )}
+
+        </div>
       </div>
     </div>
   );

@@ -19,13 +19,22 @@ export function useMobileViewport(): MobileViewportState {
   });
 
   React.useEffect(() => {
+    // Read the media query, not innerWidth: an iOS home-screen app can report a desktop
+    // innerWidth on launch, and the query may never fire 'change' to correct it.
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     const sync = () => {
-      setState({ decided: true, isMobile: window.innerWidth < MOBILE_BREAKPOINT });
+      const isMobile = mql.matches;
+      setState((prev) => (prev.decided && prev.isMobile === isMobile ? prev : { decided: true, isMobile }));
     };
     mql.addEventListener('change', sync);
+    window.addEventListener('resize', sync);
+    window.addEventListener('orientationchange', sync);
     sync();
-    return () => mql.removeEventListener('change', sync);
+    return () => {
+      mql.removeEventListener('change', sync);
+      window.removeEventListener('resize', sync);
+      window.removeEventListener('orientationchange', sync);
+    };
   }, []);
 
   return state;
