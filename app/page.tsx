@@ -220,7 +220,7 @@ export default function NodaApp() {
     []
   );
 
-  const { handleLessonCreated } = useLessonCreateFlow(
+  const { handleLessonCreated, handleLessonsCreated } = useLessonCreateFlow(
     setSelectedItem,
     handleLoadLesson,
     handleModeChange,
@@ -1041,6 +1041,7 @@ export default function NodaApp() {
               <NewLessonModal
                 onClose={closeUploadModal}
                 onSubmit={handleLessonCreated}
+                onSubmitMany={handleLessonsCreated}
                 getTakenAudioLessonNames={getTakenAudioLessonNames}
                 folders={effectiveFolders.map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? f.name }))}
                 onNotify={(message, type) => setToast({ message, type })}

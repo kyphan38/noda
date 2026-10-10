@@ -1,11 +1,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Music2, FileText, X, Check } from 'lucide-react';
+import {
+  MEDIA_WARN_BYTES,
+  lessonNameFromFile,
+  isSrtFile,
+  mediaFileError,
+  mediaTypeFromFile,
+  pairLessonFiles,
+  type LessonFilePair,
+} from '@/lib/lessonFiles';
 import { isLessonNameTaken } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-
-const MEDIA_MAX_BYTES = 200 * 1024 * 1024;
-const MEDIA_WARN_BYTES = 100 * 1024 * 1024;
 
 export interface LessonData {
   name: string;
@@ -19,47 +25,24 @@ interface NewLessonModalProps {
   onClose: () => void;
   /** `onUploadProgress` reports the media upload share, 0..1. */
   onSubmit: (data: LessonData, onUploadProgress: (fraction: number) => void) => void | Promise<void>;
+  /** Several lessons from files dropped together; see useLessonCreateFlow.handleLessonsCreated. */
+  onSubmitMany: (
+    items: LessonData[],
+    onUploadProgress: (index: number, fraction: number) => void,
+    onItemDone: (index: number) => void
+  ) => Promise<void>;
   getTakenAudioLessonNames: () => string[];
   folders?: Array<{ id: string; name: string }>;
   onNotify?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
-function isAcceptedLessonMedia(file: File): boolean {
-  const name = file.name.toLowerCase();
-  if (file.type.startsWith('audio/')) return true;
-  if (file.type === 'video/mp4' || file.type === 'video/webm') return true;
-  if (/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name)) return true;
-  if (name.endsWith('.webm') && (file.type === '' || file.type === 'application/octet-stream')) return true;
-  if (name.endsWith('.mp4')) {
-    if (file.type === '' || file.type === 'application/octet-stream') return true;
-    return file.type.startsWith('video/');
-  }
-  return false;
-}
-
-/** Reject obvious extension vs MIME mismatch (AC 1.1.4). */
-function isExtensionMimeMismatch(file: File): boolean {
-  const name = file.name.toLowerCase();
-  const t = file.type;
-  if (!t || t === 'application/octet-stream') return false;
-  if (name.endsWith('.mp4')) return !t.startsWith('video/');
-  if (name.endsWith('.webm')) return !t.startsWith('video/') && !t.startsWith('audio/');
-  return false;
-}
-
-function mediaTypeFromFile(file: File): 'audio' | 'video' {
-  if (file.type.startsWith('video/')) return 'video';
-  if (file.name.toLowerCase().endsWith('.mp4')) return 'video';
-  return 'audio';
-}
-
-function isSrtFile(file: File) {
-  return file.name.toLowerCase().endsWith('.srt') || file.type === 'application/x-subrip' || file.type === 'text/plain';
-}
+/** One lesson in a multi-file drop; `error` rows are shown but not created. */
+type BatchRow = LessonFilePair & { error: string | null };
 
 export function NewLessonModal({
   onClose,
   onSubmit,
+  onSubmitMany,
   getTakenAudioLessonNames,
   folders = [],
   onNotify,
@@ -77,6 +60,12 @@ export function NewLessonModal({
   const [isSaving, setIsSaving] = useState(false);
   /** 0..100 while the media file uploads; null before the first progress event. */
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  /** Set when 2+ media files were dropped together: one row per lesson. */
+  const [batch, setBatch] = useState<BatchRow[] | null>(null);
+  /** .srt files in the drop with no media of the same name. */
+  const [unmatchedTranscripts, setUnmatchedTranscripts] = useState<string[]>([]);
+  /** Which batch item is uploading, for the button label. */
+  const [batchProgress, setBatchProgress] = useState<{ index: number; total: number; percent: number } | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -89,10 +78,9 @@ export function NewLessonModal({
   const applyMediaFile = useCallback(
     (file: File) => {
       setFormUploadError(null);
-      if (file.size > MEDIA_MAX_BYTES) {
-        setFormUploadError(
-          'File is too large (200MB max). Compress the video or extract audio before importing.',
-        );
+      const error = mediaFileError(file);
+      if (error) {
+        setFormUploadError(error);
         return;
       }
       if (file.size >= MEDIA_WARN_BYTES) {
@@ -102,16 +90,7 @@ export function NewLessonModal({
         );
       }
 
-      if (!isAcceptedLessonMedia(file)) {
-        setFormUploadError('Invalid file. Supported: common audio formats, MP4, and WebM.');
-        return;
-      }
-      if (isExtensionMimeMismatch(file)) {
-        setFormUploadError('File type does not match extension (e.g. use real MP4/WebM).');
-        return;
-      }
-
-      const stem = file.name.replace(/\.[^/.]+$/, '');
+      const stem = lessonNameFromFile(file.name);
       const taken = getTakenAudioLessonNames();
       if (isLessonNameTaken(stem, taken)) {
         setMediaNameConflict(
@@ -131,9 +110,55 @@ export function NewLessonModal({
     setTranscriptFile(file);
   }, []);
 
+  /**
+   * Files dropped or picked together. One media file (with or without its .srt)
+   * fills the form as before; two or more become a list of lessons, each media
+   * paired with the .srt of the same name.
+   */
+  const applyFiles = useCallback(
+    (files: File[]) => {
+      if (files.length === 0) return;
+      if (files.length === 1) {
+        if (files[0].name.toLowerCase().endsWith('.srt')) applyTranscriptFile(files[0]);
+        else applyMediaFile(files[0]);
+        return;
+      }
+      const { pairs, unmatchedTranscripts: unmatched } = pairLessonFiles(files);
+      setFormUploadError(null);
+      setUnmatchedTranscripts(unmatched.map((f) => f.name));
+      if (pairs.length === 0) {
+        setFormUploadError('No audio or video file in the drop.');
+        return;
+      }
+      if (pairs.length === 1) {
+        setBatch(null);
+        applyMediaFile(pairs[0].media);
+        if (pairs[0].transcript) setTranscriptFile(pairs[0].transcript);
+        return;
+      }
+      const taken = getTakenAudioLessonNames();
+      const rows = pairs.map((pair) => {
+        const error =
+          mediaFileError(pair.media) ?? (isLessonNameTaken(pair.name, taken) ? 'Name already in use' : null);
+        if (!error) taken.push(pair.name); // two media files with one name: only the first goes in
+        return { ...pair, error };
+      });
+      setBatch(rows);
+      setMediaFile(null);
+      setTranscriptFile(null);
+      setMediaNameConflict(null);
+    },
+    [applyMediaFile, applyTranscriptFile, getTakenAudioLessonNames]
+  );
+
+  const clearBatch = () => {
+    setBatch(null);
+    setUnmatchedTranscripts([]);
+    setFormUploadError(null);
+  };
+
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) applyMediaFile(file);
+    applyFiles(Array.from(e.target.files ?? []));
     e.target.value = '';
   };
 
@@ -146,16 +171,46 @@ export function NewLessonModal({
     e.preventDefault();
     e.stopPropagation();
     setMediaDrag(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) applyMediaFile(file);
+    applyFiles(Array.from(e.dataTransfer.files ?? []));
   };
 
   const handleTranscriptDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setTranscriptDrag(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) applyTranscriptFile(file);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length > 1) applyFiles(files);
+    else if (files[0]) applyTranscriptFile(files[0]);
+  };
+
+  const batchReady = batch?.filter((r) => !r.error) ?? [];
+
+  const handleSubmitBatch = async () => {
+    if (!batch || batchReady.length === 0 || isSaving) return;
+    const rows = batchReady;
+    setIsSaving(true);
+    setFormUploadError(null);
+    const done = new Set<BatchRow>();
+    try {
+      await onSubmitMany(
+        rows.map((r) => ({
+          name: r.name,
+          folderId,
+          mediaFile: r.media,
+          mediaType: mediaTypeFromFile(r.media),
+          transcriptFile: r.transcript,
+        })),
+        (index, fraction) => setBatchProgress({ index, total: rows.length, percent: Math.round(fraction * 100) }),
+        (index) => done.add(rows[index])
+      );
+    } catch (error) {
+      // Keep only what is not created yet, so Create again does not duplicate lessons.
+      setBatch((list) => list?.filter((r) => !done.has(r)) ?? null);
+      setFormUploadError(error instanceof Error ? error.message : 'Could not create the lessons.');
+    } finally {
+      setIsSaving(false);
+      setBatchProgress(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -214,6 +269,7 @@ export function NewLessonModal({
         ) : null}
 
         <div className={`space-y-6 ${isSaving ? 'pointer-events-none opacity-70' : ''}`}>
+          {!batch && (
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Name</label>
             <input
@@ -230,6 +286,7 @@ export function NewLessonModal({
               disabled={isSaving}
             />
           </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Folder</label>
@@ -248,6 +305,36 @@ export function NewLessonModal({
             </select>
           </div>
 
+          {batch ? (
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-400">Lessons ({batchReady.length})</span>
+                <Button type="button" variant="ghost" size="xs" onClick={clearBatch} disabled={isSaving}>
+                  Clear
+                </Button>
+              </div>
+              <ul className="divide-y divide-gray-700/70 rounded-lg border border-gray-700 bg-gray-900">
+                {batch.map((row) => (
+                  <li key={row.media.name} className={`flex items-center gap-3 px-3 py-2 ${row.error ? 'opacity-50' : ''}`}>
+                    <Music2 size={14} className="shrink-0 text-gray-500" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate text-sm text-gray-100" title={row.media.name}>
+                      {row.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {row.error ?? (row.transcript ? (
+                        <span className="inline-flex items-center gap-1"><Check size={12} aria-hidden /> .srt</span>
+                      ) : 'No transcript')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {unmatchedTranscripts.length > 0 && (
+                <p className="mt-2 text-xs text-gray-500" title={unmatchedTranscripts.join('\n')}>
+                  {unmatchedTranscripts.length} .srt without matching media
+                </p>
+              )}
+            </div>
+          ) : (
           <div className="bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-2xl p-6">
             <div
               onDragEnter={(e) => {
@@ -275,14 +362,15 @@ export function NewLessonModal({
               </p>
               <input
                 type="file"
-                accept="audio/*,video/mp4,video/webm,.mp4,.webm"
+                multiple
+                accept="audio/*,video/mp4,video/webm,.mp4,.webm,.srt"
                 onChange={handleMediaUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 disabled={isSaving}
               />
               {mediaFile && !mediaNameConflict && (
-                <p className="text-gray-200 font-medium relative z-10 pointer-events-none inline-flex items-center gap-1.5">
-                  <Check size={16} aria-hidden /> {mediaFile.name}
+                <p className="text-gray-200 font-medium relative z-10 pointer-events-none inline-flex max-w-full items-center gap-1.5">
+                  <Check size={16} className="shrink-0" aria-hidden /> <span className="truncate">{mediaFile.name}</span>
                 </p>
               )}
             </div>
@@ -308,8 +396,8 @@ export function NewLessonModal({
                 <p className="text-sm font-medium text-gray-300">+ Add transcript (.srt)</p>
                 <p className="text-xs text-gray-500 mt-0.5">Drop file here or click</p>
                 {transcriptFile && (
-                  <p className="text-xs text-gray-300 mt-1 inline-flex items-center gap-1">
-                    <Check size={12} aria-hidden /> {transcriptFile.name}
+                  <p className="text-xs text-gray-300 mt-1 inline-flex max-w-full items-center gap-1">
+                    <Check size={12} className="shrink-0" aria-hidden /> <span className="truncate">{transcriptFile.name}</span>
                   </p>
                 )}
               </div>
@@ -322,19 +410,26 @@ export function NewLessonModal({
               />
             </div>
           </div>
+          )}
 
           <Button
             type="button"
             variant="default"
             className="h-auto w-full justify-center gap-2 rounded-xl py-4 text-lg font-bold"
-            disabled={!mediaFile || !lessonName || isSaving}
-            onClick={() => void handleSubmit()}
+            disabled={(batch ? batchReady.length === 0 : !mediaFile || !lessonName) || isSaving}
+            onClick={() => void (batch ? handleSubmitBatch() : handleSubmit())}
           >
             {isSaving ? (
               <>
                 <span className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
-                {uploadPercent !== null && uploadPercent < 100 ? `Uploading… ${uploadPercent}%` : 'Saving…'}
+                {batchProgress
+                  ? `Uploading ${batchProgress.index + 1}/${batchProgress.total}… ${batchProgress.percent}%`
+                  : uploadPercent !== null && uploadPercent < 100
+                    ? `Uploading… ${uploadPercent}%`
+                    : 'Saving…'}
               </>
+            ) : batch ? (
+              `Create ${batchReady.length} ${batchReady.length === 1 ? 'lesson' : 'lessons'}`
             ) : (
               'Create'
             )}

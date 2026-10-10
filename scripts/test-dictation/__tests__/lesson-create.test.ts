@@ -69,3 +69,43 @@ describe('lesson create flow', () => {
   });
 });
 
+describe('batch lesson create', () => {
+  const mp3 = (name: string) => ({ ...input, name, mediaFile: new File(['x'], `${name}.mp3`, { type: 'audio/mpeg' }) });
+
+  it('creates every lesson in order, then opens the first', async () => {
+    upload.mockResolvedValue({ path: 'users/u/media/x.mp3', downloadURL: 'u', contentType: 'audio/mpeg', size: 1 });
+    const { result, calls } = setup();
+    const done: number[] = [];
+    await result.current.handleLessonsCreated([mp3('a'), mp3('b')], () => {}, (i) => done.push(i));
+    expect(done).toEqual([0, 1]);
+    expect(calls.uploadMode).toEqual(['idle']);
+    expect(calls.selected).toBe(1);
+    expect(calls.toasts.at(-1)).toMatchObject({ message: '2 lessons created.', type: 'success' });
+    upload.mockReset();
+  });
+
+  it('stops at a failed upload and says how many were created', async () => {
+    upload
+      .mockResolvedValueOnce({ path: 'users/u/media/x.mp3', downloadURL: 'u', contentType: 'audio/mpeg', size: 1 })
+      .mockRejectedValueOnce(new Error('network'));
+    const { result, calls } = setup();
+    const done: number[] = [];
+    await expect(
+      result.current.handleLessonsCreated([mp3('a'), mp3('b'), mp3('c')], () => {}, (i) => done.push(i))
+    ).rejects.toThrow(/Created 1 of 3 lessons/);
+    expect(done).toEqual([0]);
+    expect(calls.uploadMode).toEqual([]);
+  });
+
+  it('reports progress per item', async () => {
+    upload.mockImplementation(async (_id: string, _file: File, onProgress?: (f: number) => void) => {
+      onProgress?.(1);
+      return { path: 'users/u/media/x.mp3', downloadURL: 'u', contentType: 'audio/mpeg', size: 1 };
+    });
+    const { result } = setup();
+    const seen: string[] = [];
+    await result.current.handleLessonsCreated([mp3('a'), mp3('b')], (i, f) => seen.push(`${i}:${f}`), () => {});
+    expect(seen).toEqual(['0:1', '1:1']);
+    upload.mockReset();
+  });
+});
