@@ -26,12 +26,12 @@ function getGenAI(): GoogleGenAI {
 }
 
 /**
- * Model used for shadowing pattern analysis. Defaults to gemini-3.8-flash -
+ * Model used for shadowing pattern analysis. Defaults to gemini-4-argon -
  * the one model every app in this workspace now runs on. Override with
  * GEMINI_MODEL if a spike needs a different one.
  */
 export function getShadowingModelId(): string {
-  return process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+  return process.env.GEMINI_MODEL?.trim() || "gemini-4-argon";
 }
 
 /**
