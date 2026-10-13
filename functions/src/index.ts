@@ -5,10 +5,10 @@
  * full staged plan.
  */
 
-import * as admin from "firebase-admin";
+import { getApps, initializeApp } from "firebase-admin/app";
 
-if (!admin.apps.length) {
-  admin.initializeApp();
+if (!getApps().length) {
+  initializeApp();
 }
 
 export { analyzeShadowingPattern } from "./analyzeShadowingPattern";

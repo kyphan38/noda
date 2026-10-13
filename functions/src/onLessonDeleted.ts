@@ -10,8 +10,9 @@
  */
 
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
-import * as admin from "firebase-admin";
+import { getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 import { lessonStoragePaths } from "./lib/lessonCleanup";
 
@@ -28,7 +29,7 @@ export const onLessonDeleted = onDocumentDeleted(
   async (event) => {
     const { uid, lessonId } = event.params;
     const data = event.data?.data() ?? {};
-    const bucket = admin.storage().bucket();
+    const bucket = getStorage().bucket();
 
     const paths = lessonStoragePaths(uid, data);
     let deleted = 0;
@@ -42,8 +43,8 @@ export const onLessonDeleted = onDocumentDeleted(
     }
 
     // The parent doc is already gone; this removes what is left under it.
-    const lessonRef = getFirestore(admin.app(), NODA_DB_ID).doc(`users/${uid}/lessons/${lessonId}`);
-    await getFirestore(admin.app(), NODA_DB_ID).recursiveDelete(lessonRef);
+    const lessonRef = getFirestore(getApp(), NODA_DB_ID).doc(`users/${uid}/lessons/${lessonId}`);
+    await getFirestore(getApp(), NODA_DB_ID).recursiveDelete(lessonRef);
 
     // One line per lesson, so a file that survives a delete can be traced back.
     console.log(

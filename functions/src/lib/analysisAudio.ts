@@ -13,7 +13,7 @@
  * Storage rules only open `users/{uid}/media/`); only this function touches it.
  */
 
-import type * as admin from "firebase-admin";
+import type { getStorage } from "firebase-admin/storage";
 import { randomUUID } from "crypto";
 import { unlinkSync } from "fs";
 import * as os from "os";
@@ -25,7 +25,7 @@ import { firebaseDownloadUrl } from "./firebaseDownloadUrl";
 export { analysisAudioPath } from "./analysisAudioPath";
 
 /** Typed off firebase-admin so this file does not depend on @google-cloud/storage directly. */
-type Bucket = ReturnType<ReturnType<typeof admin.storage>["bucket"]>;
+type Bucket = ReturnType<ReturnType<typeof getStorage>["bucket"]>;
 
 function isNotFound(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { code?: unknown }).code === 404;

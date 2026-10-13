@@ -16,13 +16,9 @@
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
-// NOTE: `admin.firestore.FieldValue` is undefined under the Functions
-// Emulator - the emulator wraps `admin.firestore` to auto-point at the
-// Firestore emulator host but does not copy the static FieldValue/Timestamp
-// members onto the wrapper. Import the modular API directly instead (works
-// in both the emulator and production).
+import { getApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { readFileSync, unlinkSync } from "fs";
 
 import { sliceAudioClip } from "./lib/sliceAudio";
@@ -209,9 +205,7 @@ export const analyzeShadowingPattern = onCall(
       throw new HttpsError("invalid-argument", "mediaStoragePath is not one of your uploads.");
     }
 
-    // `admin.firestore()` always targets `(default)` and cannot take a database
-    // id - use the modular `getFirestore(app, dbId)` form instead.
-    const cacheDocRef = getFirestore(admin.app(), NODA_DB_ID).doc(
+    const cacheDocRef = getFirestore(getApp(), NODA_DB_ID).doc(
       `users/${request.auth.uid}/lessons/${lessonId}/shadowingAnalysis/${sentenceId}`
     );
 
@@ -228,7 +222,7 @@ export const analyzeShadowingPattern = onCall(
 
     try {
       // A small mono FLAC copy instead of the full upload - see lib/analysisAudio.ts.
-      audioPath = await fetchAnalysisAudio(admin.storage().bucket(), mediaStoragePath, copyPath);
+      audioPath = await fetchAnalysisAudio(getStorage().bucket(), mediaStoragePath, copyPath);
 
       clipPath = await sliceAudioClip(audioPath, startSec, endSec);
 
