@@ -43,7 +43,7 @@ export function CleanupModal({ isOpen, onKeep, onMoveToTrash }: CleanupModalProp
         role="dialog"
         aria-modal="true"
         aria-labelledby="noda-cleanup-title"
-        className="app-modal-panel bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl"
+        className="app-modal-panel bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-sm w-full text-center"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">

@@ -61,7 +61,7 @@ export function PortalMenu({
     <div
       id={menuId}
       role="menu"
-      className={`fixed ${widthClassName} bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[210] py-1 overflow-hidden`}
+      className={`fixed ${widthClassName} bg-gray-800 border border-gray-700 rounded-lg z-[210] py-1 overflow-hidden`}
       style={{ top: pos.top, right: pos.right }}
       onMouseDown={(e) => e.stopPropagation()}
     >

@@ -57,7 +57,7 @@ export function DeleteManyModal({ count, onCancel, onConfirm }: DeleteManyModalP
         role="dialog"
         aria-modal="true"
         aria-labelledby="noda-delete-many-title"
-        className="app-modal-panel bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+        className="app-modal-panel bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-sm w-full"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center mb-4">

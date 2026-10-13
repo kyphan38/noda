@@ -99,7 +99,7 @@ function TrashedItemRow({
               <div
                 id={`trash-row-menu-${item.id}`}
                 role="menu"
-                className="fixed w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[210] py-1 overflow-hidden"
+                className="fixed w-40 bg-gray-800 border border-gray-700 rounded-lg z-[210] py-1 overflow-hidden"
                 style={{ top: menuPos.top, right: menuPos.right }}
                 onMouseDown={(e) => e.stopPropagation()}
               >

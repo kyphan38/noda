@@ -134,7 +134,7 @@ function SpeedPopover({
         left: pos.left,
         transform: 'translate(-50%, -100%)',
       }}
-      className="z-[9999] flex flex-col items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-lg min-w-[140px] sm:min-w-[120px]"
+      className="z-[9999] flex flex-col items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 min-w-[140px] sm:min-w-[120px]"
     >
       <span className="text-xs font-medium text-white tabular-nums">{speed.toFixed(1)}×</span>
       <input
@@ -192,7 +192,7 @@ function RepeatPopover({
         left: pos.left,
         transform: 'translate(-50%, -100%)',
       }}
-      className="z-[9999] flex items-center gap-1 rounded-xl border border-gray-700 bg-gray-900 px-2 py-2 shadow-lg"
+      className="z-[9999] flex items-center gap-1 rounded-xl border border-gray-700 bg-gray-900 px-2 py-2"
     >
       {REPEAT_COUNT_OPTIONS.map((n) => (
         <button

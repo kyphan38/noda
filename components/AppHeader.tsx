@@ -105,7 +105,7 @@ export function AppHeader({
               <MoreVertical size={22} aria-hidden />
             </button>
             {headerItemMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 z-30">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg py-1 z-30">
                 <button
                   type="button"
                   onClick={onRenameCurrent}
