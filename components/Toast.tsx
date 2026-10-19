@@ -34,7 +34,7 @@ export function Toast({ message, type, onClose, action, durationMs = 3000 }: Toa
       {action && (
         <button
           type="button"
-          className="toast-action shrink-0 rounded-md px-2 py-1 text-sm font-semibold underline-offset-2 hover:underline"
+          className="toast-action shrink-0 rounded-md px-2 py-1 text-sm font-semibold"
           onClick={() => {
             action.onClick();
             onClose();

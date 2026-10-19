@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "bg-gray-800 font-medium text-gray-100 hover:bg-gray-700 focus-visible:border-gray-500 focus-visible:ring-gray-500/20",
         danger:
           "border-transparent bg-gray-100 text-gray-900 hover:bg-white focus-visible:border-gray-400 focus-visible:ring-gray-500/35",
-        link: "border-transparent text-gray-200 underline-offset-4 hover:underline",
+        link: "border-transparent text-gray-200 hover:text-white",
       },
       size: {
         default: "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
