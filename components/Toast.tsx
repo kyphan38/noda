@@ -15,16 +15,20 @@ export interface ToastProps {
   /** Optional button, e.g. Undo. Clicking it also closes the toast. */
   action?: ToastAction;
   durationMs?: number;
+  /** Sliding out after it closed: no timer, no taps. */
+  leaving?: boolean;
 }
 
-export function Toast({ message, type, onClose, action, durationMs = 3000 }: ToastProps) {
+export function Toast({ message, type, onClose, action, durationMs = 3000, leaving = false }: ToastProps) {
   useEffect(() => {
+    // A leaving toast already closed; closing again would hide a newer one.
+    if (leaving) return;
     const timer = setTimeout(onClose, durationMs);
     return () => clearTimeout(timer);
-  }, [onClose, durationMs]);
+  }, [onClose, durationMs, leaving]);
 
   return (
-    <div className={`toast toast-${type}`} role="status">
+    <div className={`toast toast-${type}${leaving ? ' is-leaving' : ''}`} role="status" aria-hidden={leaving || undefined}>
       <span className="toast-icon" aria-hidden>
         {type === 'success' && <Check size={16} />}
         {type === 'error' && <X size={16} />}
@@ -35,6 +39,7 @@ export function Toast({ message, type, onClose, action, durationMs = 3000 }: Toa
         <button
           type="button"
           className="toast-action shrink-0 rounded-md px-2 py-1 text-sm font-semibold"
+          disabled={leaving}
           onClick={() => {
             action.onClick();
             onClose();
@@ -43,7 +48,13 @@ export function Toast({ message, type, onClose, action, durationMs = 3000 }: Toa
           {action.label}
         </button>
       )}
-      <button type="button" className="toast-close opacity-80 hover:opacity-100 p-1" onClick={onClose} aria-label="Close">
+      <button
+        type="button"
+        className="toast-close opacity-80 hover:opacity-100 p-1"
+        disabled={leaving}
+        onClick={onClose}
+        aria-label="Close"
+      >
         <X size={14} aria-hidden />
       </button>
     </div>

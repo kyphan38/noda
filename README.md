@@ -49,3 +49,19 @@ Any change requires a rebuild/redeploy.
 - Only allowlisted user can render app content.
 - Since this is static export (`output: "export"`), there is no server middleware enforcement in noda.
 - **Authoritative enforcement** is [Firestore rules](firestore.rules) and [Storage rules](storage.rules): only `users/{userId}/...` where `request.auth.uid == userId`. After deploy, confirm once in **Firebase Console → Firestore → Rules → Rules Playground** (e.g. read as another `userId` → expect deny). 
+
+## Motion
+
+Short, opacity/transform only, following `ws/app/DESIGN.md` "Motion". Plan:
+`PLAN-motion.md`. Shared classes sit in the Motion block of `app/globals.css`
+(`fade-in`, `fade-out`, `rise`, `pop`, `breathe`, `is-leaving` for modals and
+the toast), with `--ease-soft`. The last block there turns every animation
+and transition off under `prefers-reduced-motion`.
+
+- `lib/motion.ts` (`reducedMotion`) is covered by vitest; `hooks/usePresence.ts`
+  keeps something mounted while it animates out.
+- Mode content fades in over 240ms, modals over 180-220ms.
+- Loading skeletons are still gray blocks that `breathe`, not a shimmer.
+- `ToastLayer` keeps the last toast 200ms after it closes so it slides out;
+  a leaving toast has no timer and takes no taps.
+- Try it without Google sign-in: `npm run dev:e2e` (port 3010).

@@ -549,3 +549,4 @@ trượt lên nhẹ khi mở.
 ## Tiến độ
 
 (AI làm ghi một dòng mỗi phase: ngày, commit, ghi chú.)
+- P1 (2026-10-19): Motion CSS block + `--ease-soft`, shorter mode/modal entries, one global reduced-motion block, skeleton `breathe`, `lib/motion.ts` + test, `usePresence`, `ToastLayer` with exit. E2E not run: Playwright browsers are not installed (`npx playwright install`, owner to approve). Toast and skeleton checked on a temporary page in E2E mode.

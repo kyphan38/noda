@@ -31,7 +31,8 @@ import { useMobileViewport } from '@/hooks/use-mobile';
 import { LessonItem, Sentence, type AppMode } from '@/types';
 import { LessonView } from '@/components/LessonView';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
-import { Toast, type ToastAction } from '@/components/Toast';
+import { type ToastAction } from '@/components/Toast';
+import { ToastLayer } from '@/components/ToastLayer';
 import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { hasAllowlistConfig, isAllowedUser } from '@/lib/auth/allowed-user';
 import { buildItemSearchString, parseItemFromSearch } from '@/lib/item-url';
@@ -1175,15 +1176,7 @@ export default function NodaApp() {
         }}
       />
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          action={toast.action}
-          durationMs={toast.durationMs}
-          onClose={dismissToast}
-        />
-      )}
+      <ToastLayer toast={toast} onClose={dismissToast} />
     </div>
   );
 }
