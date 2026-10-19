@@ -35,14 +35,10 @@ function Chunk({ chunk }: { chunk: ShadowingChunk }) {
   return (
     <span>
       {chunk.tokens.map((token, i) => (
-        <span
-          key={i}
-          className={`${LEVEL_CLASS[token.level]} ${
-            token.linked ? 'underline decoration-dotted decoration-gray-700 underline-offset-[6px]' : ''
-          }`}
-        >
+        <span key={i} className={LEVEL_CLASS[token.level]}>
           {i > 0 ? ' ' : ''}
-          {token.display}
+          {/* Fill only the word, not the space before it. */}
+          {token.linked ? <span className="rounded-sm bg-gray-800">{token.display}</span> : token.display}
         </span>
       ))}
       <span className={`ml-1 text-gray-300 ${chunk.toneStrength === 'weak' ? 'opacity-50' : ''}`}>

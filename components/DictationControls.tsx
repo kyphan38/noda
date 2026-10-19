@@ -162,7 +162,7 @@ export function DictationControls({
                   ) : spaceTyped === ' ' ? (
                     <span className="text-gray-100">{' '}</span>
                   ) : (
-                    <span className="text-gray-500 underline">{'\u00a0'}</span>
+                    <span className="rounded-sm bg-gray-700 text-gray-500">{'\u00a0'}</span>
                   )}
                 </React.Fragment>
               );
