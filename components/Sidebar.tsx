@@ -11,6 +11,9 @@ import {
   RotateCcw,
   Trash2,
   MoreVertical,
+  Monitor,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { LessonSummary, ExpandedSections, LessonItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
@@ -275,6 +278,7 @@ function SidebarImpl({
           <div className="p-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-white">noda</h2>
             <div className="flex items-center gap-1">
+              <ThemeToggle />
               <button
                 onClick={onLogout}
                 className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
@@ -370,8 +374,6 @@ function SidebarImpl({
               </div>
             )}
           </div>
-
-          <ThemeRow />
         </div>
       </div>
     </>
@@ -379,30 +381,23 @@ function SidebarImpl({
 }
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
+const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
 
-/** Theme, per device. The current choice is ink and medium; the others are faint and tappable. */
-function ThemeRow() {
+/** Theme, per device. One icon that cycles system, light, dark. */
+function ThemeToggle() {
   const theme = useSyncExternalStore(themeStore.subscribe, themeStore.get, themeStore.getServer);
+  const Icon = THEME_ICONS[theme];
+  const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
   return (
-    <div
-      className="flex items-center gap-4 border-t border-gray-800 px-4 py-3 text-xs"
-      role="radiogroup"
-      aria-label="Theme"
+    <button
+      type="button"
+      onClick={() => themeStore.set(next)}
+      className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+      title={`Theme: ${theme}`}
+      aria-label={`Theme: ${theme}`}
     >
-      <span className="font-bold uppercase tracking-wider text-gray-500">Theme</span>
-      {THEMES.map((t) => (
-        <button
-          key={t}
-          type="button"
-          role="radio"
-          aria-checked={theme === t}
-          onClick={() => themeStore.set(t)}
-          className={theme === t ? 'font-medium text-gray-100' : 'text-gray-500 hover:text-gray-300'}
-        >
-          {t}
-        </button>
-      ))}
-    </div>
+      <Icon size={18} />
+    </button>
   );
 }
 
