@@ -65,3 +65,11 @@ and transition off under `prefers-reduced-motion`.
 - `ToastLayer` keeps the last toast 200ms after it closes so it slides out;
   a leaving toast has no timer and takes no taps.
 - Try it without Google sign-in: `npm run dev:e2e` (port 3010).
+- Modals use `ModalShell`: backdrop click and Esc play the exit (200ms), then
+  call `onClose`; buttons inside close at once. `NewLessonModal` has no
+  backdrop close (a stray click would lose the picked files).
+- Mode tabs share one sliding pill (`useIndicator`, `.mode-tab-pill`); the
+  first placement and resizes jump, only a mode change slides.
+- Mobile sidebar: swipe left to close (`useDrawerSwipe`, touch and pen only,
+  axis locks after 8px so the lesson list still scrolls). The close button
+  and the dim layer still work.

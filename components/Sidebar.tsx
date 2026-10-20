@@ -15,6 +15,7 @@ import {
 import { LessonSummary, ExpandedSections, LessonItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
 import type { UseFoldersResult } from '@/hooks/useFolders';
+import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
 import { themeStore, type Theme } from '@/lib/theme';
 
 function TrashedItemRow({
@@ -248,10 +249,13 @@ function SidebarImpl({
 
   const flexColWidth = isMobile ? 'w-0' : isOpen ? 'w-72' : 'w-0';
 
+  const swipe = useDrawerSwipe({ enabled: isMobile && isOpen, onClose: () => onToggle(false) });
+
   return (
     <>
       {isMobile && isOpen && (
         <button
+          ref={swipe.dim}
           type="button"
           aria-label="Close sidebar"
           className="fixed inset-0 z-40 bg-black/50 touch-manipulation"
@@ -262,6 +266,8 @@ function SidebarImpl({
         className={`shrink-0 transition-[width] duration-300 ease-in-out ${flexColWidth} relative z-50`}
       >
         <div
+          ref={swipe.panel}
+          {...swipe.panelProps}
           className={`fixed inset-y-0 left-0 w-72 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}

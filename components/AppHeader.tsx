@@ -5,6 +5,35 @@ import { PanelLeft, Trash2, MoreVertical, Edit2, RotateCcw } from 'lucide-react'
 import type { AppMode, LessonItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { LESSON_MODES } from '@/constants';
+import { useIndicator } from '@/hooks/useIndicator';
+
+/** The mode tabs with one shared pill that slides to the active tab. */
+function ModeTabs({
+  appMode,
+  onModeChange,
+}: {
+  appMode: AppMode;
+  onModeChange: (mode: AppMode) => void | Promise<void>;
+}) {
+  const { container, indicator } = useIndicator<HTMLElement, HTMLSpanElement>(appMode);
+  return (
+    <nav ref={container} className="mode-tabs" aria-label="Lesson mode">
+      <span ref={indicator} aria-hidden="true" className="mode-tab-pill" />
+      {LESSON_MODES.map(({ mode, label }) => (
+        <button
+          key={mode}
+          type="button"
+          className={cn('mode-tab', appMode === mode && 'active')}
+          data-active={appMode === mode}
+          aria-current={appMode === mode ? 'page' : undefined}
+          onClick={() => void onModeChange(mode)}
+        >
+          {label}
+        </button>
+      ))}
+    </nav>
+  );
+}
 
 export type HeaderSelectedItem = {
   id: string;
@@ -62,19 +91,7 @@ export function AppHeader({
 
       {selectedItem && (
         <div className="mode-tabs-container">
-          <nav className="mode-tabs" aria-label="Lesson mode">
-            {LESSON_MODES.map(({ mode, label }) => (
-              <button
-                key={mode}
-                type="button"
-                className={cn('mode-tab', appMode === mode && 'active')}
-                aria-current={appMode === mode ? 'page' : undefined}
-                onClick={() => void onModeChange(mode)}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
+          <ModeTabs appMode={appMode} onModeChange={onModeChange} />
           <p className="max-w-full truncate text-xs text-gray-500" title={selectedItem.data.name}>
             <span className="text-gray-300">{selectedItem.data.name}</span>
             {modeProgress !== null && (

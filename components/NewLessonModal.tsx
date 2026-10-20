@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Music2, FileText, X, Check } from 'lucide-react';
 import {
   MEDIA_WARN_BYTES,
@@ -12,6 +12,7 @@ import {
 import { isLessonNameTaken } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { ModalShell } from '@/components/ModalShell';
 
 export interface LessonData {
   name: string;
@@ -66,14 +67,6 @@ export function NewLessonModal({
   const [unmatchedTranscripts, setUnmatchedTranscripts] = useState<string[]>([]);
   /** Which batch item is uploading, for the button label. */
   const [batchProgress, setBatchProgress] = useState<{ index: number; total: number; percent: number } | null>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const applyMediaFile = useCallback(
     (file: File) => {
@@ -237,217 +230,221 @@ export function NewLessonModal({
   };
 
   return (
-    <div className="app-modal-backdrop fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="app-modal-panel relative bg-gray-800 rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700/80">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Music2 size={22} strokeWidth={1.75} aria-hidden /> New Lesson
-          </h2>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-gray-400 hover:text-white"
-            onClick={onClose}
-            aria-label="Close"
+    <ModalShell
+      onClose={onClose}
+      labelledBy="noda-new-lesson-title"
+      backdropClassName="bg-black/80 backdrop-blur-sm z-50 p-4"
+      panelClassName="relative bg-gray-800 rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700/80"
+      closeOnBackdrop={false}
+    >
+      <div className="flex justify-between items-center mb-6">
+        <h2 id="noda-new-lesson-title" className="text-2xl font-bold text-white flex items-center gap-2">
+          <Music2 size={22} strokeWidth={1.75} aria-hidden /> New Lesson
+        </h2>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-gray-400 hover:text-white"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <X size={18} aria-hidden />
+        </Button>
+      </div>
+
+      {formUploadError ? (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>Cannot add this lesson</AlertTitle>
+          <AlertDescription>{formUploadError}</AlertDescription>
+        </Alert>
+      ) : null}
+      {mediaNameConflict ? (
+        <Alert variant="warning" className="mb-4">
+          <AlertTitle>Name already in use</AlertTitle>
+          <AlertDescription>{mediaNameConflict}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className={`space-y-6 ${isSaving ? 'pointer-events-none opacity-70' : ''}`}>
+        {!batch && (
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-2">Name</label>
+          <input
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
+            placeholder=""
+            value={lessonName}
+            onChange={(e) => {
+              setLessonName(e.target.value);
+              setMediaNameConflict(null);
+              setFormUploadError(null);
+            }}
+            autoCorrect="off"
+            autoCapitalize="off"
+            disabled={isSaving}
+          />
+        </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-2">Folder</label>
+          <select
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
+            value={folderId ?? ''}
+            onChange={(e) => setFolderId(e.target.value ? e.target.value : null)}
+            disabled={isSaving}
           >
-            <X size={18} aria-hidden />
-          </Button>
+            <option value="">(Root)</option>
+            {visibleFolders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {formUploadError ? (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Cannot add this lesson</AlertTitle>
-            <AlertDescription>{formUploadError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {mediaNameConflict ? (
-          <Alert variant="warning" className="mb-4">
-            <AlertTitle>Name already in use</AlertTitle>
-            <AlertDescription>{mediaNameConflict}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <div className={`space-y-6 ${isSaving ? 'pointer-events-none opacity-70' : ''}`}>
-          {!batch && (
+        {batch ? (
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Name</label>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-400">Lessons ({batchReady.length})</span>
+              <Button type="button" variant="ghost" size="xs" onClick={clearBatch} disabled={isSaving}>
+                Clear
+              </Button>
+            </div>
+            <ul className="divide-y divide-gray-700/70 rounded-lg border border-gray-700 bg-gray-900">
+              {batch.map((row) => (
+                <li key={row.media.name} className={`flex items-center gap-3 px-3 py-2 ${row.error ? 'opacity-50' : ''}`}>
+                  <Music2 size={14} className="shrink-0 text-gray-500" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-100" title={row.media.name}>
+                    {row.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-gray-400">
+                    {row.error ?? (row.transcript ? (
+                      <span className="inline-flex items-center gap-1"><Check size={12} aria-hidden /> .srt</span>
+                    ) : 'No transcript')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {unmatchedTranscripts.length > 0 && (
+              <p className="mt-2 text-xs text-gray-500" title={unmatchedTranscripts.join('\n')}>
+                {unmatchedTranscripts.length} .srt without matching media
+              </p>
+            )}
+          </div>
+        ) : (
+        <div className="bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-2xl p-6">
+          <div
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setMediaDrag(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setMediaDrag(false);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={handleMediaDrop}
+            className={`text-center pb-6 border-b border-gray-700 mb-4 relative rounded-xl transition-colors ${mediaDrag ? 'bg-gray-800/60 border border-dashed border-gray-500' : ''}`}
+          >
+            <div className="flex justify-center mb-3 text-gray-300">
+              <Music2 size={40} />
+            </div>
+            <p className="text-lg font-medium text-white mb-1">Upload audio or video</p>
+            <p className="text-sm text-gray-400 mb-2">MP3, WAV, M4A, MP4, WebM - click or drop here</p>
+            <p className="text-xs text-gray-500 mb-4">
+              Up to 200MB. Big video? Use audio-only (MP3).
+            </p>
             <input
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
-              placeholder=""
-              value={lessonName}
-              onChange={(e) => {
-                setLessonName(e.target.value);
-                setMediaNameConflict(null);
-                setFormUploadError(null);
-              }}
-              autoCorrect="off"
-              autoCapitalize="off"
+              type="file"
+              multiple
+              accept="audio/*,video/mp4,video/webm,.mp4,.webm,.srt"
+              onChange={handleMediaUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              disabled={isSaving}
+            />
+            {mediaFile && !mediaNameConflict && (
+              <p className="text-gray-200 font-medium relative z-10 pointer-events-none inline-flex max-w-full items-center gap-1.5">
+                <Check size={16} className="shrink-0" aria-hidden /> <span className="truncate">{mediaFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          <div
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setTranscriptDrag(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setTranscriptDrag(false);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={handleTranscriptDrop}
+            className={`flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg relative transition-colors ${transcriptDrag ? 'ring-1 ring-gray-500 bg-gray-800/60' : ''}`}
+          >
+            <FileText size={20} className="text-gray-400 shrink-0" />
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-medium text-gray-300">+ Add transcript (.srt)</p>
+              <p className="text-xs text-gray-500 mt-0.5">Drop file here or click</p>
+              {transcriptFile && (
+                <p className="text-xs text-gray-300 mt-1 inline-flex max-w-full items-center gap-1">
+                  <Check size={12} className="shrink-0" aria-hidden /> <span className="truncate">{transcriptFile.name}</span>
+                </p>
+              )}
+            </div>
+            <input
+              type="file"
+              accept=".srt"
+              onChange={handleTranscriptUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               disabled={isSaving}
             />
           </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Folder</label>
-            <select
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
-              value={folderId ?? ''}
-              onChange={(e) => setFolderId(e.target.value ? e.target.value : null)}
-              disabled={isSaving}
-            >
-              <option value="">(Root)</option>
-              {visibleFolders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {batch ? (
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-400">Lessons ({batchReady.length})</span>
-                <Button type="button" variant="ghost" size="xs" onClick={clearBatch} disabled={isSaving}>
-                  Clear
-                </Button>
-              </div>
-              <ul className="divide-y divide-gray-700/70 rounded-lg border border-gray-700 bg-gray-900">
-                {batch.map((row) => (
-                  <li key={row.media.name} className={`flex items-center gap-3 px-3 py-2 ${row.error ? 'opacity-50' : ''}`}>
-                    <Music2 size={14} className="shrink-0 text-gray-500" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate text-sm text-gray-100" title={row.media.name}>
-                      {row.name}
-                    </span>
-                    <span className="shrink-0 text-xs text-gray-400">
-                      {row.error ?? (row.transcript ? (
-                        <span className="inline-flex items-center gap-1"><Check size={12} aria-hidden /> .srt</span>
-                      ) : 'No transcript')}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {unmatchedTranscripts.length > 0 && (
-                <p className="mt-2 text-xs text-gray-500" title={unmatchedTranscripts.join('\n')}>
-                  {unmatchedTranscripts.length} .srt without matching media
-                </p>
-              )}
-            </div>
-          ) : (
-          <div className="bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-2xl p-6">
-            <div
-              onDragEnter={(e) => {
-                e.preventDefault();
-                setMediaDrag(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                if (!e.currentTarget.contains(e.relatedTarget as Node)) setMediaDrag(false);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'copy';
-              }}
-              onDrop={handleMediaDrop}
-              className={`text-center pb-6 border-b border-gray-700 mb-4 relative rounded-xl transition-colors ${mediaDrag ? 'bg-gray-800/60 border border-dashed border-gray-500' : ''}`}
-            >
-              <div className="flex justify-center mb-3 text-gray-300">
-                <Music2 size={40} />
-              </div>
-              <p className="text-lg font-medium text-white mb-1">Upload audio or video</p>
-              <p className="text-sm text-gray-400 mb-2">MP3, WAV, M4A, MP4, WebM - click or drop here</p>
-              <p className="text-xs text-gray-500 mb-4">
-                Up to 200MB. Big video? Use audio-only (MP3).
-              </p>
-              <input
-                type="file"
-                multiple
-                accept="audio/*,video/mp4,video/webm,.mp4,.webm,.srt"
-                onChange={handleMediaUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                disabled={isSaving}
-              />
-              {mediaFile && !mediaNameConflict && (
-                <p className="text-gray-200 font-medium relative z-10 pointer-events-none inline-flex max-w-full items-center gap-1.5">
-                  <Check size={16} className="shrink-0" aria-hidden /> <span className="truncate">{mediaFile.name}</span>
-                </p>
-              )}
-            </div>
-
-            <div
-              onDragEnter={(e) => {
-                e.preventDefault();
-                setTranscriptDrag(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                if (!e.currentTarget.contains(e.relatedTarget as Node)) setTranscriptDrag(false);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'copy';
-              }}
-              onDrop={handleTranscriptDrop}
-              className={`flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg relative transition-colors ${transcriptDrag ? 'ring-1 ring-gray-500 bg-gray-800/60' : ''}`}
-            >
-              <FileText size={20} className="text-gray-400 shrink-0" />
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium text-gray-300">+ Add transcript (.srt)</p>
-                <p className="text-xs text-gray-500 mt-0.5">Drop file here or click</p>
-                {transcriptFile && (
-                  <p className="text-xs text-gray-300 mt-1 inline-flex max-w-full items-center gap-1">
-                    <Check size={12} className="shrink-0" aria-hidden /> <span className="truncate">{transcriptFile.name}</span>
-                  </p>
-                )}
-              </div>
-              <input
-                type="file"
-                accept=".srt"
-                onChange={handleTranscriptUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-          )}
-
-          <Button
-            type="button"
-            variant="default"
-            className="h-auto w-full justify-center gap-2 rounded-xl py-4 text-lg font-bold"
-            disabled={(batch ? batchReady.length === 0 : !mediaFile || !lessonName) || isSaving}
-            onClick={() => void (batch ? handleSubmitBatch() : handleSubmit())}
-          >
-            {isSaving ? (
-              <>
-                <span className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
-                {batchProgress
-                  ? `Uploading ${batchProgress.index + 1}/${batchProgress.total}… ${batchProgress.percent}%`
-                  : uploadPercent !== null && uploadPercent < 100
-                    ? `Uploading… ${uploadPercent}%`
-                    : 'Saving…'}
-              </>
-            ) : batch ? (
-              `Create ${batchReady.length} ${batchReady.length === 1 ? 'lesson' : 'lessons'}`
-            ) : (
-              'Create'
-            )}
-          </Button>
-          {isSaving && uploadPercent !== null && (
-            <div
-              className="h-1.5 w-full overflow-hidden rounded-full bg-gray-700"
-              role="progressbar"
-              aria-label="Upload progress"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={uploadPercent}
-            >
-              <div className="h-full rounded-full bg-gray-200 transition-[width] duration-200" style={{ width: `${uploadPercent}%` }} />
-            </div>
-          )}
         </div>
+        )}
+
+        <Button
+          type="button"
+          variant="default"
+          className="h-auto w-full justify-center gap-2 rounded-xl py-4 text-lg font-bold"
+          disabled={(batch ? batchReady.length === 0 : !mediaFile || !lessonName) || isSaving}
+          onClick={() => void (batch ? handleSubmitBatch() : handleSubmit())}
+        >
+          {isSaving ? (
+            <>
+              <span className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-current" aria-hidden />
+              {batchProgress
+                ? `Uploading ${batchProgress.index + 1}/${batchProgress.total}… ${batchProgress.percent}%`
+                : uploadPercent !== null && uploadPercent < 100
+                  ? `Uploading… ${uploadPercent}%`
+                  : 'Saving…'}
+            </>
+          ) : batch ? (
+            `Create ${batchReady.length} ${batchReady.length === 1 ? 'lesson' : 'lessons'}`
+          ) : (
+            'Create'
+          )}
+        </Button>
+        {isSaving && uploadPercent !== null && (
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-gray-700"
+            role="progressbar"
+            aria-label="Upload progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={uploadPercent}
+          >
+            <div className="h-full rounded-full bg-gray-200 transition-[width] duration-200" style={{ width: `${uploadPercent}%` }} />
+          </div>
+        )}
       </div>
-    </div>
+    </ModalShell>
   );
 }
