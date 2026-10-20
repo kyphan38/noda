@@ -187,7 +187,7 @@ export function normalizeShadowingAnalysis(raw: unknown, sourceText: string): No
   const spelled = chunks.flatMap((c) => c.tokens.map((t) => letters(t.w))).filter(Boolean).join(" ");
   const expected = sourceText.split(/\s+/).map(letters).filter(Boolean).join(" ");
   if (spelled !== expected) {
-    throw new ShadowingShapeError(`Tokens do not spell the transcript. Got "${spelled}".`);
+    throw new ShadowingShapeError(`Tokens do not spell the transcript. Got "${spelled}", expected "${expected}".`);
   }
 
   return { chunks, notes: normalizeNotes((raw as { notes?: unknown }).notes) };

@@ -3,6 +3,9 @@
 import { httpsCallable } from 'firebase/functions';
 import { getFirebaseFunctions } from '@/lib/auth/firebase-client';
 import { SHADOWING_ANALYSIS_FUNCTION_NAME } from '@/constants';
+
+/** Keep above `timeoutSeconds` in functions/src/analyzeShadowingPattern.ts. */
+const SHADOWING_ANALYSIS_CLIENT_TIMEOUT_MS = 190_000;
 import type { ShadowingPatternDoc } from '@/types';
 
 interface RequestShadowingAnalysisPayload {
@@ -43,7 +46,11 @@ export async function requestShadowingAnalysis(
 ): Promise<ShadowingAnalysisResult> {
   const callable = httpsCallable<RequestShadowingAnalysisPayload, ShadowingAnalysisResult>(
     getFirebaseFunctions(),
-    SHADOWING_ANALYSIS_FUNCTION_NAME
+    SHADOWING_ANALYSIS_FUNCTION_NAME,
+    // The SDK default is 70s, but a cache miss can run up to the function's 180s
+    // (first-time audio copy + a Gemini retry). Wait a bit longer than the server
+    // so a slow success is not reported as a timeout.
+    { timeout: SHADOWING_ANALYSIS_CLIENT_TIMEOUT_MS }
   );
   const result = await callable({ lessonId, sentenceId, startSec, endSec, mediaStoragePath, sourceText });
   return result.data;

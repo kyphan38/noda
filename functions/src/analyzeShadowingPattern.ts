@@ -183,6 +183,7 @@ export const analyzeShadowingPattern = onCall(
     secrets: ["GEMINI_API_KEY", "ALLOWED_USER_UID"],
     // Worst case is download + ffmpeg + two full Gemini attempts (2 x 55s), which needs
     // headroom over 110s or a retry gets cut off and surfaces as a generic internal error.
+    // The client waits longer than this - see lib/shadowingAnalysis.ts.
     timeoutSeconds: 180,
     memory: "512MiB",
   },
