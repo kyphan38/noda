@@ -26,12 +26,13 @@ function getGenAI(): GoogleGenAI {
 }
 
 /**
- * Model used for shadowing pattern analysis. Defaults to gemini-4-argon -
- * the one model every app in this workspace now runs on. Override with
- * GEMINI_MODEL if a spike needs a different one.
+ * Model used for shadowing pattern analysis. Stays on gemini-3.8-flash: on
+ * real clips gemini-4-argon often ignored the audio and the transcript and
+ * returned a made-up line ("the quick brown fox"), so no analysis passed the
+ * shape check. Override with GEMINI_MODEL if a spike needs a different one.
  */
 export function getShadowingModelId(): string {
-  return process.env.GEMINI_MODEL?.trim() || "gemini-4-argon";
+  return process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
 }
 
 /**
