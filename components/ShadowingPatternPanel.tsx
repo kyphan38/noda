@@ -219,35 +219,32 @@ export function ShadowingPatternPanel({
       <div key="ready" onClick={stop} className="fade-in flex h-full min-h-0 flex-col gap-2">
         {Header}
 
-        {/* One scroll area for the line and its notes. The panel can be as short as the
-            transcript box, and a pinned line left the notes a strip too thin to read.
-            No scrollbar: the bottom fade says "more below", and the extra bottom
-            padding lets the last note scroll clear of it. */}
-        <div className="scroll-none flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1 pb-5 [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
-          <div className="text-[15px] leading-[1.9]">
-            {analysis.chunks.map((chunk, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <span className="mx-1.5 text-gray-600">|</span>}
-                <Chunk chunk={chunk} />
-              </React.Fragment>
+        {/* Pinned: the line stays put while the notes below it scroll. */}
+        <div className="shrink-0 px-1 text-[17px] leading-loose">
+          {analysis.chunks.map((chunk, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="mx-1.5 text-gray-600">|</span>}
+              <Chunk chunk={chunk} />
+            </React.Fragment>
+          ))}
+        </div>
+
+        {analysis.notes.length > 0 && (
+          // No scrollbar: the list is short. The bottom fade says "more below" instead, and the
+          // extra bottom padding lets the last note scroll clear of the fade.
+          <div className="scroll-none flex flex-1 flex-col gap-2.5 overflow-y-auto border-t border-gray-800 px-1 pt-2.5 pb-5 [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
+            {analysis.notes.map((note, i) => (
+              <NoteRow key={i} note={note} />
             ))}
           </div>
+        )}
 
-          {analysis.notes.length > 0 && (
-            <div className="flex flex-col gap-2.5 border-t border-gray-800 pt-2.5">
-              {analysis.notes.map((note, i) => (
-                <NoteRow key={i} note={note} />
-              ))}
-            </div>
-          )}
-
-          {/* A clean read is a real result, not an empty state - say so instead of showing nothing. */}
-          {analysis.notes.length === 0 && (
-            <div className="border-t border-gray-800 pt-2 text-[13px] text-gray-500">
-              Said clearly. Nothing to note.
-            </div>
-          )}
-        </div>
+        {/* A clean read is a real result, not an empty state - say so instead of showing nothing. */}
+        {analysis.notes.length === 0 && (
+          <div className="shrink-0 border-t border-gray-800 px-1 pt-2 text-[13px] text-gray-500">
+            Said clearly. Nothing to note.
+          </div>
+        )}
       </div>
     );
   }
