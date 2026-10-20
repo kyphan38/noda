@@ -245,6 +245,14 @@ export function Player({
   ai,
 }: PlayerProps) {
   const currentTime = usePlaybackTime(clock);
+
+  // The play/pause icon pops when the state changes, not when the player first appears.
+  const [prevPlaying, setPrevPlaying] = useState(isPlaying);
+  const [toggled, setToggled] = useState(false);
+  if (isPlaying !== prevPlaying) {
+    setPrevPlaying(isPlaying);
+    setToggled(true);
+  }
   const [showSpeedPopover, setShowSpeedPopover] = useState(false);
   const [showRepeatPopover, setShowRepeatPopover] = useState(false);
 
@@ -270,10 +278,11 @@ export function Player({
           aria-label={isPlaying ? 'Pause' : 'Play'}
           title={isPlaying ? 'Pause' : 'Play'}
         >
+          {/* A key per icon, so the new one mounts and pops once. Not on first render. */}
           {isPlaying ? (
-            <Pause className="h-4 w-4 fill-current" aria-hidden />
+            <Pause key="pause" className={`h-4 w-4 fill-current${toggled ? ' pop' : ''}`} aria-hidden />
           ) : (
-            <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden />
+            <Play key="play" className={`ml-0.5 h-4 w-4 fill-current${toggled ? ' pop' : ''}`} aria-hidden />
           )}
         </button>
 

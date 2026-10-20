@@ -505,6 +505,22 @@ textarea {
   pointer-events: none;
 }
 
+/* "Lesson complete!": one thin ring spreads out from the icon and fades. */
+@keyframes ring-out {
+  from {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+.ring-out {
+  animation: ring-out 900ms ease-out 200ms both;
+  pointer-events: none;
+}
+
 /* Dictation feedback, one character at a time. The class sits on the characters just
    typed and stays until the next render, so it must not change layout: a letter fades
    in (opacity only), and a wrong one shakes. `transform` needs a box, so the shake

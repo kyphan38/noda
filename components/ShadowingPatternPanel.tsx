@@ -215,7 +215,8 @@ export function ShadowingPatternPanel({
 
   if (status === 'ready' && analysis && renderable) {
     return (
-      <div onClick={stop} className="flex h-full min-h-0 flex-col gap-2">
+      // A key of its own, so the result mounts fresh when the answer arrives and fades in once.
+      <div key="ready" onClick={stop} className="fade-in flex h-full min-h-0 flex-col gap-2">
         {Header}
 
         {/* Pinned: the line stays put while the notes below it scroll. */}

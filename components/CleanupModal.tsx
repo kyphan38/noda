@@ -30,7 +30,12 @@ export function CleanupModal({ isOpen, onKeep, onMoveToTrash }: CleanupModalProp
       panelClassName="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-sm w-full text-center"
       portal
     >
-      <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">
+      {/* The icon pops in after the panel, and one thin ring spreads out from it once. */}
+      <div
+        className="pop relative w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4"
+        style={{ animationDelay: '120ms' }}
+      >
+        <span aria-hidden className="ring-out absolute inset-0 rounded-full border border-gray-500" />
         <PartyPopper className="w-8 h-8 text-gray-200" strokeWidth={1.5} />
       </div>
       <h3 id="noda-cleanup-title" className="text-xl font-bold text-white mb-2">

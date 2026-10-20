@@ -21,7 +21,7 @@ interface ShadowingPatternDockProps {
  */
 export function ShadowingPatternDock({ isMobile, entry, sentenceText, onClose, onAnalyze }: ShadowingPatternDockProps) {
   return (
-    <div className={`overflow-hidden ${isMobile ? 'flex min-h-0 flex-col p-2.5' : 'h-full rounded-xl border border-gray-800 bg-gray-900 p-2.5'}`}>
+    <div className={`rise overflow-hidden ${isMobile ? 'flex min-h-0 flex-col p-2.5' : 'h-full rounded-xl border border-gray-800 bg-gray-900 p-2.5'}`}>
       <ShadowingPatternPanel
         status={entry.status}
         analysis={entry.analysis}

@@ -83,3 +83,12 @@ and transition off under `prefers-reduced-motion`.
 - A line finished while on screen fades its full text in, and its done icon
   pops (`justDone` in `TranscriptSentence`). Lessons that open with done
   lines show them still.
+- Progress bars in the sidebar and welcome list are `scaleX` and fill over
+  600ms when a sentence is finished; they start at their value, so a list
+  that loads does not animate. The "lesson complete" check pops only when the
+  lesson completes while on screen.
+- "Lesson complete!" modal: the icon pops after the panel, one thin ring
+  spreads out from it (`ring-out`) once.
+- Play/Pause: the new icon pops when the state changes, not on first render.
+- The shadowing-pattern dock `rise`s when it opens (once per sentence), and
+  the analysis result fades in when it arrives.
