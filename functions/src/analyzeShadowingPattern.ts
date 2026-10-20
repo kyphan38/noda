@@ -137,6 +137,31 @@ async function callGeminiWithRetry(sourceText: string, base64ClipAudio: string):
   }
 }
 
+/** sliceAudioClip writes mono 16kHz 16-bit PCM WAV. */
+const WAV_BYTES_PER_SEC = 16000 * 2;
+const MIN_CLIP_SECONDS = 0.3;
+/** Real speech sits around -30 dBFS; digital silence is far below this. */
+const SILENCE_DBFS = -60;
+
+/** Length and loudness (RMS in dBFS) of a clip from sliceAudioClip. */
+function describeClip(wav: Buffer): { bytes: number; seconds: number; dbfs: number } {
+  // ffmpeg adds a LIST chunk, so find the PCM by its "data" chunk, not a fixed offset.
+  const dataAt = wav.indexOf("data", 12, "ascii");
+  const start = dataAt >= 0 ? dataAt + 8 : wav.length;
+  const samples = Math.max(0, Math.floor((wav.length - start) / 2));
+  let sumSquares = 0;
+  for (let i = 0; i < samples; i++) {
+    const v = wav.readInt16LE(start + i * 2) / 32768;
+    sumSquares += v * v;
+  }
+  const rms = samples > 0 ? Math.sqrt(sumSquares / samples) : 0;
+  return {
+    bytes: wav.length,
+    seconds: Math.round((samples * 2 * 100) / WAV_BYTES_PER_SEC) / 100,
+    dbfs: rms > 0 ? Math.round(20 * Math.log10(rms) * 10) / 10 : -Infinity,
+  };
+}
+
 interface AnalyzeShadowingPatternRequest {
   lessonId: string;
   sentenceId: number;
@@ -237,7 +262,15 @@ export const analyzeShadowingPattern = onCall(
 
       clipPath = await sliceAudioClip(audioPath, startSec, endSec);
 
-      const base64ClipAudio = readFileSync(clipPath).toString("base64");
+      const clipBuffer = readFileSync(clipPath);
+      const clip = describeClip(clipBuffer);
+      console.info("Shadowing clip", { lessonId, sentenceId, startSec, endSec, ...clip });
+      // An empty or silent clip makes Gemini invent a sentence that never matches the
+      // transcript, so both attempts fail slowly. Stop here with a clear message instead.
+      if (clip.seconds < MIN_CLIP_SECONDS || clip.dbfs < SILENCE_DBFS) {
+        throw new HttpsError("failed-precondition", "No audio found for this sentence.");
+      }
+      const base64ClipAudio = clipBuffer.toString("base64");
 
       const analysis = await callGeminiWithRetry(sourceText, base64ClipAudio);
 
