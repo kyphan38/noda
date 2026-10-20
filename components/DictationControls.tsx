@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
@@ -14,6 +14,8 @@ interface DictationControlsProps {
   onDictationKeyDown: (e: React.KeyboardEvent<DictationKeyTarget>, sentence: Sentence) => void;
   onDictationRetry?: (sentence: Sentence) => void;
   isMobile?: boolean;
+  /** The line was finished a moment ago by the learner: its full text fades in. */
+  justDone?: boolean;
 }
 
 export function DictationControls({
@@ -25,9 +27,20 @@ export function DictationControls({
   onDictationKeyDown,
   onDictationRetry,
   isMobile = false,
+  justDone = false,
 }: DictationControlsProps) {
   const targetNorm = useMemo(() => normalizeDictationTarget(sentence.text), [sentence.text]);
   const inputNorm = alignDictationInput(dictationInput, targetNorm);
+
+  // Only characters added since the last render animate (typing forward, a hint, a paste).
+  // Backspace and opening a half-typed line change nothing, so nothing moves. CSS does the
+  // work; there is no timer and no extra state per key.
+  const prevLen = useRef(inputNorm.length);
+  const fromIdx = prevLen.current;
+  useEffect(() => {
+    prevLen.current = inputNorm.length;
+  }, [inputNorm.length]);
+  const isFresh = (i: number) => isActive && i >= fromIdx && i < inputNorm.length;
 
   const hiddenRef = useRef<HTMLTextAreaElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
@@ -80,7 +93,7 @@ export function DictationControls({
       <div className="flex flex-col">
         {/* The mobile "next sentence" button lives in the row's action column (TranscriptSentence),
             in line with the rewrite and status icons. */}
-        <div data-dictation-done className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 whitespace-pre-wrap break-words text-gray-100">
+        <div data-dictation-done className={`${justDone ? 'fade-in ' : ''}font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 whitespace-pre-wrap break-words text-gray-100`}>
           {targetNorm}
         </div>
         {isActive && (
@@ -129,15 +142,30 @@ export function DictationControls({
                   {isActive && i === inputNorm.length && (
                     <span
                       aria-hidden
-                      className="border-l border-gray-100 animate-pulse"
+                      data-caret
+                      className="dictation-caret border-l border-gray-100"
                     />
                   )}
+                  {/* A key per state: when a star becomes a letter React mounts a new span,
+                      so its animation runs once. */}
                   {typed === undefined ? (
-                    <span data-char="empty" className="text-gray-500">{'*'}</span>
+                    <span key={`${i}-empty`} data-char="empty" className="text-gray-500">{'*'}</span>
                   ) : typed === ch ? (
-                    <span data-char="correct" className="text-gray-100">{ch}</span>
+                    <span
+                      key={`${i}-ok`}
+                      data-char="correct"
+                      className={`text-gray-100${isFresh(i) ? ' char-in' : ''}`}
+                    >
+                      {ch}
+                    </span>
                   ) : (
-                    <span data-char="wrong" className="text-gray-500 line-through">{typed}</span>
+                    <span
+                      key={`${i}-bad`}
+                      data-char="wrong"
+                      className={`text-gray-500 line-through${isFresh(i) ? ' char-wrong' : ''}`}
+                    >
+                      {typed}
+                    </span>
                   )}
                 </React.Fragment>
               );
@@ -154,15 +182,22 @@ export function DictationControls({
                   {isActive && spaceIdx === inputNorm.length && (
                     <span
                       aria-hidden
-                      className="border-l border-gray-100 animate-pulse"
+                      data-caret
+                      className="dictation-caret border-l border-gray-100"
                     />
                   )}
                   {spaceTyped === undefined ? (
-                    <span data-char="empty" className="text-gray-500">{' '}</span>
+                    <span key="empty" data-char="empty" className="text-gray-500">{' '}</span>
                   ) : spaceTyped === ' ' ? (
-                    <span data-char="correct" className="text-gray-100">{' '}</span>
+                    <span key="ok" data-char="correct" className="text-gray-100">{' '}</span>
                   ) : (
-                    <span data-char="wrong" className="rounded-sm bg-gray-700 text-gray-500">{'\u00a0'}</span>
+                    <span
+                      key="bad"
+                      data-char="wrong"
+                      className={`rounded-sm bg-gray-700 text-gray-500${isFresh(spaceIdx) ? ' char-wrong' : ''}`}
+                    >
+                      {'\u00a0'}
+                    </span>
                   )}
                 </React.Fragment>
               );
@@ -180,7 +215,8 @@ export function DictationControls({
         {isActive && inputNorm.length >= targetNorm.length && targetNorm.length > 0 && (
           <span
             aria-hidden
-            className="border-l border-gray-100 animate-pulse"
+            data-caret
+            className="dictation-caret border-l border-gray-100"
           />
         )}
       </div>

@@ -505,6 +505,43 @@ textarea {
   pointer-events: none;
 }
 
+/* Dictation feedback, one character at a time. The class sits on the characters just
+   typed and stays until the next render, so it must not change layout: a letter fades
+   in (opacity only), and a wrong one shakes. `transform` needs a box, so the shake
+   switches the span to inline-block only while it runs, then it is inline again and
+   lines up with its neighbours. */
+@keyframes char-in {
+  from {
+    opacity: 0.3;
+  }
+}
+.char-in {
+  animation: char-in 120ms ease-out both;
+}
+@keyframes char-wrong {
+  0%,
+  100% {
+    display: inline-block;
+    transform: translateX(0);
+  }
+  30% {
+    display: inline-block;
+    transform: translateX(-2px);
+  }
+  70% {
+    display: inline-block;
+    transform: translateX(2px);
+  }
+}
+.char-wrong {
+  animation: char-wrong 160ms ease-out;
+}
+/* Steady while typing. Each key puts the caret in a new element, which restarts
+   the 1.2s delay, so it only breathes once typing stops. */
+.dictation-caret {
+  animation: breathe 3.2s ease-in-out 1.2s infinite;
+}
+
 /* Keep last: the system "reduce motion" setting turns all of it off. */
 @media (prefers-reduced-motion: reduce) {
   html {

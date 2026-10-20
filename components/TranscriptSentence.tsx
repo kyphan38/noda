@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, RotateCcw, CornerDownLeft } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
 import { DictationControls } from './DictationControls';
@@ -46,6 +46,16 @@ export function TranscriptSentence({
   touchControls = false,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
+
+  // "Just finished" = this line turned done while it is on screen. A lesson that opens with
+  // done lines remounts the rows (page.tsx keys the view by lesson and mode), so those start
+  // false and nothing pops.
+  const [prevDone, setPrevDone] = useState(isCompleted);
+  const [justDone, setJustDone] = useState(false);
+  if (isCompleted !== prevDone) {
+    setPrevDone(isCompleted);
+    setJustDone(isCompleted);
+  }
 
   // Touch "next line" button - only where there is no Enter key to press. Dictation: phones,
   // once the line is typed correctly (the keyboard's Go key also works). Shadowing: phones and
@@ -104,6 +114,7 @@ export function TranscriptSentence({
             onDictationKeyDown={onDictationKeyDown}
             onDictationRetry={onDictationRetry}
             isMobile={isMobile}
+            justDone={justDone}
           />
         ) : (
           // Same size and weight whether active or not: the line must wrap the same way in both
@@ -170,14 +181,14 @@ export function TranscriptSentence({
           {!isActive && appMode === 'shadowing' && isCompleted && (
             <CheckCircle2
               data-shadowing-done-icon
-              className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400"
+              className={`h-4 w-4 sm:h-5 sm:w-5 text-gray-400${justDone ? ' pop' : ''}`}
               aria-label="Shadowed"
             />
           )}
           {!isActive && appMode !== 'shadowing' && isPast && (
             <CheckCircle2
               data-dictation-status-icon
-              className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600"
+              className={`h-4 w-4 sm:h-5 sm:w-5 text-gray-600${justDone ? ' pop' : ''}`}
               aria-hidden
             />
           )}

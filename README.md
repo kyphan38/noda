@@ -73,3 +73,13 @@ and transition off under `prefers-reduced-motion`.
 - Mobile sidebar: swipe left to close (`useDrawerSwipe`, touch and pen only,
   axis locks after 8px so the lesson list still scrolls). The close button
   and the dim layer still work.
+- Dictation feedback is CSS only, no timer and no state per key. Only the
+  characters added since the last render animate (`prevLen` in
+  `DictationControls`): a right letter fades in (`char-in`, opacity only), a
+  wrong one shakes once (`char-wrong`). Backspace and opening a half-typed
+  line animate nothing. Each state has its own React `key`, so the span is
+  new when a star becomes a letter. The caret is steady while typing and
+  breathes after 1.2s without a key (`.dictation-caret`, `[data-caret]`).
+- A line finished while on screen fades its full text in, and its done icon
+  pops (`justDone` in `TranscriptSentence`). Lessons that open with done
+  lines show them still.
