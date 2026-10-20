@@ -220,7 +220,7 @@ export function ShadowingPatternPanel({
         {Header}
 
         {/* Pinned: the line stays put while the notes below it scroll. */}
-        <div className="shrink-0 px-1 text-[17px] leading-loose">
+        <div className="shrink-0 px-1 text-[15px] leading-[1.9]">
           {analysis.chunks.map((chunk, i) => (
             <React.Fragment key={i}>
               {i > 0 && <span className="mx-1.5 text-gray-600">|</span>}
