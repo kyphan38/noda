@@ -22,7 +22,7 @@ export async function run(page: Page, report: ReportEntry[]) {
   await check(report, '3d. Completed row shows green target text', async () => {
     return page.evaluate((i: number) => {
       const row = document.querySelector(`[data-index="${i}"]`);
-      const greenDiv = row?.querySelector('.text-green-400');
+      const greenDiv = row?.querySelector('[data-dictation-done]');
       return greenDiv !== null && (greenDiv?.textContent?.length ?? 0) > 0;
     }, 1);
   });
@@ -48,7 +48,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.press('Enter');
     await sleep(200);
     return page.evaluate((i: number) =>
-      document.querySelector(`[data-index="${i}"]`)?.className.includes('emerald') ?? false, 2);
+      document.querySelector(`[data-index="${i}"]`)?.hasAttribute('data-active') ?? false, 2);
   }, 8_000);
 
   await check(report, '3f. Completion via corrections triggers', async () => {

@@ -5,7 +5,7 @@
 import { Page } from '@playwright/test';
 import {
   ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
-  activateClean, typeAnswer, countSpans, countStars, isRowCompleted, pressEnter,
+  activateClean, typeAnswer, countChars, countStars, isRowCompleted, pressEnter,
 } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
@@ -27,8 +27,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('t', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     return green === 1 && red === 0;
   });
 
@@ -37,7 +37,7 @@ export async function run(page: Page, report: ReportEntry[]) {
   await check(report, '2b. Wrong char shows red', async () => {
     const ta = page.locator('[data-dictation-input]');
     await ta.pressSequentially('z', { delay: CHAR_DELAY_MS });
-    const red = await countSpans(page, idx, 'text-red-500');
+    const red = await countChars(page, idx, 'wrong');
     return red === 1;
   });
 
@@ -49,7 +49,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     return page.evaluate((i: number) => {
       const row = document.querySelector(`[data-index="${i}"]`);
       if (!row) return false;
-      const cursor = row.querySelector('.animate-pulse');
+      const cursor = row.querySelector('.animate-pulse, [data-caret]');
       if (!cursor) return false;
       const spans = row.querySelectorAll('span');
       const cursorIdx = [...spans].indexOf(cursor as HTMLSpanElement);
@@ -63,7 +63,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     const ta = page.locator('[data-dictation-input]');
     // Type "thec" - letters map to "the c" (auto-space at position 3)
     await ta.pressSequentially('thec', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
+    const green = await countChars(page, idx, 'correct');
     return green === 5; // t,h,e,(space),c
   });
 
@@ -75,8 +75,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('the.', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     return green === 3 && red === 0;
   });
 
@@ -88,8 +88,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('THECAT', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     return green === 7 && red === 0; // "the cat" with auto-space
   });
 
@@ -101,8 +101,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('the  cat', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     return green === 7 && red === 0; // spaces stripped, letters aligned
   });
 
@@ -111,8 +111,8 @@ export async function run(page: Page, report: ReportEntry[]) {
   await check(report, '2i. Full correct answer shows all green', async () => {
     await activateClean(page, idx);
     await typeAnswer(page, target);
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     const stars = await countStars(page, idx);
     if (green === 0 && red === 0 && stars === 0) {
       return await isRowCompleted(page, idx);

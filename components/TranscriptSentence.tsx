@@ -72,6 +72,7 @@ export function TranscriptSentence({
   return (
     <div
       data-index={index}
+      data-active={isActive || undefined}
       onClick={() => onSentenceClick(sentence)}
       className={`
         group flex cursor-pointer items-baseline gap-2 sm:gap-4 rounded-xl px-2 sm:px-3 py-2.5 sm:py-3 mb-1.5 transition duration-200

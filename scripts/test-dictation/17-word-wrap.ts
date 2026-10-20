@@ -65,8 +65,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     const aligned = await page.evaluate((i: number) => {
       const row = document.querySelector(`[data-index="${i}"]`);
       if (!row) return false;
-      const greenSpans = row.querySelectorAll('span.text-emerald-500');
-      const redSpans = row.querySelectorAll('span.text-red-500');
+      const greenSpans = row.querySelectorAll('[data-char="correct"]');
+      const redSpans = row.querySelectorAll('[data-char="wrong"]');
       if (greenSpans.length === 0 || redSpans.length === 0) return false;
 
       // Collect bounding-rect tops for first-line green and red chars

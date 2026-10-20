@@ -10,7 +10,7 @@
 import { Page } from '@playwright/test';
 import {
   ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
-  activateClean, completeTyping, pressEnter, countSpans, countStars,
+  activateClean, completeTyping, pressEnter, countChars, countStars,
   isRowCompleted, dismissModal,
 } from './helpers.js';
 
@@ -36,9 +36,9 @@ export async function run(page: Page, report: ReportEntry[]) {
       if (!row) return false;
       const spans = row.querySelectorAll('span');
       // Count green spans: t, h, e, space = 4
-      const green = row.querySelectorAll('span.text-emerald-500');
+      const green = row.querySelectorAll('[data-char="correct"]');
       // The cursor (animate-pulse) should be AFTER the space position
-      const cursor = row.querySelector('.animate-pulse');
+      const cursor = row.querySelector('.animate-pulse, [data-caret]');
       if (!cursor) return false;
       // 4 green spans means cursor is at position 4, past the space
       return green.length === 4;
@@ -52,16 +52,14 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('the ', { delay: CHAR_DELAY_MS });
-    // The space position (index 3) should be emerald green
+    // The space position (index 3) should count as correct
     return page.evaluate((i: number) => {
       const row = document.querySelector(`[data-index="${i}"]`);
       if (!row) return false;
       const feedback = row.querySelector('[aria-hidden]');
       if (!feedback) return false;
       const spans = feedback.querySelectorAll(':scope > span, :scope > :not(span) > span');
-      // Position 3 is the space - check it's green, not gray
-      const allGreen = feedback.querySelectorAll('span.text-emerald-500');
-      const allGray = feedback.querySelectorAll('span.text-gray-500');
+      const allGreen = feedback.querySelectorAll('[data-char="correct"]');
       // We should have 4 green (t, h, e, space) and the rest gray
       return allGreen.length === 4;
     }, idx);
@@ -75,7 +73,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.focus();
     // Type "thec" - no space, but display should show "the c" with auto-space
     await ta.pressSequentially('thec', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
+    const green = await countChars(page, idx, 'correct');
     // Should be 5 green: t, h, e, (auto-space), c
     return green === 5;
   });
@@ -87,8 +85,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('the c', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     return green === 5 && red === 0;
   });
 
@@ -99,8 +97,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('the cat sat', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     // "the cat sat" = 11 chars (9 letters + 2 spaces)
     return green === 11 && red === 0;
   }, 10_000);
@@ -138,11 +136,11 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.focus();
     // Type "thec" → displays "the c" (5 green)
     await ta.pressSequentially('thec', { delay: CHAR_DELAY_MS });
-    const greenBefore = await countSpans(page, idx, 'text-emerald-500');
+    const greenBefore = await countChars(page, idx, 'correct');
     // Backspace removes 'c'; auto-inserted boundary space stays → "the " (4 green)
     await ta.press('Backspace');
     await sleep(150);
-    const greenAfter = await countSpans(page, idx, 'text-emerald-500');
+    const greenAfter = await countChars(page, idx, 'correct');
     return greenBefore === 5 && greenAfter === 4;
   });
 
@@ -154,11 +152,11 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.focus();
     // Type "the " (with space) → 4 green
     await ta.pressSequentially('the ', { delay: CHAR_DELAY_MS });
-    const greenBefore = await countSpans(page, idx, 'text-emerald-500');
+    const greenBefore = await countChars(page, idx, 'correct');
     // Backspace → back to "the" (3 green)
     await ta.press('Backspace');
     await sleep(100);
-    const greenAfter = await countSpans(page, idx, 'text-emerald-500');
+    const greenAfter = await countChars(page, idx, 'correct');
     return greenBefore === 4 && greenAfter === 3;
   });
 
@@ -172,7 +170,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.pressSequentially('the', { delay: CHAR_DELAY_MS });
     await ta.press('Tab');
     await sleep(150);
-    const green = await countSpans(page, idx, 'text-emerald-500');
+    const green = await countChars(page, idx, 'correct');
     return green === 5;
   });
 
@@ -189,10 +187,10 @@ export async function run(page: Page, report: ReportEntry[]) {
       if (!row) return false;
       const feedback = row.querySelector('[aria-hidden]');
       if (!feedback) return false;
-      const grayStars = [...feedback.querySelectorAll('span.text-gray-500')].filter(
+      const grayStars = [...feedback.querySelectorAll('[data-char="empty"]')].filter(
         (s) => s.textContent === '*',
       );
-      const green = feedback.querySelectorAll('span.text-emerald-500');
+      const green = feedback.querySelectorAll('[data-char="correct"]');
       // 7 green (t,h,e,space,c,a,t) and remaining gray (not in typed region)
       return green.length === 7 && grayStars.length > 0;
     }, idx);
@@ -206,8 +204,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.focus();
     // Type "thx" → t(green) h(green) x(red at 'e' position)
     await ta.pressSequentially('thx', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     return green === 2 && red === 1;
   });
 

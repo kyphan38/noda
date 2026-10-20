@@ -10,7 +10,7 @@ import {
   ReportEntry, check, sleep, APP_URL, LESSON_SENTENCES, CHAR_DELAY_MS,
   SENTENCE_STARTS, SENTENCE_ENDS,
   seedLesson, seekToSentence, waitForActive, pauseAudio, pressEnter,
-  isRowCompleted, countSpans, countStars, getAudioTime, dismissModal,
+  isRowCompleted, countChars, countStars, getAudioTime, dismissModal,
   clearInput, activateClean, completeTyping,
 } from './helpers.js';
 
@@ -62,7 +62,7 @@ export async function run(_desktopPage: Page, report: ReportEntry[]) {
     const input = page.locator('[data-dictation-input]');
     await input.focus();
     await input.pressSequentially('the cat', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, 0, 'text-emerald-500');
+    const green = await countChars(page, 0, 'correct');
     return green === 7;
   }, 10_000);
 
@@ -72,11 +72,11 @@ export async function run(_desktopPage: Page, report: ReportEntry[]) {
     const input = page.locator('[data-dictation-input]');
     await input.focus();
     await input.pressSequentially('the', { delay: CHAR_DELAY_MS });
-    const greenBefore = await countSpans(page, 0, 'text-emerald-500');
+    const greenBefore = await countChars(page, 0, 'correct');
     const hintBtn = page.locator('[data-dictation-hint]');
     await hintBtn.click();
     await sleep(200);
-    const greenAfter = await countSpans(page, 0, 'text-emerald-500');
+    const greenAfter = await countChars(page, 0, 'correct');
     return greenAfter > greenBefore;
   }, 10_000);
 
@@ -136,10 +136,10 @@ export async function run(_desktopPage: Page, report: ReportEntry[]) {
     const input = page.locator('[data-dictation-input]');
     await input.focus();
     await input.pressSequentially('a do', { delay: CHAR_DELAY_MS });
-    const greenBefore = await countSpans(page, 1, 'text-emerald-500');
+    const greenBefore = await countChars(page, 1, 'correct');
     await input.press('Backspace');
     await sleep(100);
-    const greenAfter = await countSpans(page, 1, 'text-emerald-500');
+    const greenAfter = await countChars(page, 1, 'correct');
     return greenBefore === 4 && greenAfter === 3;
   });
 

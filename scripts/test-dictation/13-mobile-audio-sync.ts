@@ -86,7 +86,7 @@ export async function run(_desktopPage: Page, report: ReportEntry[]) {
         for (let i = 0; i < starts.length; i++) {
           if (t >= starts[i] - 0.3 && t < ends[i] + 0.1) {
             const row = document.querySelector(`[data-index="${i}"]`);
-            return row?.className.includes('emerald') ?? false;
+            return row?.hasAttribute('data-active') ?? false;
           }
         }
         return false;

@@ -5,7 +5,7 @@
 import { Page } from '@playwright/test';
 import {
   ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
-  activateClean, completeTyping, pressEnter, countSpans, countStars,
+  activateClean, completeTyping, pressEnter, countChars, countStars,
 } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
@@ -29,10 +29,10 @@ export async function run(page: Page, report: ReportEntry[]) {
   await check(report, '4a. Backspace removes last visible char', async () => {
     const ta = page.locator('[data-dictation-input]');
     await ta.pressSequentially('bird', { delay: CHAR_DELAY_MS });
-    const greenBefore = await countSpans(page, bsIdx, 'text-emerald-500');
+    const greenBefore = await countChars(page, bsIdx, 'correct');
     await ta.press('Backspace');
     await sleep(100);
-    const greenAfter = await countSpans(page, bsIdx, 'text-emerald-500');
+    const greenAfter = await countChars(page, bsIdx, 'correct');
     return greenBefore === 4 && greenAfter === 3;
   });
 
@@ -41,10 +41,10 @@ export async function run(page: Page, report: ReportEntry[]) {
   await check(report, '4b. Backspace on wrong char removes it', async () => {
     const ta = page.locator('[data-dictation-input]');
     await ta.pressSequentially('bx', { delay: CHAR_DELAY_MS });
-    const redBefore = await countSpans(page, bsIdx, 'text-red-500');
+    const redBefore = await countChars(page, bsIdx, 'wrong');
     await ta.press('Backspace');
     await sleep(100);
-    const redAfter = await countSpans(page, bsIdx, 'text-red-500');
+    const redAfter = await countChars(page, bsIdx, 'wrong');
     return redBefore === 1 && redAfter === 0;
   });
 
@@ -61,8 +61,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     const totalChars = await page.evaluate((i: number) => {
       const row = document.querySelector(`[data-index="${i}"]`);
       if (!row) return 0;
-      const green = row.querySelectorAll('span.text-emerald-500').length;
-      const red = row.querySelectorAll('span.text-red-500').length;
+      const green = row.querySelectorAll('[data-char="correct"]').length;
+      const red = row.querySelectorAll('[data-char="wrong"]').length;
       return green + red;
     }, bsIdx);
     return totalChars === targetLen;
@@ -76,10 +76,10 @@ export async function run(page: Page, report: ReportEntry[]) {
     const targetLen = LESSON_SENTENCES[bsIdx].length;
     const prefix = LESSON_SENTENCES[bsIdx].slice(0, targetLen - 2);
     await ta.pressSequentially(prefix + 'xxx', { delay: CHAR_DELAY_MS });
-    const redBefore = await countSpans(page, bsIdx, 'text-red-500');
+    const redBefore = await countChars(page, bsIdx, 'wrong');
     await ta.press('Backspace');
     await sleep(150);
-    const redAfter = await countSpans(page, bsIdx, 'text-red-500');
+    const redAfter = await countChars(page, bsIdx, 'wrong');
     return redBefore >= 2 && redAfter < redBefore;
   }, 25_000);
 
@@ -90,10 +90,10 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('bi.r', { delay: CHAR_DELAY_MS });
-    const greenBefore = await countSpans(page, bsIdx, 'text-emerald-500');
+    const greenBefore = await countChars(page, bsIdx, 'correct');
     await ta.press('Backspace');
     await sleep(150);
-    const greenAfter = await countSpans(page, bsIdx, 'text-emerald-500');
+    const greenAfter = await countChars(page, bsIdx, 'correct');
     return greenBefore === 3 && greenAfter === 2;
   });
 
@@ -106,8 +106,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.pressSequentially('birds', { delay: CHAR_DELAY_MS });
     for (let j = 0; j < 5; j++) await ta.press('Backspace');
     await sleep(100);
-    const green = await countSpans(page, bsIdx, 'text-emerald-500');
-    const red = await countSpans(page, bsIdx, 'text-red-500');
+    const green = await countChars(page, bsIdx, 'correct');
+    const red = await countChars(page, bsIdx, 'wrong');
     const stars = await countStars(page, bsIdx);
     return green === 0 && red === 0 && stars > 0;
   });

@@ -80,7 +80,7 @@ export function DictationControls({
       <div className="flex flex-col">
         {/* The mobile "next sentence" button lives in the row's action column (TranscriptSentence),
             in line with the rewrite and status icons. */}
-        <div className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 whitespace-pre-wrap break-words text-gray-100">
+        <div data-dictation-done className="font-mono text-[15px] sm:text-base leading-normal tracking-normal min-w-0 whitespace-pre-wrap break-words text-gray-100">
           {targetNorm}
         </div>
         {isActive && (
@@ -133,11 +133,11 @@ export function DictationControls({
                     />
                   )}
                   {typed === undefined ? (
-                    <span className="text-gray-500">{'*'}</span>
+                    <span data-char="empty" className="text-gray-500">{'*'}</span>
                   ) : typed === ch ? (
-                    <span className="text-gray-100">{ch}</span>
+                    <span data-char="correct" className="text-gray-100">{ch}</span>
                   ) : (
-                    <span className="text-gray-500 line-through">{typed}</span>
+                    <span data-char="wrong" className="text-gray-500 line-through">{typed}</span>
                   )}
                 </React.Fragment>
               );
@@ -158,11 +158,11 @@ export function DictationControls({
                     />
                   )}
                   {spaceTyped === undefined ? (
-                    <span className="text-gray-500">{' '}</span>
+                    <span data-char="empty" className="text-gray-500">{' '}</span>
                   ) : spaceTyped === ' ' ? (
-                    <span className="text-gray-100">{' '}</span>
+                    <span data-char="correct" className="text-gray-100">{' '}</span>
                   ) : (
-                    <span className="rounded-sm bg-gray-700 text-gray-500">{'\u00a0'}</span>
+                    <span data-char="wrong" className="rounded-sm bg-gray-700 text-gray-500">{'\u00a0'}</span>
                   )}
                 </React.Fragment>
               );

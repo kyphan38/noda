@@ -123,6 +123,14 @@ export async function seedLesson(context: BrowserContext) {
   await context.addInitScript((data: string) => {
     localStorage.setItem('__e2e_lesson__', data);
   }, JSON.stringify(lesson));
+  // The Next.js dev badge sits bottom-left and covers the player on a phone viewport.
+  await context.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = 'nextjs-portal { display: none !important; }';
+      document.head.appendChild(style);
+    });
+  });
 }
 
 // ── Page helpers ──────────────────────────────────────────────────────────────
@@ -140,7 +148,7 @@ export async function seekToSentence(page: Page, index: number) {
 
 export async function waitForActive(page: Page, index: number, timeout = 4000) {
   await page.waitForFunction(
-    (i: number) => document.querySelector(`[data-index="${i}"]`)?.className.includes('emerald') ?? false,
+    (i: number) => document.querySelector(`[data-index="${i}"]`)?.hasAttribute('data-active') ?? false,
     index, { timeout }
   );
 }
@@ -159,10 +167,10 @@ export async function waitForAllGreen(page: Page, index: number, timeout = 5000)
     (i: number) => {
       const row = document.querySelector(`[data-index="${i}"]`);
       if (!row) return false;
-      if (row.querySelector('.text-green-400')) return true;
-      const green = row.querySelectorAll('span.text-emerald-500');
-      const red   = row.querySelectorAll('span.text-red-500');
-      const stars = [...row.querySelectorAll('span.text-gray-500')].filter(s => s.textContent === '*');
+      if (row.querySelector('[data-dictation-done]')) return true;
+      const green = row.querySelectorAll('[data-char="correct"]');
+      const red   = row.querySelectorAll('[data-char="wrong"]');
+      const stars = [...row.querySelectorAll('[data-char="empty"]')].filter(s => s.textContent === '*');
       return green.length > 0 && red.length === 0 && stars.length === 0;
     },
     index, { timeout }
@@ -173,11 +181,23 @@ export async function pressEnter(page: Page) {
   const sr = page.locator('[aria-label="Press Enter to continue"]');
   await sr.waitFor({ state: 'attached', timeout: 3000 });
   await sr.press('Enter');
+  // Let the app's own seek to the next line land. A raw seek before that is ignored by the
+  // app's seek guard (useLessonPlaybackLoop), so the next activateClean would time out.
+  await page.waitForFunction(
+    (starts: number[]) => {
+      const m = (document.querySelector('audio') ?? document.querySelector('video')) as HTMLMediaElement | null;
+      const row = document.querySelector('[data-index][data-active]') as HTMLElement | null;
+      if (!m || !row) return true;
+      return !m.seeking && m.currentTime >= starts[Number(row.dataset.index)] - 0.01;
+    },
+    SENTENCE_STARTS, { timeout: 2000 }
+  ).catch(() => {});
+  await sleep(100);
 }
 
 export async function isRowCompleted(page: Page, index: number): Promise<boolean> {
   return page.evaluate(
-    (i: number) => document.querySelector(`[data-index="${i}"]`)?.querySelector('.text-green-400') !== null,
+    (i: number) => document.querySelector(`[data-index="${i}"]`)?.querySelector('[data-dictation-done]') !== null,
     index
   );
 }
@@ -222,17 +242,18 @@ export async function getRewriteStatusCenterDeltaY(page: Page, index: number): P
   }, index);
 }
 
-export async function countSpans(page: Page, index: number, className: string): Promise<number> {
+/** Count feedback chars by state (data-char on DictationControls spans). */
+export async function countChars(page: Page, index: number, kind: 'correct' | 'wrong' | 'empty'): Promise<number> {
   return page.evaluate(
-    ([i, cls]: [number, string]) =>
-      document.querySelector(`[data-index="${i}"]`)?.querySelectorAll(`span.${cls}`).length ?? 0,
-    [index, className] as [number, string]
+    ([i, k]: [number, string]) =>
+      document.querySelector(`[data-index="${i}"]`)?.querySelectorAll(`[data-char="${k}"]`).length ?? 0,
+    [index, kind] as [number, string]
   );
 }
 
 export async function countStars(page: Page, index: number): Promise<number> {
   return page.evaluate(
-    (i: number) => [...(document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('span.text-gray-500') ?? [])]
+    (i: number) => [...(document.querySelector(`[data-index="${i}"]`)?.querySelectorAll('[data-char="empty"]') ?? [])]
       .filter(s => s.textContent === '*').length,
     index
   );

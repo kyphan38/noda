@@ -14,7 +14,7 @@ import {
   ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
   activateClean, completeTyping, pressEnter,
   seekToSentence, waitForActive, pauseAudio,
-  isRowCompleted, countSpans, countStars,
+  isRowCompleted, countChars, countStars,
   dismissModal,
 } from './helpers.js';
 
@@ -39,8 +39,8 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.waitFor({ state: 'attached', timeout: 3_000 });
     await ta.focus();
     await ta.pressSequentially('who run switzerlands trains', { delay: CHAR_DELAY_MS });
-    const green = await countSpans(page, idx, 'text-emerald-500');
-    const red = await countSpans(page, idx, 'text-red-500');
+    const green = await countChars(page, idx, 'correct');
+    const red = await countChars(page, idx, 'wrong');
     const stars = await countStars(page, idx);
     if (green === 0 && red === 0 && stars === 0) {
       return await isRowCompleted(page, idx);

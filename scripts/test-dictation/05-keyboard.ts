@@ -7,7 +7,7 @@ import {
   ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
   clickRewriteLine,
   SENTENCE_STARTS, SENTENCE_ENDS,
-  activateClean, completeTyping, pressEnter, countSpans,
+  activateClean, completeTyping, pressEnter, countChars,
   waitForActive, seekToSentence, pauseAudio, setAudioTime, isRowCompleted,
 } from './helpers.js';
 
@@ -25,7 +25,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.focus();
     await ta.press('Tab');
     await sleep(150);
-    const green = await countSpans(page, kbIdx, 'text-emerald-500');
+    const green = await countChars(page, kbIdx, 'correct');
     return green === 1;
   });
 
@@ -36,7 +36,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.pressSequentially('the', { delay: CHAR_DELAY_MS });
     await ta.press('Tab');
     await sleep(150);
-    const green = await countSpans(page, kbIdx, 'text-emerald-500');
+    const green = await countChars(page, kbIdx, 'correct');
     // Tab gives next letter 's', auto-space appears → "the s" = 5 greens
     return green === 5;
   });
@@ -48,7 +48,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.pressSequentially('tx', { delay: CHAR_DELAY_MS });
     await ta.press('Tab');
     await sleep(150);
-    const green = await countSpans(page, kbIdx, 'text-emerald-500');
+    const green = await countChars(page, kbIdx, 'correct');
     return green >= 1;
   });
 
@@ -110,7 +110,7 @@ export async function run(page: Page, report: ReportEntry[]) {
     await ta.press('Enter');
     await sleep(200);
     return page.evaluate((i: number) =>
-      document.querySelector(`[data-index="${i}"]`)?.className.includes('emerald') ?? false, kbIdx);
+      document.querySelector(`[data-index="${i}"]`)?.hasAttribute('data-active') ?? false, kbIdx);
   });
 
   await activateClean(page, kbIdx);
