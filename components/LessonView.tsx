@@ -170,6 +170,9 @@ export function LessonView({
     close: closeShadowingPanel,
     show: showShadowingSentence,
     analyze: analyzeShadowingSentence,
+    autoAnalyze: shadowingAutoAnalyze,
+    autoStopped: shadowingAutoStopped,
+    setAutoAnalyze: setShadowingAutoAnalyze,
   } = useShadowingPatternManager(lessonId, mediaStoragePath, transcript);
   const activeShadowingSentence =
     activeShadowingSentenceId != null
@@ -522,6 +525,9 @@ export function LessonView({
                   sentenceText={activeShadowingSentence?.text ?? ''}
                   onClose={closeShadowingPanel}
                   onAnalyze={onAnalyzeShadowingSentence}
+                  autoAnalyze={shadowingAutoAnalyze}
+                  autoStopped={shadowingAutoStopped}
+                  onAutoAnalyzeChange={setShadowingAutoAnalyze}
                 />
               )}
             </div>
@@ -541,6 +547,9 @@ export function LessonView({
                   sentenceText={activeShadowingSentence?.text ?? ''}
                   onClose={closeShadowingPanel}
                   onAnalyze={onAnalyzeShadowingSentence}
+                  autoAnalyze={shadowingAutoAnalyze}
+                  autoStopped={shadowingAutoStopped}
+                  onAutoAnalyzeChange={setShadowingAutoAnalyze}
                 />
               )}
             </div>

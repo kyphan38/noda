@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getShadowingAnalysisFirestore } from '@/lib/db';
 import { requestShadowingAnalysis } from '@/lib/shadowingAnalysis';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
-import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
+import { readAutoAnalyze, writeAutoAnalyze } from '@/lib/shadowingAutoAnalyze';
+import { nextSentencesToPrefetch, sentencesToAutoAnalyze } from '@/lib/shadowingPrefetch';
 import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
 import { resolveShadowingErrorMessage, type ShadowingPatternStatus } from './useShadowingPatternAnalysis';
 import type { Sentence, ShadowingPatternAnalysis } from '@/types';
@@ -16,6 +17,12 @@ export interface ShadowingEntry {
 }
 
 const IDLE_ENTRY: ShadowingEntry = { status: 'idle', analysis: null, error: null };
+
+/** Auto-analyze stops after this many failures in a row - usually the network or the
+ *  function is down, and going on would just fail (or bill) the next sentences too. */
+const AUTO_MAX_FAILURES_IN_A_ROW = 2;
+
+type PrefetchResult = 'ready' | 'failed' | 'skipped';
 
 /**
  * Shown when the analysis comes back in a shape this client cannot render, which in
@@ -41,6 +48,11 @@ export interface UseShadowingPatternManagerResult {
   show: (sentence: ShadowingSentenceRef, options: { follow: boolean }) => void;
   /** Paid Gemini analysis - only from an explicit button press. */
   analyze: (sentence: ShadowingSentenceRef) => void;
+  /** The panel's "Auto" toggle: analyze the current sentence and the next ones without asking. */
+  autoAnalyze: boolean;
+  /** True when auto-analyze gave up after failures in a row; turning it on again resets it. */
+  autoStopped: boolean;
+  setAutoAnalyze: (on: boolean) => void;
 }
 
 /**
@@ -64,6 +76,12 @@ export interface UseShadowingPatternManagerResult {
  * following ones in the background, and by the time the learner moves on they are already
  * cached. Prefetch only ever fires from a deliberate user action, never from another prefetch:
  * cascading would quietly analyze (and bill for) an entire lesson.
+ *
+ * Auto-analyze (opt-in toggle, saved per device): while the panel is open, keep a sliding
+ * window ready - the sentence the panel is on plus the next `SHADOWING_PREFETCH_COUNT`.
+ * The window is worked through one sentence at a time, in order, and it moves only with
+ * the panel, so the cost follows what is actually listened to and never runs ahead to the
+ * end of the lesson. A sentence that fails is skipped; failures in a row stop it.
  */
 export function useShadowingPatternManager(
   lessonId: string | null,
@@ -82,6 +100,31 @@ export function useShadowingPatternManager(
   /** Sentences already attempted in the background; a failed prefetch is never retried
    *  on its own, it just falls back to the normal confirm-then-generate flow. */
   const prefetchedIdsRef = useRef<Set<number>>(new Set());
+  const [autoAnalyze, setAutoAnalyzeState] = useState(false);
+  const [autoStopped, setAutoStopped] = useState(false);
+  /** Mirrors of the state the auto loop reads between awaits. */
+  const autoAnalyzeRef = useRef(false);
+  const isPanelOpenRef = useRef(false);
+  const activeSentenceIdRef = useRef<number | null>(null);
+  /** Id of the running auto loop (0 = none); a loop exits as soon as it is no longer current. */
+  const autoRunRef = useRef(0);
+  const autoRunSeqRef = useRef(0);
+  const autoFailuresRef = useRef(0);
+
+  // localStorage is read after mount so the server render and the first client render match.
+  useEffect(() => {
+    const on = readAutoAnalyze();
+    autoAnalyzeRef.current = on;
+    setAutoAnalyzeState(on);
+  }, []);
+
+  useEffect(() => {
+    isPanelOpenRef.current = isPanelOpen;
+  }, [isPanelOpen]);
+
+  useEffect(() => {
+    activeSentenceIdRef.current = activeSentenceId;
+  }, [activeSentenceId]);
 
   useEffect(() => {
     transcriptRef.current = transcript;
@@ -94,6 +137,9 @@ export function useShadowingPatternManager(
     requestsRef.current.reset();
     entriesRef.current = {};
     prefetchedIdsRef.current = new Set();
+    autoRunRef.current = 0;
+    autoFailuresRef.current = 0;
+    setAutoStopped(false);
     setEntries({});
     setActiveSentenceId(null);
     setIsPanelOpen(false);
@@ -117,15 +163,15 @@ export function useShadowingPatternManager(
    * message about it would be noise. Clicking the sentence then behaves normally.
    */
   const prefetchSentence = useCallback(
-    async (sentence: Sentence) => {
-      if (!lessonId || !mediaStoragePath) return;
+    async (sentence: Sentence): Promise<PrefetchResult> => {
+      if (!lessonId || !mediaStoragePath) return 'skipped';
       const requests = requestsRef.current;
-      if (requests.isLoading(sentence.id)) return;
-      if (entriesRef.current[sentence.id]?.status === 'ready') return;
-      if (prefetchedIdsRef.current.has(sentence.id)) return;
+      if (requests.isLoading(sentence.id)) return 'skipped';
+      if (entriesRef.current[sentence.id]?.status === 'ready') return 'skipped';
+      if (prefetchedIdsRef.current.has(sentence.id)) return 'skipped';
 
       const token = requests.begin(sentence.id);
-      if (!token) return;
+      if (!token) return 'skipped';
       prefetchedIdsRef.current.add(sentence.id);
       // A real 'loading' entry, not a hidden one: it spins that row's sparkle so the work
       // is visible, and it makes a click during the prefetch join the in-flight request
@@ -134,10 +180,10 @@ export function useShadowingPatternManager(
 
       try {
         const cached = await getShadowingAnalysisFirestore(lessonId, sentence.id);
-        if (!requests.isCurrent(token)) return;
+        if (!requests.isCurrent(token)) return 'skipped';
         if (cached && isRenderableAnalysis(cached.analysis)) {
           setEntry(sentence.id, { status: 'ready', analysis: cached.analysis, error: null });
-          return;
+          return 'ready';
         }
         const result = await requestShadowingAnalysis(
           lessonId,
@@ -147,16 +193,18 @@ export function useShadowingPatternManager(
           mediaStoragePath,
           sentence.text
         );
-        if (!requests.isCurrent(token)) return;
-        setEntry(
-          sentence.id,
-          isRenderableAnalysis(result.analysis)
-            ? { status: 'ready', analysis: result.analysis, error: null }
-            : IDLE_ENTRY
-        );
+        if (!requests.isCurrent(token)) return 'skipped';
+        if (!isRenderableAnalysis(result.analysis)) {
+          setEntry(sentence.id, IDLE_ENTRY);
+          return 'failed';
+        }
+        setEntry(sentence.id, { status: 'ready', analysis: result.analysis, error: null });
+        return 'ready';
       } catch (e) {
         console.warn('Shadowing prefetch failed (harmless):', e);
-        if (requests.isCurrent(token)) setEntry(sentence.id, IDLE_ENTRY);
+        if (!requests.isCurrent(token)) return 'skipped';
+        setEntry(sentence.id, IDLE_ENTRY);
+        return 'failed';
       } finally {
         requests.end(token);
       }
@@ -176,6 +224,63 @@ export function useShadowingPatternManager(
     },
     [lessonId, mediaStoragePath, prefetchSentence]
   );
+
+  /**
+   * Work through the auto-analyze window, one sentence at a time. Re-reads the panel's
+   * sentence after every step, so the window slides as playback moves. Only one loop runs;
+   * calling this while one is running is a no-op (the running loop sees the new state).
+   */
+  const runAuto = useCallback(async () => {
+    if (autoRunRef.current !== 0) return;
+    const runId = ++autoRunSeqRef.current;
+    autoRunRef.current = runId;
+    try {
+      while (autoRunRef.current === runId) {
+        if (!lessonId || !mediaStoragePath) return;
+        if (!autoAnalyzeRef.current || !isPanelOpenRef.current) return;
+        const activeId = activeSentenceIdRef.current;
+        if (activeId == null) return;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          setAutoStopped(true);
+          return;
+        }
+
+        const next = sentencesToAutoAnalyze(transcriptRef.current, activeId).find((s) => {
+          if (prefetchedIdsRef.current.has(s.id)) return false; // tried already (a failure is skipped)
+          if (requestsRef.current.isLoading(s.id)) return false;
+          const status = entriesRef.current[s.id]?.status;
+          // 'error' is a failed manual analyze: the panel shows Retry, leave it to the user.
+          return status !== 'ready' && status !== 'error';
+        });
+        if (!next) return; // window is full; a new active sentence starts the loop again
+
+        const result = await prefetchSentence(next);
+        if (result === 'ready') autoFailuresRef.current = 0;
+        if (result === 'failed') {
+          autoFailuresRef.current += 1;
+          if (autoFailuresRef.current >= AUTO_MAX_FAILURES_IN_A_ROW) {
+            setAutoStopped(true);
+            return;
+          }
+        }
+        // 'skipped' moves on too: the sentence is now tried or loading, so `find` passes it.
+      }
+    } finally {
+      if (autoRunRef.current === runId) autoRunRef.current = 0;
+    }
+  }, [lessonId, mediaStoragePath, prefetchSentence]);
+
+  useEffect(() => {
+    if (autoAnalyze && !autoStopped && isPanelOpen && activeSentenceId != null) void runAuto();
+  }, [autoAnalyze, autoStopped, isPanelOpen, activeSentenceId, runAuto]);
+
+  const setAutoAnalyze = useCallback((on: boolean) => {
+    autoAnalyzeRef.current = on;
+    autoFailuresRef.current = 0;
+    setAutoStopped(false);
+    setAutoAnalyzeState(on);
+    writeAutoAnalyze(on);
+  }, []);
 
   const runGenerate = useCallback(
     (sentence: ShadowingSentenceRef) => {
@@ -213,7 +318,8 @@ export function useShadowingPatternManager(
             return;
           }
           setEntry(sentence.id, { status: 'ready', analysis: result.analysis, error: null });
-          prefetchAfter(sentence.id);
+          // Auto-analyze already covers the next ones, in order; do not fire them in parallel.
+          if (!autoAnalyzeRef.current) prefetchAfter(sentence.id);
         } catch (e) {
           console.error('Shadowing pattern analysis failed:', e);
           if (!requests.isCurrent(token)) return;
@@ -290,5 +396,8 @@ export function useShadowingPatternManager(
     close,
     show,
     analyze,
+    autoAnalyze,
+    autoStopped,
+    setAutoAnalyze,
   };
 }

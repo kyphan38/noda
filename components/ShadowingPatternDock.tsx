@@ -10,6 +10,9 @@ interface ShadowingPatternDockProps {
   sentenceText: string;
   onClose: () => void;
   onAnalyze: () => void;
+  autoAnalyze: boolean;
+  autoStopped: boolean;
+  onAutoAnalyzeChange: (on: boolean) => void;
 }
 
 /**
@@ -19,7 +22,16 @@ interface ShadowingPatternDockProps {
  * host has only a max-height, so this is a shrinking flex column instead of `h-full`. The panel itself keeps the
  * annotated line pinned and scrolls only its notes, so this stays `overflow-hidden`.
  */
-export function ShadowingPatternDock({ isMobile, entry, sentenceText, onClose, onAnalyze }: ShadowingPatternDockProps) {
+export function ShadowingPatternDock({
+  isMobile,
+  entry,
+  sentenceText,
+  onClose,
+  onAnalyze,
+  autoAnalyze,
+  autoStopped,
+  onAutoAnalyzeChange,
+}: ShadowingPatternDockProps) {
   return (
     <div className={`rise overflow-hidden ${isMobile ? 'flex min-h-0 flex-col p-2.5' : 'h-full rounded-xl border border-gray-800 bg-gray-900 p-2.5'}`}>
       <ShadowingPatternPanel
@@ -29,6 +41,9 @@ export function ShadowingPatternDock({ isMobile, entry, sentenceText, onClose, o
         sentenceText={sentenceText}
         onAnalyze={onAnalyze}
         onClose={onClose}
+        autoAnalyze={autoAnalyze}
+        autoStopped={autoStopped}
+        onAutoAnalyzeChange={onAutoAnalyzeChange}
       />
     </div>
   );

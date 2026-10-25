@@ -7,7 +7,7 @@ import { analysisAudioPath } from '../../../functions/src/lib/analysisAudioPath'
 import { lessonStoragePaths } from '../../../functions/src/lib/lessonCleanup';
 import { firebaseDownloadUrl } from '../../../functions/src/lib/firebaseDownloadUrl';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
-import { nextSentencesToPrefetch } from '@/lib/shadowingPrefetch';
+import { nextSentencesToPrefetch, sentencesToAutoAnalyze } from '@/lib/shadowingPrefetch';
 import { ShadowingRequestTracker } from '@/lib/shadowingRequests';
 import { SHADOWING_PREFETCH_COUNT } from '@/constants';
 import type { Sentence } from '@/types';
@@ -341,3 +341,20 @@ describe('firebaseDownloadUrl', () => {
   });
 });
 
+
+describe('sentencesToAutoAnalyze', () => {
+  const s = (id: number): Sentence => ({ id, text: `s${id}`, start: id, end: id + 1 });
+  const transcript = [s(1), s(2), s(3), s(4), s(5)];
+
+  it('starts with the current sentence, then the next ones in order', () => {
+    expect(sentencesToAutoAnalyze(transcript, 2, 2).map((x) => x.id)).toEqual([2, 3, 4]);
+  });
+
+  it('shrinks at the end of the lesson', () => {
+    expect(sentencesToAutoAnalyze(transcript, 5, 2).map((x) => x.id)).toEqual([5]);
+  });
+
+  it('is empty for an id that is not in this transcript', () => {
+    expect(sentencesToAutoAnalyze(transcript, 99, 2)).toEqual([]);
+  });
+});

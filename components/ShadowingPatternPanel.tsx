@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { AudioLines, RotateCcw, X } from 'lucide-react';
+import { SHADOWING_PREFETCH_COUNT } from '@/constants';
 import { NOTE_LABEL, TONE_ARROW, isRenderableAnalysis, noteBadgeClass } from '@/lib/shadowingChunks';
 import type { ShadowingChunk, ShadowingNote, ShadowingPatternAnalysis } from '@/types';
 import type { ShadowingPatternStatus } from '@/hooks/useShadowingPatternAnalysis';
@@ -15,6 +16,11 @@ interface ShadowingPatternPanelProps {
   /** Paid analysis of this sentence: the "Analyze with AI" button and Retry. */
   onAnalyze: () => void;
   onClose: () => void;
+  /** "Auto" toggle: analyze this sentence and the next ones without the button. */
+  autoAnalyze: boolean;
+  /** Auto-analyze gave up after failures in a row. */
+  autoStopped: boolean;
+  onAutoAnalyzeChange: (on: boolean) => void;
 }
 
 const LEVEL_CLASS = {
@@ -100,6 +106,9 @@ export function ShadowingPatternPanel({
   sentenceText,
   onAnalyze,
   onClose,
+  autoAnalyze,
+  autoStopped,
+  onAutoAnalyzeChange,
 }: ShadowingPatternPanelProps) {
   // Stop clicks inside the panel from bubbling to the sentence row's onSentenceClick.
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -116,7 +125,38 @@ export function ShadowingPatternPanel({
         <AudioLines className="h-3.5 w-3.5 shrink-0" aria-hidden />
         <span className="hidden sm:inline">Shadowing pattern</span>
       </div>
-      <div className="ml-auto shrink-0">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={autoAnalyze}
+          onClick={(e) => {
+            e.stopPropagation();
+            // When stopped after errors, a click starts it again instead of turning it off.
+            onAutoAnalyzeChange(autoStopped ? true : !autoAnalyze);
+          }}
+          className="flex h-7 items-center gap-1.5 rounded-md px-1.5 text-xs text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+          title={
+            autoStopped
+              ? 'Auto-analyze stopped after errors - click to try again'
+              : `Analyze this sentence and the next ${SHADOWING_PREFETCH_COUNT} without asking (uses AI credits)`
+          }
+        >
+          <span>{autoStopped ? 'Auto (stopped)' : 'Auto'}</span>
+          {/* Small switch track; the knob moves right when on. */}
+          <span
+            className={`relative inline-block h-3.5 w-6 rounded-full transition-colors ${
+              autoAnalyze ? (autoStopped ? 'bg-gray-500' : 'bg-gray-100') : 'bg-gray-700'
+            }`}
+            aria-hidden
+          >
+            <span
+              className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-gray-900 transition-[left] ${
+                autoAnalyze ? 'left-3' : 'left-0.5'
+              }`}
+            />
+          </span>
+        </button>
         <button
           type="button"
           onClick={(e) => {

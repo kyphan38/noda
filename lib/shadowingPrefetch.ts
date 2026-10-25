@@ -19,3 +19,18 @@ export function nextSentencesToPrefetch(
   if (index < 0) return [];
   return transcript.slice(index + 1, index + 1 + count);
 }
+
+/**
+ * Auto-analyze window: the sentence the panel is on, then the next `count` after it, in
+ * transcript order. The hook works through it one at a time from the front, so the
+ * sentence being heard is always the first one to get an answer.
+ */
+export function sentencesToAutoAnalyze(
+  transcript: Sentence[],
+  sentenceId: number,
+  count: number = SHADOWING_PREFETCH_COUNT
+): Sentence[] {
+  const current = transcript.find((s) => s.id === sentenceId);
+  if (!current) return [];
+  return [current, ...nextSentencesToPrefetch(transcript, sentenceId, count)];
+}
