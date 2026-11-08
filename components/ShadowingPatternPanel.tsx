@@ -23,18 +23,21 @@ interface ShadowingPatternPanelProps {
   onAutoAnalyzeChange: (on: boolean) => void;
 }
 
+// One signal per meaning: CAPS (in `display`) marks the stressed syllable, so strong words
+// get brightness only - bold would cover the whole word and make `CONflict` read as stressed
+// on every syllable.
 const LEVEL_CLASS = {
-  strong: 'text-gray-100 font-medium',
+  strong: 'text-gray-100',
   normal: 'text-gray-300',
   weak: 'text-gray-500',
 } as const;
 
 /**
  * One thought group: the words with their stress marking, then the pitch arrow.
- * Groups flow inline separated by a divider rather than sitting on their own rows,
- * so a long sentence still reads as one sentence. The divider - not the line break -
- * is what marks a boundary, which is all a confident reader needs to know where the
- * speaker breathes.
+ * Groups flow inline rather than sitting on their own rows, so a long sentence still
+ * reads as one sentence. The arrow plus a wider gap - not the line break - is what
+ * marks a boundary, which is all a confident reader needs to know where the speaker
+ * breathes.
  */
 function Chunk({ chunk }: { chunk: ShadowingChunk }) {
   const arrow = TONE_ARROW[chunk.tone];
@@ -43,12 +46,21 @@ function Chunk({ chunk }: { chunk: ShadowingChunk }) {
       {chunk.tokens.map((token, i) => (
         <span key={i} className={LEVEL_CLASS[token.level]}>
           {i > 0 ? ' ' : ''}
-          {/* Fill only the word, not the space before it. */}
-          {token.linked ? <span className="rounded-sm bg-gray-800">{token.display}</span> : token.display}
+          {/* Underline only the word, not the space before it. */}
+          {token.linked ? (
+            <span className="underline decoration-gray-500 decoration-dotted underline-offset-4">{token.display}</span>
+          ) : (
+            token.display
+          )}
         </span>
       ))}
-      <span className={`ml-1 text-gray-300 ${chunk.toneStrength === 'weak' ? 'opacity-50' : ''}`}>
-        {chunk.toneStrength === 'weak' ? `(${arrow})` : arrow}
+      {/* Its own colour so the pitch movement can be scanned apart from the words; a weak
+          (slight continuation) tone is just faded. */}
+      <span
+        className={`ml-1 text-[13px] text-sky-600 dark:text-sky-400 ${chunk.toneStrength === 'weak' ? 'opacity-50' : ''}`}
+        aria-label={chunk.toneStrength === 'weak' ? `slight ${chunk.tone}` : chunk.tone}
+      >
+        {arrow}
       </span>
     </span>
   );
@@ -66,17 +78,18 @@ function NoteRow({ note }: { note: ShadowingNote }) {
         {NOTE_LABEL[note.type] ?? note.type}
       </span>
       <div className="min-w-0 flex-1">
+        {/* Emphasis goes on `sounds` - the form to imitate - not on the written words. */}
         {hasExample && (
-          <div className="text-sm leading-snug text-gray-200">
-            <span className="font-medium">{note.text}</span>
+          <div className="text-sm leading-snug text-gray-400">
+            <span>{note.text}</span>
             {note.via && (
               <>
-                <span className="text-gray-400"> → </span>
-                <span className="text-gray-300">{note.via}</span>
+                <span className="text-gray-600"> → </span>
+                <span className="text-gray-500">{note.via}</span>
               </>
             )}
-            {note.sounds && <span className="text-gray-400"> → </span>}
-            {note.sounds && <span>“{note.sounds}”</span>}
+            {note.sounds && <span className="text-gray-600"> → </span>}
+            {note.sounds && <span className="font-medium text-gray-100">“{note.sounds}”</span>}
             {note.ipa && <span className="ml-1 font-mono text-[11px] text-gray-500">{note.ipa}</span>}
           </div>
         )}
@@ -263,7 +276,8 @@ export function ShadowingPatternPanel({
         <div className="shrink-0 px-1 text-[15px] leading-[1.9]">
           {analysis.chunks.map((chunk, i) => (
             <React.Fragment key={i}>
-              {i > 0 && <span className="mx-1.5 text-gray-600">|</span>}
+              {/* The arrow already ends each group; a wider gap is enough to separate them. */}
+              {i > 0 && <span className="inline-block w-3" aria-hidden />}
               <Chunk chunk={chunk} />
             </React.Fragment>
           ))}
