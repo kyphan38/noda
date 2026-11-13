@@ -52,8 +52,7 @@ Any change requires a rebuild/redeploy.
 
 ## YouTube lessons
 
-Plan and test results: [PLAN-youtube.md](PLAN-youtube.md). Dev only for now
-(`YOUTUBE_LESSONS_ENABLED` in `constants/index.tsx`).
+Plan and test results: [PLAN-youtube.md](PLAN-youtube.md).
 
 - New lesson → paste a YouTube link. The modal checks, in the browser, that the
   video has English subtitles the channel uploaded (auto captions do not count).

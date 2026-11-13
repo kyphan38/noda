@@ -21,7 +21,6 @@ import {
   type YoutubeGateError,
   type YoutubeGateState,
 } from '@/hooks/useYoutubeSubtitleGate';
-import { YOUTUBE_LESSONS_ENABLED } from '@/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ModalShell } from '@/components/ModalShell';
@@ -109,7 +108,7 @@ export function NewLessonModal({
   const [youtubeSrt, setYoutubeSrt] = useState<{ file: File; text: string } | null>(null);
   /** Name last filled from the video title, so a name the user typed is never replaced. */
   const autoNameRef = useRef('');
-  const youtubeMode = YOUTUBE_LESSONS_ENABLED && youtubeInput.trim() !== '';
+  const youtubeMode = youtubeInput.trim() !== '';
   const { hostRef: youtubeHostRef, state: youtubeGateRaw } = useYoutubeSubtitleGate(
     youtubeMode ? youtubeLink.id : null
   );
@@ -429,7 +428,7 @@ export function NewLessonModal({
           </select>
         </div>
 
-        {YOUTUBE_LESSONS_ENABLED && !batch && (
+        {!batch && (
           <div>
             <label htmlFor="noda-youtube-link" className="block text-sm font-medium text-gray-400 mb-2">
               YouTube link
