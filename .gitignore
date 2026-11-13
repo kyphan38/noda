@@ -13,3 +13,6 @@ __pycache__/
 test-results/
 functions/lib/
 .vercel
+
+# Local Gemini key for scripts
+.gemini.key
