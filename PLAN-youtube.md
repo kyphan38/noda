@@ -349,4 +349,9 @@ Mục tiêu: **không sửa** `useLessonPlaybackLoop.ts` nếu có thể.
   README. Chưa test được: mất mạng thật (Browser pane không giả lập offline),
   iOS Safari thật, quảng cáo. Tab ẩn: video không chạy và app tự về dừng sau
   ~2s (thấy khi cửa sổ bị ẩn lúc test), không bị treo.
+- [x] Test có đăng nhập (2026-11-13, `npm run dev`, Firebase thật): tạo lesson
+  từ link BBC + `.srt` thật (117 câu), lưu Firestore, reload vẫn mở được; shadowing
+  dừng ở 16.79s (cuối câu 16.8s); AI trên function đã deploy: 3 câu đều 200, 19.0s,
+  36.0s, 39.5s (2 câu sau là prefetch có sẵn của app); đổi qua lại lesson upload
+  và lesson YouTube đều đúng.
 - [ ] Bật cho production: bỏ `YOUTUBE_LESSONS_ENABLED` (owner quyết định)
