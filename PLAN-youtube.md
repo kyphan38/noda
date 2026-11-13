@@ -311,6 +311,18 @@ Mục tiêu: **không sửa** `useLessonPlaybackLoop.ts` nếu có thể.
   `caches.delete('noda-v1')`) rồi tải lại.
 - Đừng chạy `npm run build` khi dev server đang chạy: nó ghi đè `.next` và
   dev server trả 404. Dừng server, build, rồi chạy lại server.
+- `page.tsx` đặt `key` cho LessonView theo mode, nên **mỗi lần đổi mode là một
+  player YouTube mới** (~0.3-1s mới sẵn sàng). Vì vậy adapter được tạo ngay khi
+  mount và giữ lại seek/play/tốc độ cho đến `attach`. Đừng tạo adapter trong
+  `onReady`: lệnh resume sau khi đổi mode sẽ bị mất.
+- Thanh player trong LessonView từng chỉ hiện khi có `mediaURL`. Lesson YouTube
+  không có `mediaURL`: kiểm tra mọi chỗ `mediaURL &&` khi thêm UI mới.
+- YouTube nhận tốc độ bất kỳ (0.7, 0.9…), nhưng áp dụng sau ~300ms. Adapter
+  trả tốc độ vừa đặt trong lúc chờ.
+- `getOption('captions', 'track')` vẫn trả track sau `unloadModule('captions')`,
+  nhưng phụ đề không hiện trong video (đã xem bằng mắt khi phát).
+- Công cụ click của Browser pane không click được vào iframe YouTube khi đang
+  giả lập kích thước màn hình. Bỏ giả lập rồi click.
 - Ở `dev:e2e` không có đăng nhập, nên Create báo lỗi lưu. Muốn mở thử lesson
   YouTube thì dùng `localStorage.__e2e_lesson__` với `youtubeVideoId`.
 
@@ -330,6 +342,6 @@ Mục tiêu: **không sửa** `useLessonPlaybackLoop.ts` nếu có thể.
 - [x] P0 - Kiểm tra lấy phụ đề từ Cloud Functions (bị chặn, xem kết quả P0)
 - [x] P1 - Link YouTube và gate trong modal (chỉ hiện ở dev, cờ `YOUTUBE_LESSONS_ENABLED`; nút Create bật ở P2 khi truyền `onSubmitYoutube`)
 - [x] P2 - Lưu và mở lesson YouTube (vẫn chỉ ở dev; lưu thật vào Firestore mới test bằng unit test, chưa test với tài khoản thật)
-- [ ] P3 - Player YouTube
+- [x] P3 - Player YouTube (vẫn chỉ ở dev; chưa test đổi qua lại giữa lesson upload và lesson YouTube vì `dev:e2e` chỉ seed được một lesson)
 - [ ] P4 - AI shadowing cho lesson YouTube
 - [ ] P5 - Trường hợp lỗi và hoàn thiện

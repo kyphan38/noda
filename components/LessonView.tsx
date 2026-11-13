@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Player, type PlayerAiButton } from './Player';
 import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
+import { YouTubeStage } from './YouTubeStage';
 import { ShadowingPatternDock } from './ShadowingPatternDock';
 import { ResumePrompt } from './ResumePrompt';
 import type { ResumeTarget } from '@/lib/progress';
@@ -116,6 +117,8 @@ export function LessonView({
   const [videoHidden, setVideoHidden] = useState(false);
   const [hevcWarning, setHevcWarning] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  /** True once the YouTube player holds mediaRef; effects that read the ref rerun then. */
+  const [youtubeReady, setYoutubeReady] = useState(false);
   const onFocusModeChangeRef = React.useRef(onFocusModeChange);
   const pendingToggleRestoreRef = React.useRef<{
     time: number;
@@ -136,8 +139,10 @@ export function LessonView({
 
   const mediaType = lesson.mediaType ?? 'audio';
   const isVideoLesson = mediaType === 'video' && !!mediaURL;
-  const videoLayout = isVideoLesson && !isMobile;
-  const showVideoStage = videoLayout && !videoHidden;
+  const isYoutubeLesson = !!youtubeVideoId;
+  const videoLayout = (isVideoLesson || isYoutubeLesson) && !isMobile;
+  // A YouTube video cannot be hidden: YouTube's terms want the player visible.
+  const showVideoStage = videoLayout && (isYoutubeLesson || !videoHidden);
   const showFocusToggle = mode !== 'dictation' && showVideoStage;
   const focusActive = focusMode && showFocusToggle;
 
@@ -323,7 +328,7 @@ export function LessonView({
       el.removeEventListener('canplay', onReady);
       el.removeEventListener('canplaythrough', onReady);
     };
-  }, [mediaURL, lesson.id, mediaRef]);
+  }, [mediaURL, lesson.id, mediaRef, youtubeReady]);
 
   useEffect(() => {
     if (!isVideoLesson || isMobile || !mediaURL) {
@@ -356,7 +361,7 @@ export function LessonView({
     if (Number.isFinite(playbackRate) && Math.abs(media.playbackRate - playbackRate) > 0.001) {
       media.playbackRate = playbackRate;
     }
-  }, [lesson.id, mediaURL, videoHidden, showVideoStage, playbackRate, mediaRef]);
+  }, [lesson.id, mediaURL, videoHidden, showVideoStage, playbackRate, mediaRef, youtubeReady]);
 
   const mediaEvents = {
     onLoadedMetadata: (e: React.SyntheticEvent<HTMLMediaElement>) => {
@@ -396,9 +401,23 @@ export function LessonView({
 
   return (
     <div className={`flex flex-col flex-1 min-h-0 ${videoLayout ? 'gap-4' : 'gap-3'}`}>
-      {/* The YouTube player lands in PLAN-youtube.md P3. */}
       {youtubeVideoId && !mediaURL && (
-        <p className="text-xs text-gray-500 text-center px-2 shrink-0">Playback not ready</p>
+        <div className={`relative ${focusActive ? 'flex-1 min-h-0' : 'shrink-0'}`}>
+          <YouTubeStage
+            videoId={youtubeVideoId}
+            mediaRef={mediaRef}
+            setIsPlaying={setIsPlaying}
+            setDuration={setDuration}
+            onReadyChange={setYoutubeReady}
+            className={
+              focusActive
+                ? 'w-full h-full mx-auto rounded-2xl border border-gray-800'
+                : isMobile
+                  ? 'w-full aspect-video min-h-[200px] rounded-2xl border border-gray-800'
+                  : 'w-full max-w-4xl mx-auto aspect-video min-h-[200px] max-h-[35vh] rounded-2xl border border-gray-800'
+            }
+          />
+        </div>
       )}
       {isVideoLesson && isMobile && mediaURL && (
         <p className="text-xs text-gray-500 text-center px-2 shrink-0">
@@ -565,7 +584,7 @@ export function LessonView({
       )}
 
       {/* Control bar: always the last item, so it stays pinned to the bottom of the screen in every mode. */}
-      {mediaURL && (
+      {(mediaURL || youtubeVideoId) && (
         <div className="shrink-0">
           <MemoPlayer
             isPlaying={isPlaying}

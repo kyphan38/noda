@@ -73,7 +73,7 @@ export const SHADOWING_MAX_RHYTHM_NOTES = 1;
 export const SHADOWING_PREFETCH_COUNT = 2;
 
 /**
- * YouTube lessons (PLAN-youtube.md). Dev only until the YouTube player lands
- * (P3); then this goes away.
+ * YouTube lessons (PLAN-youtube.md). Dev only until the owner turns them on
+ * (AI analysis for them comes in P4); then this goes away.
  */
 export const YOUTUBE_LESSONS_ENABLED = process.env.NODE_ENV !== 'production';
