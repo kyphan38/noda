@@ -344,4 +344,9 @@ Mục tiêu: **không sửa** `useLessonPlaybackLoop.ts` nếu có thể.
 - [x] P2 - Lưu và mở lesson YouTube (vẫn chỉ ở dev; lưu thật vào Firestore mới test bằng unit test, chưa test với tài khoản thật)
 - [x] P3 - Player YouTube (vẫn chỉ ở dev; chưa test đổi qua lại giữa lesson upload và lesson YouTube vì `dev:e2e` chỉ seed được một lesson)
 - [x] P4 - AI shadowing cho lesson YouTube (đã deploy 2026-11-13, revision `analyzeshadowingpattern-00021`; chưa đo 10 câu trên production vì cần đăng nhập vào app. Chạy thử code đã build với Gemini trên máy: 4/4 câu OK, 0.86-8.2s, 14-41s)
-- [ ] P5 - Trường hợp lỗi và hoàn thiện
+- [x] P5 - Trường hợp lỗi và hoàn thiện. Đã làm: video hỏng hiện lỗi và không
+  cho "phát"; script player không tải được thì dừng và thử lại khi online;
+  README. Chưa test được: mất mạng thật (Browser pane không giả lập offline),
+  iOS Safari thật, quảng cáo. Tab ẩn: video không chạy và app tự về dừng sau
+  ~2s (thấy khi cửa sổ bị ẩn lúc test), không bị treo.
+- [ ] Bật cho production: bỏ `YOUTUBE_LESSONS_ENABLED` (owner quyết định)

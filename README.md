@@ -50,6 +50,27 @@ Any change requires a rebuild/redeploy.
 - Since this is static export (`output: "export"`), there is no server middleware enforcement in noda.
 - **Authoritative enforcement** is [Firestore rules](firestore.rules) and [Storage rules](storage.rules): only `users/{userId}/...` where `request.auth.uid == userId`. After deploy, confirm once in **Firebase Console → Firestore → Rules → Rules Playground** (e.g. read as another `userId` → expect deny). 
 
+## YouTube lessons
+
+Plan and test results: [PLAN-youtube.md](PLAN-youtube.md). Dev only for now
+(`YOUTUBE_LESSONS_ENABLED` in `constants/index.tsx`).
+
+- New lesson → paste a YouTube link. The modal checks, in the browser, that the
+  video has English subtitles the channel uploaded (auto captions do not count).
+  YouTube blocks this check from Cloud Functions.
+- Then drop the `.srt` (from the local yt-dlp script). It must fit the video's
+  length, and a yt-dlp file name must carry the same video id.
+- The lesson stores `source: 'youtube'` and `youtubeVideoId`; nothing goes to
+  Storage. Lessons without `source` are uploads.
+- Playback: `YouTubeStage` (embedded player, always visible, no YouTube
+  controls or subtitles) and `lib/youtubeMediaAdapter.ts`, which looks like a
+  media element to the playback loop.
+- AI shadowing sends `youtubeVideoId` instead of `mediaStoragePath`; Gemini
+  reads the sentence's time range from YouTube itself.
+- A removed, private or non-embeddable video shows an error on the player;
+  the transcript and progress stay. If the player script cannot load
+  (offline), it tries again when the browser is back online.
+
 ## Motion
 
 Short, opacity/transform only, following `ws/app/DESIGN.md` "Motion". Plan:

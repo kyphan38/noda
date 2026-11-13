@@ -34,6 +34,8 @@ export class YoutubeMediaAdapter {
   private pendingSeek: { target: number; at: number } | null = null;
   private pendingRate: { rate: number; at: number } | null = null;
   private player: YTPlayer | null = null;
+  /** Set by handleError: the video cannot play (gone, private, not embeddable, no network). */
+  private failed = false;
 
   constructor(private readonly now: () => number = () => performance.now()) {}
 
@@ -112,6 +114,9 @@ export class YoutubeMediaAdapter {
   }
 
   play(): Promise<void> {
+    // Like a media element with an error: play does nothing, and the app stays paused
+    // instead of running the loop on a clock that never moves.
+    if (this.failed) return Promise.resolve();
     this.lastCommandAt = this.now();
     this.player?.playVideo();
     if (!this.wantsToPlay) {
@@ -164,8 +169,9 @@ export class YoutubeMediaAdapter {
     }
   }
 
-  /** Wire to the player's onError. */
+  /** Wire to the player's onError, and call when the player API cannot load. */
   handleError(): void {
+    this.failed = true;
     if (this.wantsToPlay) {
       this.wantsToPlay = false;
       this.emit('pause');

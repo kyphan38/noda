@@ -30,6 +30,9 @@ function errorMessage(code: number): string {
 export function YouTubeStage({ videoId, mediaRef, className, setIsPlaying, setDuration, onReadyChange }: YouTubeStageProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Bumped to load the player again after the API script failed (offline). */
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadFailed, setLoadFailed] = useState(false);
   // Callbacks change every render of the parent; the player must not restart for that.
   const callbacksRef = useRef({ setIsPlaying, setDuration, onReadyChange });
   useEffect(() => {
@@ -43,6 +46,7 @@ export function YouTubeStage({ videoId, mediaRef, className, setIsPlaying, setDu
     let player: YTPlayer | null = null;
     const ref = mediaRef as React.MutableRefObject<HTMLMediaElement | null>;
     setError(null);
+    setLoadFailed(false);
 
     const onPlay = () => callbacksRef.current.setIsPlaying(true);
     const onPause = () => callbacksRef.current.setIsPlaying(false);
@@ -106,7 +110,11 @@ export function YouTubeStage({ videoId, mediaRef, className, setIsPlaying, setDu
         });
       })
       .catch(() => {
-        if (!cancelled) setError('Could not load the YouTube player.');
+        if (cancelled) return;
+        // A play asked for while loading must not leave the app "playing" forever.
+        adapter.handleError();
+        setError('Could not load the YouTube player.');
+        setLoadFailed(true);
       });
 
     return () => {
@@ -125,14 +133,22 @@ export function YouTubeStage({ videoId, mediaRef, className, setIsPlaying, setDu
       }
       host.replaceChildren();
     };
-  }, [videoId, mediaRef]);
+  }, [videoId, mediaRef, loadAttempt]);
+
+  // Only a failed script load is worth retrying; a removed or blocked video stays so.
+  useEffect(() => {
+    if (!loadFailed) return;
+    const retry = () => setLoadAttempt((n) => n + 1);
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [loadFailed]);
 
   return (
     <div className={`relative bg-slate-900 overflow-hidden ${className ?? ''}`}>
       <div ref={hostRef} className="absolute inset-0 [&>iframe]:h-full [&>iframe]:w-full" />
       {error && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-slate-950/80 px-3 text-center text-xs font-medium text-gray-100"
+          className="absolute inset-0 flex items-center justify-center bg-gray-900 px-3 text-center text-xs font-medium text-gray-300"
           role="status"
         >
           {error}

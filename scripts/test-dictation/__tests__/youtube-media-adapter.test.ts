@@ -114,6 +114,16 @@ describe('YoutubeMediaAdapter', () => {
     expect(events).toEqual(['play', 'pause', 'ended', 'play', 'pause', 'error']);
   });
 
+  it('ignores play after an error', async () => {
+    media.handleError();
+    events = [];
+    player.calls = [];
+    await media.play();
+    expect(media.paused).toBe(true);
+    expect(events).toEqual([]);
+    expect(player.calls).toEqual([]);
+  });
+
   it('gives up on a play the browser blocked', async () => {
     await media.play();
     player.state = YT_STATE.UNSTARTED;
@@ -197,5 +207,20 @@ describe('YoutubeMediaAdapter before the player is ready', () => {
     expect(early.paused).toBe(true);
     expect(early.seeking).toBe(false);
     expect(early.playbackRate).toBe(1);
+  });
+});
+
+describe('YoutubeMediaAdapter when the player never loads', () => {
+  it('drops a queued play once the load fails', async () => {
+    const early = new YoutubeMediaAdapter(() => clock);
+    const seen: string[] = [];
+    early.addEventListener('pause', () => seen.push('pause'));
+    early.addEventListener('error', () => seen.push('error'));
+    await early.play();
+    early.handleError();
+    expect(early.paused).toBe(true);
+    expect(seen).toEqual(['pause', 'error']);
+    await early.play();
+    expect(early.paused).toBe(true);
   });
 });
