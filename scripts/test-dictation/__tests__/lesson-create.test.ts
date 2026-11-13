@@ -5,9 +5,10 @@ import { renderHook } from '@testing-library/react';
 /** A failed upload must keep the new-lesson modal open (nothing the user picked is lost). */
 
 const upload = vi.fn();
+const save = vi.fn(async (_lesson: unknown) => {});
 vi.mock('@/lib/db', () => ({
   uploadLessonMediaToFirebase: (...args: unknown[]) => upload(...args),
-  saveLessonFirestore: async () => {},
+  saveLessonFirestore: (lesson: unknown) => save(lesson),
 }));
 
 const { useLessonCreateFlow } = await import('@/hooks/useLessonCreateFlow');
@@ -107,5 +108,46 @@ describe('batch lesson create', () => {
     await result.current.handleLessonsCreated([mp3('a'), mp3('b')], (i, f) => seen.push(`${i}:${f}`), () => {});
     expect(seen).toEqual(['0:1', '1:1']);
     upload.mockReset();
+  });
+});
+
+describe('youtube lesson create', () => {
+  const srt = '1\n00:00:00,160 --> 00:00:01,020\nHi Georgie.\n\n2\n00:00:01,020 --> 00:00:01,880\nHi Phil.\n';
+  const yt = {
+    name: 'learning from different generations',
+    folderId: 'f1',
+    videoId: 'h-NZcQF7jgI',
+    transcriptFile: new File([srt], 'subs.srt'),
+  };
+
+  it('saves a youtube lesson with no upload, then opens it', async () => {
+    upload.mockReset();
+    save.mockClear();
+    const { result, calls } = setup();
+    await result.current.handleYoutubeLessonCreated(yt);
+    expect(upload).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0][0]).toMatchObject({
+      name: 'learning from different generations',
+      folderId: 'f1',
+      source: 'youtube',
+      youtubeVideoId: 'h-NZcQF7jgI',
+      mediaType: 'video',
+      mediaPath: null,
+      mediaUrl: null,
+      transcriptText: srt,
+      totalSentences: 2,
+    });
+    expect(calls.uploadMode).toEqual(['idle']);
+    expect(calls.selected).toBe(1);
+    expect(calls.toasts.at(-1)).toMatchObject({ type: 'success' });
+  });
+
+  it('throws and keeps the modal open when the save fails', async () => {
+    save.mockRejectedValueOnce(new Error('offline'));
+    const { result, calls } = setup();
+    await expect(result.current.handleYoutubeLessonCreated(yt)).rejects.toThrow(/Check your connection/);
+    expect(calls.uploadMode).toEqual([]);
+    expect(calls.selected).toBe(0);
   });
 });

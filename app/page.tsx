@@ -28,7 +28,7 @@ import { useAutoScrollActiveSentence } from '@/hooks/useAutoScrollActiveSentence
 import { useGlobalPlaybackShortcuts } from '@/hooks/useGlobalPlaybackShortcuts';
 import { useHeaderItemMenuClickOutside } from '@/hooks/useHeaderItemMenu';
 import { useMobileViewport } from '@/hooks/use-mobile';
-import { LessonItem, Sentence, type AppMode } from '@/types';
+import { LessonItem, Sentence, type AppMode, type LessonSource } from '@/types';
 import { LessonView } from '@/components/LessonView';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { type ToastAction } from '@/components/Toast';
@@ -104,7 +104,7 @@ export default function NodaApp() {
     shadowingCompleted, setShadowingCompleted, shadowingCompletedRef, loadedProgress,
     isStarted, setIsStarted,
     lessonsList, recentLessonIds, isListLoading, isLessonLoading,
-    currentLessonId, mediaStoragePath,
+    currentLessonId, mediaStoragePath, youtubeVideoId, setYoutubeVideoId,
     setLessonName,
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
     expandedSections, setExpandedSections,
@@ -221,7 +221,7 @@ export default function NodaApp() {
     []
   );
 
-  const { handleLessonCreated, handleLessonsCreated } = useLessonCreateFlow(
+  const { handleLessonCreated, handleLessonsCreated, handleYoutubeLessonCreated } = useLessonCreateFlow(
     setSelectedItem,
     handleLoadLesson,
     handleModeChange,
@@ -257,6 +257,7 @@ export default function NodaApp() {
         totalSentences: number;
         hasMedia: boolean;
         mediaType: 'audio' | 'video';
+        source?: LessonSource;
         folderId?: string | null;
       },
       opts?: { pushHistory?: boolean }
@@ -271,6 +272,7 @@ export default function NodaApp() {
         shadowingProgress: row.shadowingProgress,
         hasMedia: row.hasMedia,
         mediaType: row.mediaType ?? 'audio',
+        source: row.source,
         type: 'lesson',
       };
       expandSidebarForItem();
@@ -559,12 +561,13 @@ export default function NodaApp() {
       const raw = localStorage.getItem('__e2e_lesson__');
       if (!raw) return;
       const lesson = JSON.parse(raw) as {
-        id: string; name: string; transcriptText: string; mediaDataUrl?: string;
+        id: string; name: string; transcriptText: string; mediaDataUrl?: string; youtubeVideoId?: string;
       };
       setTranscriptText(lesson.transcriptText ?? '');
       setIsStarted(true);
       setLessonName(lesson.name ?? 'E2E Lesson');
       setMediaURL(lesson.mediaDataUrl ?? null);
+      setYoutubeVideoId(lesson.youtubeVideoId ?? null);
       setSelectedItem({
         id: lesson.id,
         type: 'lesson',
@@ -574,13 +577,14 @@ export default function NodaApp() {
           language: 'en',
           dictationProgress: 0,
           shadowingProgress: 0,
-          hasMedia: !!lesson.mediaDataUrl,
-          mediaType: 'audio',
+          hasMedia: !!(lesson.mediaDataUrl || lesson.youtubeVideoId),
+          mediaType: lesson.youtubeVideoId ? 'video' : 'audio',
+          source: lesson.youtubeVideoId ? 'youtube' : 'upload',
           type: 'lesson',
         },
       });
     } catch { /* ignore parse errors */ }
-  }, [isE2EMode, setTranscriptText, setIsStarted, setLessonName, setMediaURL]);
+  }, [isE2EMode, setTranscriptText, setIsStarted, setLessonName, setMediaURL, setYoutubeVideoId]);
 
   const cycleRepeatCount = useCallback(() => {
     changeRepeatCount(getNextRepeatCount(repeatCount));
@@ -1043,6 +1047,7 @@ export default function NodaApp() {
                 onClose={closeUploadModal}
                 onSubmit={handleLessonCreated}
                 onSubmitMany={handleLessonsCreated}
+                onSubmitYoutube={handleYoutubeLessonCreated}
                 getTakenAudioLessonNames={getTakenAudioLessonNames}
                 folders={effectiveFolders.map((f) => ({ id: f.id, name: folderLabelById.get(f.id) ?? f.name }))}
                 onNotify={(message, type) => setToast({ message, type })}
@@ -1070,6 +1075,7 @@ export default function NodaApp() {
                   lesson={selectedItem.data}
                   lessonId={currentLessonId}
                   mediaStoragePath={mediaStoragePath}
+                  youtubeVideoId={youtubeVideoId}
                   mode={appMode}
                   isPlaying={isPlaying}
                   duration={duration}

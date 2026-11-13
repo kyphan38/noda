@@ -1,7 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { parseTranscript, uniquifyName } from '@/lib/utils';
 import { saveLessonFirestore, type LessonRecord, uploadLessonMediaToFirebase } from '@/lib/db';
-import type { AppMode, LessonItem } from '@/types';
+import type { AppMode, LessonItem, LessonSource } from '@/types';
 
 type SetToast = (t: { message: string; type: 'success' | 'error' | 'info' } | null) => void;
 
@@ -17,6 +17,55 @@ export interface NewLessonInput {
   mediaFile: File;
   mediaType: 'audio' | 'video';
   transcriptFile: File | null;
+}
+
+export interface NewYoutubeLessonInput {
+  name: string;
+  folderId: string | null;
+  videoId: string;
+  transcriptFile: File;
+}
+
+/** Saves a lesson played from YouTube: nothing to upload. Throws (nothing saved) on failure. */
+async function createYoutubeLessonRecord(
+  data: NewYoutubeLessonInput,
+  takenNames: string[]
+): Promise<{ lessonId: string; name: string }> {
+  try {
+    const text = await data.transcriptFile.text();
+    const lessonId = Date.now().toString();
+    const name = uniquifyName(data.name.trim() || 'Untitled lesson', takenNames);
+    const now = Date.now();
+    const newLesson: LessonRecord = {
+      id: lessonId,
+      type: 'audio',
+      name,
+      language: 'en',
+      folderId: data.folderId,
+      sortKey: now,
+      mediaFile: null,
+      mediaPath: null,
+      mediaUrl: null,
+      mediaFileName: null,
+      mediaMimeType: null,
+      mediaSizeBytes: null,
+      mediaType: 'video',
+      source: 'youtube',
+      youtubeVideoId: data.videoId,
+      transcriptText: text,
+      completedSentences: {},
+      dictationInputs: {},
+      totalSentences: parseTranscript(text).length,
+      createdAt: now,
+      lastAccessed: now,
+      updatedAt: now,
+    };
+    await saveLessonFirestore(newLesson);
+    return { lessonId, name };
+  } catch (error) {
+    console.error('Could not create YouTube lesson', error);
+    throw new Error('Could not save the lesson. Check your connection and try again.');
+  }
 }
 
 /** Uploads the media and saves the lesson; throws (nothing saved) on failure. */
@@ -75,7 +124,7 @@ export function useLessonCreateFlow(
 ) {
   /** Closes the modal and opens a just-created lesson. Returns whether it opened. */
   const openLesson = useCallback(
-    async (lessonId: string, name: string, mediaType: 'audio' | 'video') => {
+    async (lessonId: string, name: string, mediaType: 'audio' | 'video', source: LessonSource = 'upload') => {
       setUploadMode('idle');
       const lessonItem: LessonItem = {
         id: lessonId,
@@ -85,6 +134,7 @@ export function useLessonCreateFlow(
         shadowingProgress: 0,
         hasMedia: true,
         mediaType,
+        source,
         type: 'lesson',
       };
       setSelectedItem({ id: lessonId, type: 'lesson', data: lessonItem });
@@ -153,5 +203,19 @@ export function useLessonCreateFlow(
     [getTakenAudioLessonNames, openLesson, setToast]
   );
 
-  return { handleLessonCreated, handleLessonsCreated };
+  const handleYoutubeLessonCreated = useCallback(
+    async (data: NewYoutubeLessonInput) => {
+      // Like handleLessonCreated: a failed save throws and the modal stays open.
+      const { lessonId, name } = await createYoutubeLessonRecord(data, getTakenAudioLessonNames());
+      const opened = await openLesson(lessonId, name, 'video', 'youtube');
+      setToast(
+        opened
+          ? { message: 'Lesson created.', type: 'success' }
+          : { message: 'Lesson created, but it could not be opened. Pick it from the sidebar.', type: 'error' }
+      );
+    },
+    [getTakenAudioLessonNames, openLesson, setToast]
+  );
+
+  return { handleLessonCreated, handleLessonsCreated, handleYoutubeLessonCreated };
 }

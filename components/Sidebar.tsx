@@ -220,6 +220,7 @@ function SidebarImpl({
           shadowingProgress: l.shadowingProgress,
           hasMedia: l.hasMedia,
           mediaType: l.mediaType,
+          source: l.source,
           type: 'lesson' as const,
         })),
     [lessons]

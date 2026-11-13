@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/auth/firebase-client';
-import { AppMode, ExpandedSections } from '@/types';
+import { AppMode, ExpandedSections, type LessonSource } from '@/types';
 import { DEFAULT_APP_MODE, DICTATION_SAVE_DEBOUNCE_MS, SAVE_PROGRESS_DELAY_MS } from '@/constants';
 import { parseTranscript } from '@/lib/utils';
 import type { LessonProgressRecord } from '@/lib/progress';
@@ -82,6 +82,7 @@ export function useLessonLogic(
       isTrashed: boolean;
       hasMedia: boolean;
       mediaType: 'audio' | 'video';
+      source: LessonSource;
       trashedAt?: number;
     }>
   >([]);
@@ -93,6 +94,8 @@ export function useLessonLogic(
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   /** Firebase Storage path of the loaded lesson's media (for the shadowing-pattern Cloud Function). */
   const [mediaStoragePath, setMediaStoragePath] = useState<string | null>(null);
+  /** YouTube video of the loaded lesson; null for uploaded media. */
+  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [lessonName, setLessonName] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
@@ -137,8 +140,9 @@ export function useLessonLogic(
         shadowingProgress: donePercent(l.shadowingDone, l.progress?.shadowing?.completed, l.totalSentences),
         totalSentences: l.totalSentences ?? 0,
         isTrashed: !!l.isTrashed,
-        hasMedia: !!(l.mediaUrl || l.mediaPath || l.mediaFile),
+        hasMedia: !!(l.mediaUrl || l.mediaPath || l.mediaFile || l.youtubeVideoId),
         mediaType: l.mediaType ?? 'audio',
+        source: l.source ?? 'upload',
         trashedAt: l.trashedAt,
       };
     });
@@ -329,7 +333,8 @@ export function useLessonLogic(
         // `mediaUrl` frozen in at upload time: that stored URL hardcodes the
         // bucket name and download token, both of which change when the app
         // moves to another Firebase project. See PLAN-project-split.md § 1.
-        const hasMedia = !!(lesson.mediaPath || lesson.mediaUrl);
+        // YouTube lessons have nothing in Storage to resolve.
+        const hasMedia = lesson.source !== 'youtube' && !!(lesson.mediaPath || lesson.mediaUrl);
         const freshMediaUrl = hasMedia ? await resolveLessonMediaUrl(lesson) : null;
         if (myGen !== lessonLoadGenerationRef.current) return 'superseded';
         // Everything below lands in one render, so no save effect ever sees the new
@@ -337,6 +342,7 @@ export function useLessonLogic(
         currentLessonIdRef.current = lesson.id;
         setCurrentLessonId(lesson.id);
         setMediaStoragePath(lesson.mediaPath ?? null);
+        setYoutubeVideoId(lesson.source === 'youtube' ? (lesson.youtubeVideoId ?? null) : null);
         setLessonName(lesson.name);
         setMediaFile(null);
         setMediaURL(freshMediaUrl);
@@ -381,6 +387,7 @@ export function useLessonLogic(
     currentLessonIdRef.current = null;
     setCurrentLessonId(null);
     setMediaStoragePath(null);
+    setYoutubeVideoId(null);
     setLessonName('');
     setMediaFile(null);
     setMediaURL(null);
@@ -448,6 +455,8 @@ export function useLessonLogic(
     isLessonLoading,
     currentLessonId,
     mediaStoragePath,
+    youtubeVideoId,
+    setYoutubeVideoId,
     lessonName,
     setLessonName,
     isSidebarOpen,

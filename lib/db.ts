@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
-import { SHADOWING_ANALYSIS_VERSION, type AppMode, type ShadowingPatternDoc } from '@/types';
+import { SHADOWING_ANALYSIS_VERSION, type AppMode, type LessonSource, type ShadowingPatternDoc } from '@/types';
 import type { LessonProgressRecord } from '@/lib/progress';
 import { LESSON_CONTENT_DOC_ID, countDone, mergeLesson, splitLesson } from '@/lib/lessonLayout';
 
@@ -50,6 +50,10 @@ export interface LessonRecord {
   mediaSizeBytes?: number | null;
   /** Audio vs video lesson. */
   mediaType?: 'audio' | 'video';
+  /** Missing on lessons saved before YouTube lessons existed: those are uploads. */
+  source?: LessonSource;
+  /** Set when `source` is 'youtube'; such lessons have no media in Storage. */
+  youtubeVideoId?: string | null;
   transcriptText: string;
   completedSentences: Record<number, boolean>;
   /** Dictation mode drafts (sentence id → input); optional for older documents. */
@@ -163,6 +167,8 @@ const fromFirestoreLessonRecord = (
     mediaMimeType: data.mediaMimeType ?? null,
     mediaSizeBytes: data.mediaSizeBytes ?? null,
     mediaType: data.mediaType ?? 'audio',
+    source: data.source ?? 'upload',
+    youtubeVideoId: data.youtubeVideoId ?? null,
     transcriptText: data.transcriptText ?? '',
     completedSentences: data.completedSentences ?? {},
     dictationInputs: data.dictationInputs ?? {},

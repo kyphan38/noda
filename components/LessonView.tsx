@@ -29,6 +29,8 @@ interface LessonViewProps {
   /** Current lesson id + Firebase Storage media path, for the shadowing-pattern Cloud Function. */
   lessonId: string | null;
   mediaStoragePath: string | null;
+  /** Set for lessons played from YouTube. */
+  youtubeVideoId?: string | null;
   mode: AppMode;
   isPlaying: boolean;
   duration: number;
@@ -74,6 +76,7 @@ export function LessonView({
   lesson,
   lessonId,
   mediaStoragePath,
+  youtubeVideoId = null,
   mode,
   isPlaying,
   duration,
@@ -393,6 +396,10 @@ export function LessonView({
 
   return (
     <div className={`flex flex-col flex-1 min-h-0 ${videoLayout ? 'gap-4' : 'gap-3'}`}>
+      {/* The YouTube player lands in PLAN-youtube.md P3. */}
+      {youtubeVideoId && !mediaURL && (
+        <p className="text-xs text-gray-500 text-center px-2 shrink-0">Playback not ready</p>
+      )}
       {isVideoLesson && isMobile && mediaURL && (
         <p className="text-xs text-gray-500 text-center px-2 shrink-0">
           Video hidden on mobile - audio + transcript still work.

@@ -6,6 +6,7 @@ import {
   Trash2,
   Video,
   Music2,
+  Youtube,
 } from 'lucide-react';
 import { LessonItem } from '@/types';
 import { PortalMenu } from './PortalMenu';
@@ -106,8 +107,14 @@ export function LessonCard({
           </form>
         ) : (
           <>
-            <span className="shrink-0 text-gray-500" aria-hidden title={lesson.mediaType === 'video' ? 'Video' : 'Audio'}>
-              {lesson.mediaType === 'video' ? (
+            <span
+              className="shrink-0 text-gray-500"
+              aria-hidden
+              title={lesson.source === 'youtube' ? 'YouTube' : lesson.mediaType === 'video' ? 'Video' : 'Audio'}
+            >
+              {lesson.source === 'youtube' ? (
+                <Youtube size={12} className="shrink-0" />
+              ) : lesson.mediaType === 'video' ? (
                 <Video size={12} className="shrink-0" />
               ) : (
                 <Music2 size={12} className="shrink-0" />

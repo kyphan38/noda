@@ -306,6 +306,13 @@ Mục tiêu: **không sửa** `useLessonPlaybackLoop.ts` nếu có thể.
   dữ liệu thật, giữ nguyên. Quy tắc "không em dash" chỉ áp dụng cho chữ mình
   viết.
 - Lesson cũ không có `source`: luôn coi là `upload`.
+- Dev preview chạy code cũ sau khi sửa: service worker (`noda-v1`) giữ chunk
+  cũ. Gỡ nó trong tab preview (`navigator.serviceWorker.getRegistrations()`,
+  `caches.delete('noda-v1')`) rồi tải lại.
+- Đừng chạy `npm run build` khi dev server đang chạy: nó ghi đè `.next` và
+  dev server trả 404. Dừng server, build, rồi chạy lại server.
+- Ở `dev:e2e` không có đăng nhập, nên Create báo lỗi lưu. Muốn mở thử lesson
+  YouTube thì dùng `localStorage.__e2e_lesson__` với `youtubeVideoId`.
 
 ## Không làm (ghi lại để AI sau khỏi đề xuất lại)
 
@@ -322,7 +329,7 @@ Mục tiêu: **không sửa** `useLessonPlaybackLoop.ts` nếu có thể.
 
 - [x] P0 - Kiểm tra lấy phụ đề từ Cloud Functions (bị chặn, xem kết quả P0)
 - [x] P1 - Link YouTube và gate trong modal (chỉ hiện ở dev, cờ `YOUTUBE_LESSONS_ENABLED`; nút Create bật ở P2 khi truyền `onSubmitYoutube`)
-- [ ] P2 - Lưu và mở lesson YouTube
+- [x] P2 - Lưu và mở lesson YouTube (vẫn chỉ ở dev; lưu thật vào Firestore mới test bằng unit test, chưa test với tài khoản thật)
 - [ ] P3 - Player YouTube
 - [ ] P4 - AI shadowing cho lesson YouTube
 - [ ] P5 - Trường hợp lỗi và hoàn thiện

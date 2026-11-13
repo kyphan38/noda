@@ -15,6 +15,9 @@ export type DictationInputs = Record<number, string>;
 export type CompletedSentences = Record<number, boolean>;
 
 // Lesson summary from DB
+/** 'upload': media in Firebase Storage. 'youtube': played from YouTube (PLAN-youtube.md). */
+export type LessonSource = 'upload' | 'youtube';
+
 export type LessonSummary = {
   id: string;
   name: string;
@@ -27,6 +30,8 @@ export type LessonSummary = {
   /** Whether a media blob exists in IndexedDB (audio or video). */
   hasMedia: boolean;
   mediaType: 'audio' | 'video';
+  /** Where the media lives; missing means an uploaded file. */
+  source?: LessonSource;
   /** Sidebar folder membership (null/undefined = root). */
   folderId?: string | null;
   /** Sidebar ordering key within a container (client-side ordering). */
@@ -58,6 +63,7 @@ export interface LessonItem {
   shadowingProgress: number;
   hasMedia: boolean;
   mediaType: 'audio' | 'video';
+  source?: LessonSource;
   folderId?: string | null;
   sortKey?: number;
   type: 'lesson';
