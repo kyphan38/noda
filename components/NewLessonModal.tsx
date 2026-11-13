@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Music2, FileText, X, Check } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Music2, FileText, X, Check, Loader2 } from 'lucide-react';
 import {
   MEDIA_WARN_BYTES,
   lessonNameFromFile,
@@ -9,7 +9,19 @@ import {
   pairLessonFiles,
   type LessonFilePair,
 } from '@/lib/lessonFiles';
-import { isLessonNameTaken } from '@/lib/utils';
+import { isLessonNameTaken, parseTranscript } from '@/lib/utils';
+import {
+  checkSrtFitsVideo,
+  lessonNameFromTitle,
+  parseYoutubeVideoId,
+  videoIdFromFileName,
+} from '@/lib/youtube';
+import {
+  useYoutubeSubtitleGate,
+  type YoutubeGateError,
+  type YoutubeGateState,
+} from '@/hooks/useYoutubeSubtitleGate';
+import { YOUTUBE_LESSONS_ENABLED } from '@/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ModalShell } from '@/components/ModalShell';
@@ -22,6 +34,26 @@ export interface LessonData {
   transcriptFile: File | null;
 }
 
+export interface YoutubeLessonData {
+  name: string;
+  folderId: string | null;
+  videoId: string;
+  durationSec: number;
+  transcriptFile: File;
+}
+
+const YOUTUBE_GATE_MESSAGES: Record<YoutubeGateError, string> = {
+  'no-uploaded-subs': 'No uploaded English subtitles for this video.',
+  'not-found': 'Video not found or private.',
+  'not-embeddable': 'This video can only play on YouTube.',
+  live: 'Live videos are not supported.',
+  'load-failed': 'Could not load the YouTube player.',
+  'player-error': 'Could not check this video.',
+};
+
+/** Wait after typing or pasting before checking a link. */
+const YOUTUBE_LINK_DEBOUNCE_MS = 400;
+
 interface NewLessonModalProps {
   onClose: () => void;
   /** `onUploadProgress` reports the media upload share, 0..1. */
@@ -32,6 +64,8 @@ interface NewLessonModalProps {
     onUploadProgress: (index: number, fraction: number) => void,
     onItemDone: (index: number) => void
   ) => Promise<void>;
+  /** Saves a YouTube lesson. Until it is passed, the YouTube form cannot submit. */
+  onSubmitYoutube?: (data: YoutubeLessonData) => Promise<void>;
   getTakenAudioLessonNames: () => string[];
   folders?: Array<{ id: string; name: string }>;
   onNotify?: (message: string, type: 'success' | 'error' | 'info') => void;
@@ -44,6 +78,7 @@ export function NewLessonModal({
   onClose,
   onSubmit,
   onSubmitMany,
+  onSubmitYoutube,
   getTakenAudioLessonNames,
   folders = [],
   onNotify,
@@ -67,6 +102,78 @@ export function NewLessonModal({
   const [unmatchedTranscripts, setUnmatchedTranscripts] = useState<string[]>([]);
   /** Which batch item is uploading, for the button label. */
   const [batchProgress, setBatchProgress] = useState<{ index: number; total: number; percent: number } | null>(null);
+
+  const [youtubeInput, setYoutubeInput] = useState('');
+  /** The link as last checked after the debounce; `id` is null when it is not a video link. */
+  const [youtubeLink, setYoutubeLink] = useState<{ input: string; id: string | null }>({ input: '', id: null });
+  const [youtubeSrt, setYoutubeSrt] = useState<{ file: File; text: string } | null>(null);
+  /** Name last filled from the video title, so a name the user typed is never replaced. */
+  const autoNameRef = useRef('');
+  const youtubeMode = YOUTUBE_LESSONS_ENABLED && youtubeInput.trim() !== '';
+  const { hostRef: youtubeHostRef, state: youtubeGateRaw } = useYoutubeSubtitleGate(
+    youtubeMode ? youtubeLink.id : null
+  );
+  /** True while the debounce runs: the last answer is for an older link. */
+  const youtubeLinkPending = youtubeMode && youtubeLink.input !== youtubeInput;
+  const youtubeGate = useMemo<YoutubeGateState>(
+    () =>
+      youtubeLinkPending || (youtubeGateRaw.status !== 'idle' && youtubeGateRaw.videoId !== youtubeLink.id)
+        ? { status: 'checking', videoId: youtubeLink.id ?? '' }
+        : youtubeGateRaw,
+    [youtubeLinkPending, youtubeGateRaw, youtubeLink.id]
+  );
+
+  useEffect(() => {
+    const t = setTimeout(
+      () => setYoutubeLink({ input: youtubeInput, id: parseYoutubeVideoId(youtubeInput) }),
+      YOUTUBE_LINK_DEBOUNCE_MS
+    );
+    return () => clearTimeout(t);
+  }, [youtubeInput]);
+
+  const youtubeTitle = youtubeGate.status === 'ok' ? youtubeGate.title : null;
+  useEffect(() => {
+    if (youtubeTitle === null) return;
+    const auto = lessonNameFromTitle(youtubeTitle);
+    // Read the ref now: the updater runs later, after the ref holds `auto`.
+    const previousAuto = autoNameRef.current;
+    setLessonName((prev) => (prev === '' || prev === previousAuto ? auto : prev));
+    autoNameRef.current = auto;
+  }, [youtubeTitle]);
+
+  const youtubeLinkInvalid = youtubeMode && !youtubeLinkPending && youtubeLink.id === null;
+
+  const youtubeSrtCheck = useMemo(() => {
+    if (!youtubeSrt || youtubeGate.status !== 'ok') return null;
+    const sentences = parseTranscript(youtubeSrt.text);
+    const fileVideoId = videoIdFromFileName(youtubeSrt.file.name);
+    const error =
+      fileVideoId && fileVideoId !== youtubeGate.videoId
+        ? 'This .srt is for another video.'
+        : checkSrtFitsVideo(sentences, youtubeGate.durationSec);
+    return { error, count: sentences.length };
+  }, [youtubeSrt, youtubeGate]);
+
+  const youtubeReady =
+    youtubeGate.status === 'ok' && !!youtubeSrt && !!youtubeSrtCheck && !youtubeSrtCheck.error && !!lessonName.trim();
+
+  const handleYoutubeInput = (value: string) => {
+    setYoutubeInput(value);
+    setFormUploadError(null);
+    if (value.trim()) {
+      // One source per lesson: a link replaces any picked media.
+      setMediaFile(null);
+      setTranscriptFile(null);
+      setMediaNameConflict(null);
+    } else if (lessonName === autoNameRef.current) {
+      setLessonName('');
+    }
+  };
+
+  const applyYoutubeSrt = useCallback((file: File) => {
+    if (!isSrtFile(file)) return;
+    void file.text().then((text) => setYoutubeSrt({ file, text }));
+  }, []);
 
   const applyMediaFile = useCallback(
     (file: File) => {
@@ -206,6 +313,25 @@ export function NewLessonModal({
     }
   };
 
+  const handleSubmitYoutube = async () => {
+    if (!onSubmitYoutube || !youtubeReady || youtubeGate.status !== 'ok' || !youtubeSrt || isSaving) return;
+    setIsSaving(true);
+    setFormUploadError(null);
+    try {
+      await onSubmitYoutube({
+        name: lessonName,
+        folderId,
+        videoId: youtubeGate.videoId,
+        durationSec: youtubeGate.durationSec,
+        transcriptFile: youtubeSrt.file,
+      });
+    } catch (error) {
+      setFormUploadError(error instanceof Error ? error.message : 'Could not create the lesson.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!mediaFile || !lessonName || isSaving) return;
     setIsSaving(true);
@@ -303,7 +429,107 @@ export function NewLessonModal({
           </select>
         </div>
 
-        {batch ? (
+        {YOUTUBE_LESSONS_ENABLED && !batch && (
+          <div>
+            <label htmlFor="noda-youtube-link" className="block text-sm font-medium text-gray-400 mb-2">
+              YouTube link
+            </label>
+            <input
+              id="noda-youtube-link"
+              type="url"
+              inputMode="url"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
+              placeholder="https://youtu.be/…"
+              value={youtubeInput}
+              onChange={(e) => handleYoutubeInput(e.target.value)}
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              disabled={isSaving}
+            />
+            {youtubeMode && (
+              <p className="mt-2 flex min-w-0 items-center gap-1.5 text-sm" aria-live="polite">
+                {youtubeLinkInvalid ? (
+                  <span className="text-red-400">Not a YouTube video link.</span>
+                ) : youtubeGate.status === 'ok' ? (
+                  <>
+                    <Check size={14} className="shrink-0 text-gray-300" aria-hidden />
+                    <span className="truncate text-gray-200" title={youtubeGate.title}>{youtubeGate.title}</span>
+                    <span className="shrink-0 text-xs text-gray-500">{youtubeGate.trackLang}</span>
+                  </>
+                ) : youtubeGate.status === 'error' ? (
+                  <span className="text-red-400">{YOUTUBE_GATE_MESSAGES[youtubeGate.reason]}</span>
+                ) : (
+                  <>
+                    <Loader2 size={14} className="shrink-0 animate-spin text-gray-400" aria-hidden />
+                    <span className="text-gray-400">Checking subtitles…</span>
+                  </>
+                )}
+              </p>
+            )}
+            {/* The gate's player: muted, off screen, never seen. */}
+            <div
+              ref={youtubeHostRef}
+              aria-hidden
+              className="pointer-events-none fixed left-[-10000px] top-0 h-[200px] w-[200px] opacity-0"
+            />
+          </div>
+        )}
+
+        {youtubeMode ? (
+          youtubeGate.status === 'ok' && (
+            <div
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setTranscriptDrag(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setTranscriptDrag(false);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setTranscriptDrag(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) applyYoutubeSrt(file);
+              }}
+              className={`flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg relative transition-colors border-2 border-dashed border-gray-700 ${transcriptDrag ? 'ring-1 ring-gray-500 bg-gray-800/60' : ''}`}
+            >
+              <FileText size={20} className="text-gray-400 shrink-0" />
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium text-gray-300">+ Add transcript (.srt)</p>
+                {youtubeSrt && youtubeSrtCheck ? (
+                  youtubeSrtCheck.error ? (
+                    <p className="text-xs text-red-400 mt-1">{youtubeSrtCheck.error}</p>
+                  ) : (
+                    <p className="text-xs text-gray-300 mt-1 inline-flex max-w-full items-center gap-1">
+                      <Check size={12} className="shrink-0" aria-hidden />
+                      <span className="truncate">{youtubeSrt.file.name}</span>
+                      <span className="shrink-0 text-gray-500">· {youtubeSrtCheck.count} sentences</span>
+                    </p>
+                  )
+                ) : (
+                  <p className="text-xs text-gray-500 mt-0.5">Drop file here or click</p>
+                )}
+              </div>
+              <input
+                type="file"
+                accept=".srt"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) applyYoutubeSrt(file);
+                  e.target.value = '';
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isSaving}
+              />
+            </div>
+          )
+        ) : batch ? (
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-gray-400">Lessons ({batchReady.length})</span>
@@ -414,8 +640,14 @@ export function NewLessonModal({
           type="button"
           variant="default"
           className="h-auto w-full justify-center gap-2 rounded-xl py-4 text-lg font-bold"
-          disabled={(batch ? batchReady.length === 0 : !mediaFile || !lessonName) || isSaving}
-          onClick={() => void (batch ? handleSubmitBatch() : handleSubmit())}
+          disabled={
+            (youtubeMode
+              ? !youtubeReady || !onSubmitYoutube
+              : batch
+                ? batchReady.length === 0
+                : !mediaFile || !lessonName) || isSaving
+          }
+          onClick={() => void (youtubeMode ? handleSubmitYoutube() : batch ? handleSubmitBatch() : handleSubmit())}
         >
           {isSaving ? (
             <>

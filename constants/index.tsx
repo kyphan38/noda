@@ -71,3 +71,9 @@ export const SHADOWING_MAX_RHYTHM_NOTES = 1;
  * prefetched sentence is a paid Gemini call for something the user might never open.
  */
 export const SHADOWING_PREFETCH_COUNT = 2;
+
+/**
+ * YouTube lessons (PLAN-youtube.md). Dev only until lessons can be saved and
+ * played (P2/P3); then this goes away.
+ */
+export const YOUTUBE_LESSONS_ENABLED = process.env.NODE_ENV !== 'production';
