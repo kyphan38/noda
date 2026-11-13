@@ -5,6 +5,9 @@
  * cache miss does it fall through to Stage 2's flow (download -> slice ->
  * Gemini), then writes the result back to that same doc.
  *
+ * YouTube lessons send `youtubeVideoId` instead of `mediaStoragePath`: Gemini
+ * reads the sentence's time range from YouTube, with no download or ffmpeg.
+ *
  * Flow: verify caller uid == ALLOWED_USER_UID -> check Firestore cache ->
  * (miss) fetch the small analysis-audio copy (built from the source media on
  * first use, see lib/analysisAudio.ts) -> ffmpeg-slice
@@ -16,6 +19,7 @@
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import type { Part } from "@google/genai";
 import { getApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -24,6 +28,7 @@ import { readFileSync, unlinkSync } from "fs";
 import { sliceAudioClip } from "./lib/sliceAudio";
 import { analysisAudioPath, fetchAnalysisAudio } from "./lib/analysisAudio";
 import { generateShadowingJson, getShadowingModelId } from "./lib/geminiClient";
+import { parseClipSource, youtubeClipPart, type ClipSource } from "./lib/clipSource";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
 import {
   normalizeShadowingAnalysis,
@@ -78,18 +83,16 @@ function isGeminiTimeoutError(e: unknown): boolean {
 /** One Gemini call attempt: generate + parse JSON. Throws GeminiJsonParseError
  * on malformed JSON so the caller can retry once; timeout/other errors
  * propagate as-is. */
-async function callGeminiOnce(sourceText: string, base64ClipAudio: string): Promise<NormalizedAnalysis> {
+async function callGeminiOnce(sourceText: string, clip: Part): Promise<NormalizedAnalysis> {
   const text = await generateShadowingJson(
     [
       {
         role: "user",
-        parts: [
-          { text: buildShadowingAnalysisPrompt(sourceText) },
-          { inlineData: { mimeType: "audio/wav", data: base64ClipAudio } },
-        ],
+        parts: [{ text: buildShadowingAnalysisPrompt(sourceText) }, clip],
       },
     ],
-    GEMINI_TIMEOUT_MS
+    GEMINI_TIMEOUT_MS,
+    !!clip.fileData
   );
   if (!text) {
     throw new HttpsError("internal", "Empty response from Gemini.");
@@ -109,11 +112,12 @@ async function callGeminiOnce(sourceText: string, base64ClipAudio: string): Prom
 
 /** Stage 6: one call, with a single automatic retry on malformed JSON
  * or an unusable shape (timeouts are not retried - they already ate the full budget). */
-async function callGeminiWithRetry(sourceText: string, base64ClipAudio: string): Promise<NormalizedAnalysis> {
+/** `clip`: a sliced WAV (`inlineData`) or a YouTube time range (`fileData`, see lib/clipSource.ts). */
+async function callGeminiWithRetry(sourceText: string, clip: Part): Promise<NormalizedAnalysis> {
   const isRetryable = (e: unknown) => e instanceof GeminiJsonParseError || e instanceof ShadowingShapeError;
 
   try {
-    return await callGeminiOnce(sourceText, base64ClipAudio);
+    return await callGeminiOnce(sourceText, clip);
   } catch (e) {
     if (isGeminiTimeoutError(e)) {
       throw new HttpsError("deadline-exceeded", "Analysis timed out, try again.");
@@ -123,7 +127,7 @@ async function callGeminiWithRetry(sourceText: string, base64ClipAudio: string):
     // Malformed JSON or an unusable shape on attempt 1 - retry exactly once.
     console.warn("Shadowing analysis attempt 1 unusable, retrying:", (e as Error).message);
     try {
-      return await callGeminiOnce(sourceText, base64ClipAudio);
+      return await callGeminiOnce(sourceText, clip);
     } catch (e2) {
       if (isGeminiTimeoutError(e2)) {
         throw new HttpsError("deadline-exceeded", "Analysis timed out, try again.");
@@ -167,7 +171,7 @@ interface AnalyzeShadowingPatternRequest {
   sentenceId: number;
   startSec: number;
   endSec: number;
-  mediaStoragePath: string;
+  source: ClipSource;
   sourceText: string;
 }
 
@@ -192,8 +196,9 @@ function assertValidRequest(data: unknown): AnalyzeShadowingPatternRequest {
   ) {
     throw new HttpsError("invalid-argument", "startSec/endSec must be numbers with endSec > startSec.");
   }
-  if (typeof d.mediaStoragePath !== "string" || !d.mediaStoragePath.trim()) {
-    throw new HttpsError("invalid-argument", "mediaStoragePath is required.");
+  const source = parseClipSource(d);
+  if ("error" in source) {
+    throw new HttpsError("invalid-argument", source.error);
   }
   if (typeof d.sourceText !== "string" || !d.sourceText.trim()) {
     throw new HttpsError("invalid-argument", "sourceText is required.");
@@ -204,7 +209,7 @@ function assertValidRequest(data: unknown): AnalyzeShadowingPatternRequest {
     sentenceId: d.sentenceId,
     startSec: d.startSec,
     endSec: d.endSec,
-    mediaStoragePath: d.mediaStoragePath,
+    source,
     sourceText: d.sourceText,
   };
 }
@@ -232,12 +237,11 @@ export const analyzeShadowingPattern = onCall(
       throw new HttpsError("permission-denied", "This tool is single-user only.");
     }
 
-    const { lessonId, sentenceId, startSec, endSec, mediaStoragePath, sourceText } = assertValidRequest(
-      request.data
-    );
+    const { lessonId, sentenceId, startSec, endSec, source, sourceText } = assertValidRequest(request.data);
     // The media path comes from the client; only ever read the caller's own uploads.
-    const copyPath = analysisAudioPath(request.auth.uid, mediaStoragePath);
-    if (!copyPath) {
+    const copyPath =
+      source.kind === "storage" ? analysisAudioPath(request.auth.uid, source.mediaStoragePath) : null;
+    if (source.kind === "storage" && !copyPath) {
       throw new HttpsError("invalid-argument", "mediaStoragePath is not one of your uploads.");
     }
 
@@ -257,22 +261,33 @@ export const analyzeShadowingPattern = onCall(
     let clipPath: string | null = null;
 
     try {
-      // A small mono FLAC copy instead of the full upload - see lib/analysisAudio.ts.
-      audioPath = await fetchAnalysisAudio(getStorage().bucket(), mediaStoragePath, copyPath);
+      let clipPart: Part;
+      if (source.kind === "youtube") {
+        // Gemini reads the time range from YouTube itself: nothing to download or slice,
+        // and so no loudness check. A too-short range is the one thing to catch here.
+        if (endSec - startSec < MIN_CLIP_SECONDS) {
+          throw new HttpsError("failed-precondition", "No audio found for this sentence.");
+        }
+        console.info("Shadowing clip", { lessonId, sentenceId, startSec, endSec, youtube: source.youtubeVideoId });
+        clipPart = youtubeClipPart(source.youtubeVideoId, startSec, endSec);
+      } else {
+        // A small mono FLAC copy instead of the full upload - see lib/analysisAudio.ts.
+        audioPath = await fetchAnalysisAudio(getStorage().bucket(), source.mediaStoragePath, copyPath!);
 
-      clipPath = await sliceAudioClip(audioPath, startSec, endSec);
+        clipPath = await sliceAudioClip(audioPath, startSec, endSec);
 
-      const clipBuffer = readFileSync(clipPath);
-      const clip = describeClip(clipBuffer);
-      console.info("Shadowing clip", { lessonId, sentenceId, startSec, endSec, ...clip });
-      // An empty or silent clip makes Gemini invent a sentence that never matches the
-      // transcript, so both attempts fail slowly. Stop here with a clear message instead.
-      if (clip.seconds < MIN_CLIP_SECONDS || clip.dbfs < SILENCE_DBFS) {
-        throw new HttpsError("failed-precondition", "No audio found for this sentence.");
+        const clipBuffer = readFileSync(clipPath);
+        const clip = describeClip(clipBuffer);
+        console.info("Shadowing clip", { lessonId, sentenceId, startSec, endSec, ...clip });
+        // An empty or silent clip makes Gemini invent a sentence that never matches the
+        // transcript, so both attempts fail slowly. Stop here with a clear message instead.
+        if (clip.seconds < MIN_CLIP_SECONDS || clip.dbfs < SILENCE_DBFS) {
+          throw new HttpsError("failed-precondition", "No audio found for this sentence.");
+        }
+        clipPart = { inlineData: { mimeType: "audio/wav", data: clipBuffer.toString("base64") } };
       }
-      const base64ClipAudio = clipBuffer.toString("base64");
 
-      const analysis = await callGeminiWithRetry(sourceText, base64ClipAudio);
+      const analysis = await callGeminiWithRetry(sourceText, clipPart);
 
       const analysisResult = {
         sentenceId,

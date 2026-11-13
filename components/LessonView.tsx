@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Player, type PlayerAiButton } from './Player';
 import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
+import type { ShadowingMediaSource } from '@/lib/shadowingAnalysis';
 import { YouTubeStage } from './YouTubeStage';
 import { ShadowingPatternDock } from './ShadowingPatternDock';
 import { ResumePrompt } from './ResumePrompt';
@@ -170,6 +171,13 @@ export function LessonView({
 
   // Shadowing-pattern explanation feature (Stage 7: centralized manager, side panel / bottom
   // sheet). Separate from the Shadowing tab's playback loop (auto-pause per line).
+  /** Where AI analysis reads the sentence audio: YouTube lessons have no upload. */
+  const aiMediaSource = useMemo<ShadowingMediaSource | null>(
+    () =>
+      youtubeVideoId ? { youtubeVideoId } : mediaStoragePath ? { mediaStoragePath } : null,
+    [youtubeVideoId, mediaStoragePath]
+  );
+
   const {
     activeSentenceId: activeShadowingSentenceId,
     isPanelOpen: isShadowingPanelOpen,
@@ -181,7 +189,7 @@ export function LessonView({
     autoAnalyze: shadowingAutoAnalyze,
     autoStopped: shadowingAutoStopped,
     setAutoAnalyze: setShadowingAutoAnalyze,
-  } = useShadowingPatternManager(lessonId, mediaStoragePath, transcript);
+  } = useShadowingPatternManager(lessonId, aiMediaSource, transcript);
   const activeShadowingSentence =
     activeShadowingSentenceId != null
       ? transcript.find((s) => s.id === activeShadowingSentenceId)
@@ -195,7 +203,7 @@ export function LessonView({
   // hidden (Dictation, captions off) and in focus mode, which has no room for the panel.
   const touchControls = useCoarsePointer() || isMobile;
   const shadowingAvailable =
-    mode !== 'dictation' && !hideCaptions && !!lessonId && !!mediaStoragePath && !focusActive;
+    mode !== 'dictation' && !hideCaptions && !!lessonId && !!aiMediaSource && !focusActive;
 
   // The sentence the panel follows. Only a sentence that is really playing replaces it: at a
   // sentence's end (the loop's pause) and during Ctrl's 0.1s pre-roll the time sits in a gap,

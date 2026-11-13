@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getShadowingAnalysisFirestore } from '@/lib/db';
-import { requestShadowingAnalysis } from '@/lib/shadowingAnalysis';
+import { requestShadowingAnalysis, type ShadowingMediaSource } from '@/lib/shadowingAnalysis';
 import { isRenderableAnalysis } from '@/lib/shadowingChunks';
 import { readAutoAnalyze, writeAutoAnalyze } from '@/lib/shadowingAutoAnalyze';
 import { nextSentencesToPrefetch, sentencesToAutoAnalyze } from '@/lib/shadowingPrefetch';
@@ -85,7 +85,8 @@ export interface UseShadowingPatternManagerResult {
  */
 export function useShadowingPatternManager(
   lessonId: string | null,
-  mediaStoragePath: string | null,
+  /** Keep the object stable (useMemo): callbacks rebuild when it changes. */
+  mediaSource: ShadowingMediaSource | null,
   transcript: Sentence[]
 ): UseShadowingPatternManagerResult {
   const [entries, setEntries] = useState<Record<number, ShadowingEntry>>({});
@@ -164,7 +165,7 @@ export function useShadowingPatternManager(
    */
   const prefetchSentence = useCallback(
     async (sentence: Sentence): Promise<PrefetchResult> => {
-      if (!lessonId || !mediaStoragePath) return 'skipped';
+      if (!lessonId || !mediaSource) return 'skipped';
       const requests = requestsRef.current;
       if (requests.isLoading(sentence.id)) return 'skipped';
       if (entriesRef.current[sentence.id]?.status === 'ready') return 'skipped';
@@ -190,7 +191,7 @@ export function useShadowingPatternManager(
           sentence.id,
           sentence.start,
           sentence.end,
-          mediaStoragePath,
+          mediaSource,
           sentence.text
         );
         if (!requests.isCurrent(token)) return 'skipped';
@@ -209,20 +210,20 @@ export function useShadowingPatternManager(
         requests.end(token);
       }
     },
-    [lessonId, mediaStoragePath, setEntry]
+    [lessonId, mediaSource, setEntry]
   );
 
   /** Start the next `SHADOWING_PREFETCH_COUNT` sentences after `sentenceId`. */
   const prefetchAfter = useCallback(
     (sentenceId: number) => {
-      if (!lessonId || !mediaStoragePath) return;
+      if (!lessonId || !mediaSource) return;
       if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
 
       for (const next of nextSentencesToPrefetch(transcriptRef.current, sentenceId)) {
         void prefetchSentence(next);
       }
     },
-    [lessonId, mediaStoragePath, prefetchSentence]
+    [lessonId, mediaSource, prefetchSentence]
   );
 
   /**
@@ -236,7 +237,7 @@ export function useShadowingPatternManager(
     autoRunRef.current = runId;
     try {
       while (autoRunRef.current === runId) {
-        if (!lessonId || !mediaStoragePath) return;
+        if (!lessonId || !mediaSource) return;
         if (!autoAnalyzeRef.current || !isPanelOpenRef.current) return;
         const activeId = activeSentenceIdRef.current;
         if (activeId == null) return;
@@ -268,7 +269,7 @@ export function useShadowingPatternManager(
     } finally {
       if (autoRunRef.current === runId) autoRunRef.current = 0;
     }
-  }, [lessonId, mediaStoragePath, prefetchSentence]);
+  }, [lessonId, mediaSource, prefetchSentence]);
 
   useEffect(() => {
     if (autoAnalyze && !autoStopped && isPanelOpen && activeSentenceId != null) void runAuto();
@@ -284,7 +285,7 @@ export function useShadowingPatternManager(
 
   const runGenerate = useCallback(
     (sentence: ShadowingSentenceRef) => {
-      if (!lessonId || !mediaStoragePath) {
+      if (!lessonId || !mediaSource) {
         setEntry(sentence.id, { status: 'error', analysis: null, error: 'This lesson has no audio in the cloud yet.' });
         return;
       }
@@ -308,7 +309,7 @@ export function useShadowingPatternManager(
             sentence.id,
             sentence.start,
             sentence.end,
-            mediaStoragePath,
+            mediaSource,
             sentence.text
           );
           if (!requests.isCurrent(token)) return;
@@ -329,7 +330,7 @@ export function useShadowingPatternManager(
         }
       })();
     },
-    [lessonId, mediaStoragePath, prefetchAfter, setEntry]
+    [lessonId, mediaSource, prefetchAfter, setEntry]
   );
 
   /** Open the panel on `sentence`. The panel then follows the current sentence via `show`. */

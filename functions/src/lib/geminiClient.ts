@@ -9,7 +9,7 @@
  * extra transport retries would blow the function's time budget.
  */
 
-import { GoogleGenAI, type Content } from "@google/genai";
+import { GoogleGenAI, MediaResolution, type Content } from "@google/genai";
 import { SHADOWING_ANALYSIS_RESPONSE_SCHEMA } from "../prompts/shadowingAnalysisPrompt";
 
 let genAI: GoogleGenAI | null = null;
@@ -42,7 +42,9 @@ export function getShadowingModelId(): string {
  */
 export async function generateShadowingJson(
   contents: Content[],
-  timeoutMs: number
+  timeoutMs: number,
+  /** For video input: low resolution keeps a YouTube clip near 100 tokens a second. */
+  lowMediaResolution = false
 ): Promise<string | undefined> {
   const response = await getGenAI().models.generateContent({
     model: getShadowingModelId(),
@@ -51,6 +53,7 @@ export async function generateShadowingJson(
       responseMimeType: "application/json",
       responseSchema: SHADOWING_ANALYSIS_RESPONSE_SCHEMA,
       temperature: 0.2,
+      ...(lowMediaResolution ? { mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW } : {}),
       httpOptions: { timeout: timeoutMs },
     },
   });

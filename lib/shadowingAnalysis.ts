@@ -8,14 +8,16 @@ import { SHADOWING_ANALYSIS_FUNCTION_NAME } from '@/constants';
 const SHADOWING_ANALYSIS_CLIENT_TIMEOUT_MS = 190_000;
 import type { ShadowingPatternDoc } from '@/types';
 
-interface RequestShadowingAnalysisPayload {
+/** Where the sentence's audio is: an upload in Storage, or a YouTube video (PLAN-youtube.md P4). */
+export type ShadowingMediaSource = { mediaStoragePath: string } | { youtubeVideoId: string };
+
+type RequestShadowingAnalysisPayload = {
   lessonId: string;
   sentenceId: number;
   startSec: number;
   endSec: number;
-  mediaStoragePath: string;
   sourceText: string;
-}
+} & ShadowingMediaSource;
 
 /**
  * Response from the `analyzeShadowingPattern` Cloud Function.
@@ -41,7 +43,7 @@ export async function requestShadowingAnalysis(
   sentenceId: number,
   startSec: number,
   endSec: number,
-  mediaStoragePath: string,
+  media: ShadowingMediaSource,
   sourceText: string
 ): Promise<ShadowingAnalysisResult> {
   const callable = httpsCallable<RequestShadowingAnalysisPayload, ShadowingAnalysisResult>(
@@ -52,6 +54,6 @@ export async function requestShadowingAnalysis(
     // so a slow success is not reported as a timeout.
     { timeout: SHADOWING_ANALYSIS_CLIENT_TIMEOUT_MS }
   );
-  const result = await callable({ lessonId, sentenceId, startSec, endSec, mediaStoragePath, sourceText });
+  const result = await callable({ lessonId, sentenceId, startSec, endSec, sourceText, ...media });
   return result.data;
 }

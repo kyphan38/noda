@@ -343,5 +343,5 @@ Mục tiêu: **không sửa** `useLessonPlaybackLoop.ts` nếu có thể.
 - [x] P1 - Link YouTube và gate trong modal (chỉ hiện ở dev, cờ `YOUTUBE_LESSONS_ENABLED`; nút Create bật ở P2 khi truyền `onSubmitYoutube`)
 - [x] P2 - Lưu và mở lesson YouTube (vẫn chỉ ở dev; lưu thật vào Firestore mới test bằng unit test, chưa test với tài khoản thật)
 - [x] P3 - Player YouTube (vẫn chỉ ở dev; chưa test đổi qua lại giữa lesson upload và lesson YouTube vì `dev:e2e` chỉ seed được một lesson)
-- [ ] P4 - AI shadowing cho lesson YouTube
+- [x] P4 - AI shadowing cho lesson YouTube (code xong; **chưa deploy function**, nên chưa đo 10 câu trên production. Chạy thử code đã build với Gemini trên máy: 4/4 câu OK, 0.86-8.2s, 14-41s)
 - [ ] P5 - Trường hợp lỗi và hoàn thiện
