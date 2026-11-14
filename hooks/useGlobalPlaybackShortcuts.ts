@@ -36,6 +36,10 @@ export function useGlobalPlaybackShortcuts(
       if (ae instanceof HTMLElement && ae.isContentEditable) {
         return;
       }
+      // An open modal owns the keyboard: Space, Enter and Control must not drive playback behind it.
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) {
+        return;
+      }
 
       if (
         e.code === 'KeyH' &&

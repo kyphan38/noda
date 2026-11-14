@@ -26,6 +26,8 @@ import { getStorage } from "firebase-admin/storage";
 import { readFileSync, unlinkSync } from "fs";
 
 import { sliceAudioClip } from "./lib/sliceAudio";
+import { wavStats } from "./lib/wavStats";
+import { isGeminiTimeoutError } from "./lib/geminiErrors";
 import { analysisAudioPath, fetchAnalysisAudio } from "./lib/analysisAudio";
 import { generateShadowingJson, getShadowingModelId } from "./lib/geminiClient";
 import { parseClipSource, youtubeClipPart, type ClipSource } from "./lib/clipSource";
@@ -59,26 +61,6 @@ const GEMINI_TIMEOUT_MS = 55000;
 /** Stage 6: thrown when Gemini's response text fails JSON.parse - caught by the
  * caller to trigger a single automatic retry before giving up. */
 class GeminiJsonParseError extends Error {}
-
-/** Stage 6: the SDK's `httpOptions.timeout` (GEMINI_TIMEOUT_MS) times out in two ways.
- * It aborts the local fetch (an AbortError, or a message mentioning timeout/aborted),
- * and it also sends the same budget as `X-Server-Timeout`, so Gemini itself can answer
- * first with a 504 DEADLINE_EXCEEDED whose raw JSON would otherwise reach the user. */
-function isGeminiTimeoutError(e: unknown): boolean {
-  if (!(e instanceof Error)) return false;
-  const name = e.name?.toLowerCase() ?? "";
-  const message = e.message?.toLowerCase() ?? "";
-  const status = (e as { status?: unknown }).status;
-  return (
-    name.includes("abort") ||
-    message.includes("timeout") ||
-    message.includes("timed out") ||
-    message.includes("aborted") ||
-    message.includes("deadline_exceeded") ||
-    message.includes("deadline expired") ||
-    status === 504
-  );
-}
 
 /** One Gemini call attempt: generate + parse JSON. Throws GeminiJsonParseError
  * on malformed JSON so the caller can retry once; timeout/other errors
@@ -141,30 +123,9 @@ async function callGeminiWithRetry(sourceText: string, clip: Part): Promise<Norm
   }
 }
 
-/** sliceAudioClip writes mono 16kHz 16-bit PCM WAV. */
-const WAV_BYTES_PER_SEC = 16000 * 2;
 const MIN_CLIP_SECONDS = 0.3;
 /** Real speech sits around -30 dBFS; digital silence is far below this. */
 const SILENCE_DBFS = -60;
-
-/** Length and loudness (RMS in dBFS) of a clip from sliceAudioClip. */
-function describeClip(wav: Buffer): { bytes: number; seconds: number; dbfs: number } {
-  // ffmpeg adds a LIST chunk, so find the PCM by its "data" chunk, not a fixed offset.
-  const dataAt = wav.indexOf("data", 12, "ascii");
-  const start = dataAt >= 0 ? dataAt + 8 : wav.length;
-  const samples = Math.max(0, Math.floor((wav.length - start) / 2));
-  let sumSquares = 0;
-  for (let i = 0; i < samples; i++) {
-    const v = wav.readInt16LE(start + i * 2) / 32768;
-    sumSquares += v * v;
-  }
-  const rms = samples > 0 ? Math.sqrt(sumSquares / samples) : 0;
-  return {
-    bytes: wav.length,
-    seconds: Math.round((samples * 2 * 100) / WAV_BYTES_PER_SEC) / 100,
-    dbfs: rms > 0 ? Math.round(20 * Math.log10(rms) * 10) / 10 : -Infinity,
-  };
-}
 
 interface AnalyzeShadowingPatternRequest {
   lessonId: string;
@@ -277,7 +238,7 @@ export const analyzeShadowingPattern = onCall(
         clipPath = await sliceAudioClip(audioPath, startSec, endSec);
 
         const clipBuffer = readFileSync(clipPath);
-        const clip = describeClip(clipBuffer);
+        const clip = wavStats(clipBuffer);
         console.info("Shadowing clip", { lessonId, sentenceId, startSec, endSec, ...clip });
         // An empty or silent clip makes Gemini invent a sentence that never matches the
         // transcript, so both attempts fail slowly. Stop here with a clear message instead.

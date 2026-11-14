@@ -7,6 +7,7 @@ import { VideoPane } from './VideoPane';
 import type { ShadowingMediaSource } from '@/lib/shadowingAnalysis';
 import { YouTubeStage } from './YouTubeStage';
 import { ShadowingPatternDock } from './ShadowingPatternDock';
+import { SpeakingCheckModal } from './SpeakingCheckModal';
 import { ResumePrompt } from './ResumePrompt';
 import type { ResumeTarget } from '@/lib/progress';
 import type { PlaybackClock } from '@/lib/playbackClock';
@@ -253,6 +254,7 @@ export function LessonView({
       const el = document.activeElement;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
       if (el instanceof HTMLElement && el.isContentEditable) return;
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       e.preventDefault();
       onAiClick();
     };
@@ -274,6 +276,17 @@ export function LessonView({
         : undefined,
     [shadowingAvailable, onAiClick, isShadowingPanelOpen, currentAiSentence, currentAiEntry]
   );
+
+  // Speaking check: Shadowing only, where reading the text aloud is the exercise.
+  const [speakingOpen, setSpeakingOpen] = useState(false);
+  const speakingAvailable = mode === 'shadowing' && !!lessonId && !!aiMediaSource && !focusActive;
+  const openSpeakingCheck = useCallback(() => {
+    mediaRef.current?.pause();
+    setSpeakingOpen(true);
+  }, [mediaRef]);
+  useEffect(() => {
+    if (!speakingAvailable) setSpeakingOpen(false);
+  }, [speakingAvailable]);
 
   // Tell the page shell to widen a bit while the panel is open, so the 60/40 split isn't
   // cramped. Mirrors the `onFocusModeChange` ref pattern above.
@@ -591,6 +604,15 @@ export function LessonView({
         </div>
       )}
 
+      {speakingOpen && lessonId && aiMediaSource && (
+        <SpeakingCheckModal
+          lessonId={lessonId}
+          transcript={transcript}
+          media={aiMediaSource}
+          onClose={() => setSpeakingOpen(false)}
+        />
+      )}
+
       {/* Control bar: always the last item, so it stays pinned to the bottom of the screen in every mode. */}
       {(mediaURL || youtubeVideoId) && (
         <div className="shrink-0">
@@ -615,6 +637,7 @@ export function LessonView({
             focusMode={focusActive}
             onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
             ai={aiButton}
+            onSpeakingCheck={speakingAvailable ? openSpeakingCheck : undefined}
           />
 
         </div>

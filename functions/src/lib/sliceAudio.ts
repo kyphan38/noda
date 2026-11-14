@@ -57,3 +57,18 @@ export function extractAnalysisAudio(inputPath: string, outputPath: string): Pro
       .save(outputPath);
   });
 }
+
+/** Converts a learner recording (webm/opus, mp4/aac, ...) to the same mono 16kHz WAV as the clips. */
+export function convertToWav(inputPath: string): Promise<string> {
+  const outputPath = path.join(os.tmpdir(), `rec-${randomUUID()}.wav`);
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioChannels(1)
+      .audioFrequency(16000)
+      .noVideo()
+      .format("wav")
+      .on("error", (err: Error) => reject(err))
+      .on("end", () => resolve(outputPath))
+      .save(outputPath);
+  });
+}

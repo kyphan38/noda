@@ -9,7 +9,7 @@
  * extra transport retries would blow the function's time budget.
  */
 
-import { GoogleGenAI, MediaResolution, type Content } from "@google/genai";
+import { GoogleGenAI, MediaResolution, type Content, type Schema } from "@google/genai";
 import { SHADOWING_ANALYSIS_RESPONSE_SCHEMA } from "../prompts/shadowingAnalysisPrompt";
 
 let genAI: GoogleGenAI | null = null;
@@ -40,21 +40,34 @@ export function getShadowingModelId(): string {
  * text (or undefined when the response has no text part); parsing and shape
  * checks stay with the caller. A timeout rejects with an AbortError.
  */
-export async function generateShadowingJson(
+export function generateShadowingJson(
   contents: Content[],
   timeoutMs: number,
   /** For video input: low resolution keeps a YouTube clip near 100 tokens a second. */
   lowMediaResolution = false
+): Promise<string | undefined> {
+  return generateStructuredJson(contents, SHADOWING_ANALYSIS_RESPONSE_SCHEMA, {
+    timeoutMs,
+    lowMediaResolution,
+    temperature: 0.2,
+  });
+}
+
+/** Any structured-output call on the shadowing model. Same contract as above. */
+export async function generateStructuredJson(
+  contents: Content[],
+  responseSchema: Schema,
+  opts: { timeoutMs: number; lowMediaResolution?: boolean; temperature: number }
 ): Promise<string | undefined> {
   const response = await getGenAI().models.generateContent({
     model: getShadowingModelId(),
     contents,
     config: {
       responseMimeType: "application/json",
-      responseSchema: SHADOWING_ANALYSIS_RESPONSE_SCHEMA,
-      temperature: 0.2,
-      ...(lowMediaResolution ? { mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW } : {}),
-      httpOptions: { timeout: timeoutMs },
+      responseSchema,
+      temperature: opts.temperature,
+      ...(opts.lowMediaResolution ? { mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW } : {}),
+      httpOptions: { timeout: opts.timeoutMs },
     },
   });
   return response.text;

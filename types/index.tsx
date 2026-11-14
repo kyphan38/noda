@@ -168,3 +168,51 @@ export type ShadowingPatternDoc = {
   createdAt: number;
   generatedBy: string;
 };
+
+// ---------------------------------------------------------------------------
+// Speaking check: one recorded attempt at a segment, written by the
+// `assessSpeaking` Cloud Function (functions/src/assessSpeaking.ts). The score is
+// computed from Gemini's labels in functions/src/lib/speakingScore.ts.
+// ---------------------------------------------------------------------------
+
+export const SPEAKING_ATTEMPT_VERSION = 1;
+
+export type SpeakingBand = 'great' | 'good' | 'practice';
+
+export type SpeakingWordIssue = {
+  /** 0-based index into the segment text split on whitespace. */
+  index: number;
+  kind: 'mispronounced' | 'missing';
+  heard: string;
+  tip: string;
+};
+
+export type SpeakingCheckItem = {
+  id: number;
+  result: 'yes' | 'partly' | 'no';
+  type: string;
+  text: string;
+  sounds: string;
+  via: string;
+};
+
+export type SpeakingAttempt = {
+  id: string;
+  version: number;
+  segmentId: string;
+  sentenceIds: number[];
+  referenceText: string;
+  score: number;
+  band: SpeakingBand;
+  /** 0-1 per part; `sounds` is null when the sentences had no shadowing analysis yet. */
+  parts: { words: number; sounds: number | null; delivery: number; pace: number };
+  wordIssues: SpeakingWordIssue[];
+  checks: SpeakingCheckItem[];
+  criteria: { clarity: number; stress: number; intonation: number };
+  fixes: { text: string; why: string }[];
+  learnerSeconds: number;
+  referenceSeconds: number;
+  model: string;
+  /** Millis. */
+  createdAt: number;
+};

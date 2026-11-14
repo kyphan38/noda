@@ -71,3 +71,11 @@ export const SHADOWING_MAX_RHYTHM_NOTES = 1;
  * prefetched sentence is a paid Gemini call for something the user might never open.
  */
 export const SHADOWING_PREFETCH_COUNT = 2;
+
+// Speaking check (Cloud Function name; must match functions/src/index.ts export)
+export const SPEAKING_CHECK_FUNCTION_NAME = 'assessSpeaking';
+/** Segment size for the speaking check: long enough to judge, short enough to remember. */
+export const SPEAKING_SEGMENT_MIN_WORDS = 30;
+export const SPEAKING_SEGMENT_MAX_WORDS = 50;
+/** Recording stops by itself after this, so a forgotten mic cannot run forever. */
+export const SPEAKING_MAX_RECORDING_MS = 120_000;

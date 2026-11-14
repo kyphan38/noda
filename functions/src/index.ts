@@ -13,3 +13,4 @@ if (!getApps().length) {
 
 export { analyzeShadowingPattern } from "./analyzeShadowingPattern";
 export { onLessonDeleted } from "./onLessonDeleted";
+export { assessSpeaking } from "./assessSpeaking";

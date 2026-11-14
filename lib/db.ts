@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -15,7 +16,14 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from '@/lib/auth/firebase-client';
-import { SHADOWING_ANALYSIS_VERSION, type AppMode, type LessonSource, type ShadowingPatternDoc } from '@/types';
+import {
+  SHADOWING_ANALYSIS_VERSION,
+  SPEAKING_ATTEMPT_VERSION,
+  type AppMode,
+  type LessonSource,
+  type ShadowingPatternDoc,
+  type SpeakingAttempt,
+} from '@/types';
 import type { LessonProgressRecord } from '@/lib/progress';
 import { LESSON_CONTENT_DOC_ID, countDone, mergeLesson, splitLesson } from '@/lib/lessonLayout';
 
@@ -352,6 +360,23 @@ export const getShadowingAnalysisFirestore = async (
     ...data,
     createdAt: data.createdAt?.toMillis() ?? Date.now(),
   };
+};
+
+/** Every speaking-check attempt of a lesson, oldest first (written only by the Cloud Function). */
+export const listSpeakingAttemptsFirestore = async (lessonId: string): Promise<SpeakingAttempt[]> => {
+  const uid = getCurrentUidOrThrow();
+  const snapshot = await getDocs(
+    query(
+      collection(getFirebaseFirestore(), getUserLessonsCollectionPath(uid), lessonId, 'speakingAttempts'),
+      orderBy('createdAt', 'asc')
+    )
+  );
+  return snapshot.docs
+    .map((d) => {
+      const data = d.data() as Omit<SpeakingAttempt, 'id' | 'createdAt'> & { createdAt?: Timestamp };
+      return { ...data, id: d.id, createdAt: data.createdAt?.toMillis() ?? Date.now() };
+    })
+    .filter((a) => a.version === SPEAKING_ATTEMPT_VERSION);
 };
 
 export const subscribeLessonsFirestore = (

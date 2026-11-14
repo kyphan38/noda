@@ -15,6 +15,7 @@ import {
   Maximize2,
   Minimize2,
   AudioLines,
+  Mic,
 } from 'lucide-react';
 import { RepeatCount } from '@/types';
 import {
@@ -62,6 +63,8 @@ interface PlayerProps {
   onToggleFocusMode?: () => void;
   /** Shown only where the analysis is available (not in Dictation, not with captions hidden). */
   ai?: PlayerAiButton;
+  /** Opens the speaking check (Shadowing mode). */
+  onSpeakingCheck?: () => void;
 }
 
 const toolBtn =
@@ -243,6 +246,7 @@ export function Player({
   focusMode = false,
   onToggleFocusMode,
   ai,
+  onSpeakingCheck,
 }: PlayerProps) {
   const currentTime = usePlaybackTime(clock);
 
@@ -330,6 +334,18 @@ export function Player({
               {ai.cached && !ai.loading && (
                 <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gray-100" aria-hidden />
               )}
+            </button>
+          )}
+          {onSpeakingCheck && (
+            <button
+              type="button"
+              data-speaking-check
+              onClick={onSpeakingCheck}
+              className={toolBtn}
+              aria-label="Speaking check"
+              title="Speaking check"
+            >
+              <Mic className="h-4 w-4 shrink-0" aria-hidden />
             </button>
           )}
           <button
