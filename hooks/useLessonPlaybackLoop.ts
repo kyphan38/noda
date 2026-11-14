@@ -2,6 +2,7 @@ import { useEffect, type MutableRefObject, type RefObject } from 'react';
 import type { AppMode, LoopMode, RepeatCount, Sentence } from '@/types';
 import { REPEAT_PAUSE_MS, SEEK_SETTLE_TOLERANCE_S, SEEK_GUARD_TIMEOUT_MS } from '@/constants';
 import { shouldRepeatSentenceAtEnd } from '@/lib/repeat-count';
+import { settleTimeTowardTarget } from '@/lib/seekSettle';
 
 type RefBool = MutableRefObject<boolean>;
 type RefMode = MutableRefObject<AppMode>;
@@ -65,17 +66,12 @@ export function useLessonPlaybackLoop(
           }
         }
 
-        // Right after a deliberate seek to a specific sentence (click / Enter / Control
-        // replay in dictation), tiny seek inaccuracy - e.g. VBR MP3, or two sentences
-        // sitting very close together - can land `time` slightly BEFORE the target's
-        // start. Left as-is, the boundary scan below would then match the PREVIOUS
-        // sentence and the UI would appear to snap back to it. Nudge `time` forward to
-        // the intended start when it's within a small settle window.
+        // Sticky target: right after a deliberate seek (click / Enter / Control replay,
+        // any mode), a landing slightly BEFORE the target's start must not resolve to
+        // the previous sentence. See settleTimeTowardTarget.
+        time = settleTimeTowardTarget(transcript, time, userSeekTargetRef.current);
         if (replayOnceRef.current) {
-          const target = transcript.find((s) => s.id === replayOnceRef.current!.sentenceId);
-          if (target && time < target.start && time >= target.start - SEEK_SETTLE_TOLERANCE_S) {
-            time = target.start;
-          }
+          time = settleTimeTowardTarget(transcript, time, replayOnceRef.current.sentenceId);
         }
 
         const prevActiveSentenceId = lastActiveSentenceId;
