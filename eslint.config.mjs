@@ -5,7 +5,17 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(["out/**", ".next/**", "node_modules/**", "next-env.d.ts"]),
+  // This app does not use the React Compiler, so its diagnostics are advice, not errors.
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+    },
+  },
+  globalIgnores(["out/**", ".next/**", "node_modules/**", "next-env.d.ts", "functions/lib/**"]),
 ]);
 
 export default eslintConfig;
