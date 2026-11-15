@@ -25,6 +25,7 @@ import { convertToWav, sliceAudioClip } from "./lib/sliceAudio";
 import { analysisAudioPath, fetchAnalysisAudio } from "./lib/analysisAudio";
 import { generateStructuredJson, getShadowingModelId } from "./lib/geminiClient";
 import { isGeminiTimeoutError } from "./lib/geminiErrors";
+import { takeAiCall } from "./lib/dailyLimit";
 import { parseClipSource, youtubeClipPart, type ClipSource } from "./lib/clipSource";
 import { wavStats } from "./lib/wavStats";
 import {
@@ -190,6 +191,9 @@ export const assessSpeaking = onCall(
     }
 
     const db = getFirestore(getApp(), NODA_DB_ID);
+    if (!(await takeAiCall(db, uid))) {
+      throw new HttpsError("resource-exhausted", "Daily AI limit reached. Try again tomorrow.");
+    }
     const lessonPath = `users/${uid}/lessons/${req.lessonId}`;
     const temp: string[] = [];
 

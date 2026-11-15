@@ -32,6 +32,7 @@ import { analysisAudioPath, fetchAnalysisAudio } from "./lib/analysisAudio";
 import { generateShadowingJson, getShadowingModelId } from "./lib/geminiClient";
 import { parseClipSource, youtubeClipPart, type ClipSource } from "./lib/clipSource";
 import { buildShadowingAnalysisPrompt } from "./prompts/shadowingAnalysisPrompt";
+import { takeAiCall } from "./lib/dailyLimit";
 import {
   normalizeShadowingAnalysis,
   ShadowingShapeError,
@@ -216,6 +217,10 @@ export const analyzeShadowingPattern = onCall(
     // longer render, so it counts as a miss and gets overwritten below.
     if (cached && cached.version === ANALYSIS_VERSION) {
       return cached;
+    }
+
+    if (!(await takeAiCall(getFirestore(getApp(), NODA_DB_ID), request.auth.uid))) {
+      throw new HttpsError("resource-exhausted", "Daily AI limit reached. Try again tomorrow.");
     }
 
     let audioPath: string | null = null;
