@@ -27,7 +27,7 @@ import { readFileSync, unlinkSync } from "fs";
 
 import { sliceAudioClip } from "./lib/sliceAudio";
 import { wavStats } from "./lib/wavStats";
-import { isGeminiTimeoutError } from "./lib/geminiErrors";
+import { QUOTA_MESSAGE, isGeminiQuotaError, isGeminiTimeoutError } from "./lib/geminiErrors";
 import { analysisAudioPath, fetchAnalysisAudio } from "./lib/analysisAudio";
 import { generateShadowingJson, getShadowingModelId } from "./lib/geminiClient";
 import { parseClipSource, youtubeClipPart, type ClipSource } from "./lib/clipSource";
@@ -274,6 +274,10 @@ export const analyzeShadowingPattern = onCall(
       return analysisResult;
     } catch (e) {
       if (e instanceof HttpsError) throw e;
+      if (isGeminiQuotaError(e)) {
+        console.error("Gemini quota:", (e as Error).message);
+        throw new HttpsError("resource-exhausted", QUOTA_MESSAGE);
+      }
       const message = e instanceof Error ? e.message : "Unknown error";
       // An ffmpeg crash (e.g. "killed with signal SIGSEGV") is raw and unreadable.
       // Log it in full on the server; show the user one short line.

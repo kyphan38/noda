@@ -24,7 +24,7 @@ import * as path from "path";
 import { convertToWav, sliceAudioClip } from "./lib/sliceAudio";
 import { analysisAudioPath, fetchAnalysisAudio } from "./lib/analysisAudio";
 import { generateStructuredJson, getShadowingModelId } from "./lib/geminiClient";
-import { isGeminiTimeoutError } from "./lib/geminiErrors";
+import { QUOTA_MESSAGE, isGeminiQuotaError, isGeminiTimeoutError } from "./lib/geminiErrors";
 import { takeAiCall } from "./lib/dailyLimit";
 import { parseClipSource, youtubeClipPart, type ClipSource } from "./lib/clipSource";
 import { wavStats } from "./lib/wavStats";
@@ -282,6 +282,10 @@ export const assessSpeaking = onCall(
       return { ...attempt, id: ref.id, createdAt: Date.now() };
     } catch (e) {
       if (e instanceof HttpsError) throw e;
+      if (isGeminiQuotaError(e)) {
+        console.error("Gemini quota:", (e as Error).message);
+        throw new HttpsError("resource-exhausted", QUOTA_MESSAGE);
+      }
       const message = e instanceof Error ? e.message : "Unknown error";
       if (/ffmpeg|sigsegv|signal|killed|ffprobe|invalid data/i.test(message)) {
         console.error("Speaking check audio processing failed:", message);

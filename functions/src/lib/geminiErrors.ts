@@ -17,3 +17,12 @@ export function isGeminiTimeoutError(e: unknown): boolean {
     status === 504
   );
 }
+
+/** Out of Gemini credit or rate limited (HTTP 402 / 429). The raw JSON must not reach the user. */
+export function isGeminiQuotaError(e: unknown): boolean {
+  const message = e instanceof Error ? e.message : String(e);
+  const status = (e as { status?: unknown })?.status;
+  return status === 402 || status === 429 || /"code":\s*(402|429)|RESOURCE_EXHAUSTED|credits are depleted/i.test(message);
+}
+
+export const QUOTA_MESSAGE = "AI credit is used up. Top it up in AI Studio, then try again.";
