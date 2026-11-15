@@ -1,5 +1,6 @@
 {
   "routes": [
-    { "src": "/__/auth/(.*)", "dest": "https://kyphan38-noda-app.firebaseapp.com/__/auth/$1" }
+    { "src": "^/__/auth/(.*)$", "dest": "https://kyphan38-noda-app.firebaseapp.com/__/auth/$1" },
+    { "src": "^/((?!__/)(?:[^/]+/)*[^/.]+)$", "status": 308, "headers": { "Location": "/$1/" } }
   ]
 }

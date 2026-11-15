@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   basePath,
   assetPrefix: basePath || undefined,
   trailingSlash: true,
+  // On Vercel, Next's trailingSlash redirect runs before vercel.json routes, so
+  // /__/auth/handler became /__/auth/handler/ and Firebase answered "Site Not Found".
+  // vercel.json does the same redirect for every path except /__/.
+  skipTrailingSlashRedirect: true,
   typescript: {
     ignoreBuildErrors: false,
   },
