@@ -1,22 +1,31 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Single-user app: only this verified Google account may use the database.
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email == 'kyphan.work@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+    function isOwner(uid) {
+      return allowed() && request.auth.uid == uid;
+    }
     match /users/{userId}/lessons/{lessonId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
     match /users/{userId}/sidebarFolders/{folderId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
     // Heavy half of a lesson (transcript, drafts, progress), read only when it opens.
     match /users/{userId}/lessons/{lessonId}/content/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
     match /users/{userId}/lessons/{lessonId}/shadowingAnalysis/{sentenceId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
       allow write: if false; // only Cloud Function (Admin SDK) writes here
     }
     match /users/{userId}/lessons/{lessonId}/speakingAttempts/{attemptId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
       allow write: if false; // only Cloud Function (Admin SDK) writes here
     }
 
