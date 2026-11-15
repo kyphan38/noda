@@ -10,16 +10,7 @@
 
 import { Type, type Schema } from "@google/genai";
 import { MAX_DELIVERY_NOTES, MAX_FIXES } from "../lib/speakingScore";
-
-export interface SpeakingChecklistItem {
-  type: string;
-  text: string;
-  sounds: string;
-  via: string;
-}
-
-/** Most sound notes a segment sends; more makes the reply slower and less careful. */
-export const MAX_CHECKS = 8;
+import type { SpeakingChecklistItem } from "../lib/speakingChecklist";
 
 export const SPEAKING_ASSESSMENT_RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,
@@ -114,10 +105,13 @@ ${numbered}
 
 ## wordIssues
 List ONLY the words the learner got wrong. A word that is understandable and close to the target is NOT an issue, even with an accent.
-- "missing": the word is skipped or not audible at all. "heard" = "".
+- The target is how ${hasReference ? "the REFERENCE speaker actually said it" : "a fluent speaker would say it"}, not the dictionary form. Native speech reduces and drops sounds: "this" in "hear this song" can lose its /th/, "want to" becomes "wanna". When the learner copies such a reduction, that is good shadowing and NOT an issue. Only flag a word the learner said differently from ${hasReference ? "the REFERENCE" : "fluent speech"}.
+- "missing": the word is skipped or not audible at all, while the target clearly has it. "heard" = "".
 - "mispronounced": a different word is heard, or a sound is wrong enough to change or blur the word (e.g. "think" heard as "sink"). "heard" = what you actually heard, in plain English spelling.
+- Flag a word only when you are sure. If the audio is unclear at that point, leave the word out.
 - Use the index from the list above. At most one entry per word. An empty array is a valid answer.
 - If the learner adds words or repeats themselves, ignore the extras.
+- "tip": see the rules for coaching sentences below.
 
 ## checks
 Did the learner do each of these sound habits of the original speaker?
@@ -141,8 +135,11 @@ The ${MAX_FIXES} most useful things to practise next, most important first (fewe
 - Pick from the checks you marked "no" or "partly", and from stress, intonation, and pace. Do NOT repeat a word that is already in wordIssues: the learner already sees those.
 - "text": the exact words from the text the fix is about.
 
-## "why" fields (delivery and fixes)
-One imperative sentence in plain, simple English, at most 12 words, telling the learner what to DO with mouth, tongue, breath, or pitch. Do not explain theory or name rules. Never use the em dash character.
+## Coaching sentences ("tip" in wordIssues, "why" in delivery and fixes)
+One imperative sentence in plain, simple English, at most 12 words, telling the learner what to DO with lips, tongue, teeth, breath, or pitch. Do not explain theory or name rules. Never use the em dash character.
+Never write a vague instruction such as "say it clearly", "pronounce it correctly", or "don't substitute".
+Bad: "Say 'this' clearly instead of substituting 'a'."
+Good: "Touch your tongue to your top teeth for the 'th' in 'this'."
 
 Judge only what you hear. If the learner audio is silent or is clearly not this text, give 1 for every criterion and mark every word missing.
 

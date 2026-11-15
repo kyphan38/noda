@@ -38,10 +38,9 @@ import {
 } from "./lib/speakingScore";
 import {
   buildSpeakingAssessmentPrompt,
-  MAX_CHECKS,
   SPEAKING_ASSESSMENT_RESPONSE_SCHEMA,
-  type SpeakingChecklistItem,
 } from "./prompts/speakingAssessmentPrompt";
+import { buildChecklist } from "./lib/speakingChecklist";
 
 /** Keep in sync with NODA_DB_ID in analyzeShadowingPattern.ts and lib/firebase-db-id.ts. */
 const NODA_DB_ID = "(default)";
@@ -122,28 +121,6 @@ function assertValidRequest(data: unknown): AssessSpeakingRequest {
     recording: d.recording,
     recordingMimeType: d.recordingMimeType,
   };
-}
-
-/** Sound notes (not rhythm) from the cached analysis of each sentence, in sentence order. */
-function checklistFrom(docs: Array<Record<string, unknown> | undefined>): SpeakingChecklistItem[] {
-  const items: SpeakingChecklistItem[] = [];
-  for (const doc of docs) {
-    if (!doc || doc.version !== SHADOWING_ANALYSIS_VERSION) continue;
-    const notes = (doc.analysis as { notes?: unknown } | undefined)?.notes;
-    if (!Array.isArray(notes)) continue;
-    for (const n of notes) {
-      if (!n || typeof n !== "object") continue;
-      const note = n as Record<string, unknown>;
-      if (note.type === "rhythm" || typeof note.text !== "string" || !note.text.trim()) continue;
-      items.push({
-        type: String(note.type),
-        text: note.text,
-        sounds: typeof note.sounds === "string" ? note.sounds : "",
-        via: typeof note.via === "string" ? note.via : "",
-      });
-    }
-  }
-  return items.slice(0, MAX_CHECKS);
 }
 
 async function callGeminiOnce(
@@ -248,7 +225,7 @@ export const assessSpeaking = onCall(
       // --- Checklist from the shadowing analysis already done for these sentences ---
       const refs = req.sentenceIds.map((id) => db.doc(`${lessonPath}/shadowingAnalysis/${id}`));
       const snaps = await db.getAll(...refs);
-      const checklist = checklistFrom(snaps.map((s) => s.data()));
+      const checklist = buildChecklist(snaps.map((s) => s.data()), SHADOWING_ANALYSIS_VERSION);
 
       const words = splitWords(req.referenceText);
       const prompt = buildSpeakingAssessmentPrompt(words, checklist, true);

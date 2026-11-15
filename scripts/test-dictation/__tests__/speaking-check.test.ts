@@ -8,6 +8,7 @@ import {
   SpeakingShapeError,
 } from '../../../functions/src/lib/speakingScore';
 import { wavStats } from '../../../functions/src/lib/wavStats';
+import { buildChecklist } from '../../../functions/src/lib/speakingChecklist';
 import { buildSpeakingSegments } from '../../../lib/speakingSegments';
 import type { Sentence } from '../../../types';
 
@@ -258,5 +259,45 @@ describe('buildSpeakingSegments', () => {
     expect(buildSpeakingSegments([])).toEqual([]);
     const segs = buildSpeakingSegments([{ id: 1, text: '  ', start: 0, end: 1 }, sentence(2, 5, 1)]);
     expect(segs.map((s) => s.id)).toEqual(['2-2']);
+  });
+});
+
+describe('buildChecklist', () => {
+  const doc = (sentence: number, count: number, extra: object[] = []) => ({
+    version: 4,
+    analysis: {
+      notes: [
+        ...Array.from({ length: count }, (_, i) => ({ type: 'linking', text: `s${sentence}n${i}`, sounds: 'x', via: '' })),
+        ...extra,
+      ],
+    },
+  });
+
+  it('covers every sentence when there are more notes than the cap', () => {
+    // 4 sentences x 4 notes = 16, cap 10: the last sentence must still be checked.
+    const list = buildChecklist([doc(1, 4), doc(2, 4), doc(3, 4), doc(4, 4)], 4, 10);
+    expect(list).toHaveLength(10);
+    expect(new Set(list.map((c) => c.text.slice(0, 2)))).toEqual(new Set(['s1', 's2', 's3', 's4']));
+    // Back in sentence order.
+    expect(list.map((c) => c.text)).toEqual([
+      's1n0', 's1n1', 's1n2', 's2n0', 's2n1', 's2n2', 's3n0', 's3n1', 's4n0', 's4n1',
+    ]);
+  });
+
+  it('keeps everything when under the cap', () => {
+    expect(buildChecklist([doc(1, 2), doc(2, 3)], 4, 10)).toHaveLength(5);
+  });
+
+  it('skips rhythm notes, stale versions and missing docs', () => {
+    const list = buildChecklist(
+      [
+        doc(1, 1, [{ type: 'rhythm', text: '', sounds: '', via: '' }]),
+        { ...doc(2, 3), version: 3 },
+        undefined,
+        doc(4, 1),
+      ],
+      4
+    );
+    expect(list.map((c) => c.text)).toEqual(['s1n0', 's4n0']);
   });
 });
