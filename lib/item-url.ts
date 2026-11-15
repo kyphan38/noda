@@ -16,11 +16,16 @@ export function buildItemSearchString(row: { id: string; name: string }): string
 
 export type ParsedUrlSelection =
   | { kind: 'legacy-item'; id: string }
-  | { kind: 'lesson'; id: string };
+  | { kind: 'lesson'; id: string }
+  /** `?open=latest`: the lesson opened most recently (used by home-screen shortcuts). */
+  | { kind: 'latest' };
 
 export function parseItemFromSearch(search: string): ParsedUrlSelection | null {
   const q = search.startsWith('?') ? search.slice(1) : search;
   const params = new URLSearchParams(q);
+  if (params.get('open') === 'latest') {
+    return { kind: 'latest' };
+  }
   const legacy = params.get('item');
   if (legacy) {
     return { kind: 'legacy-item', id: legacy };
@@ -30,4 +35,13 @@ export function parseItemFromSearch(search: string): ParsedUrlSelection | null {
     return { kind: 'lesson', id };
   }
   return null;
+}
+
+/** First id in newest-first order that is still a live lesson. */
+export function pickLatestLessonId(
+  recentIds: readonly string[],
+  rows: readonly { id: string; isTrashed?: boolean }[]
+): string | null {
+  const live = new Set(rows.filter((r) => !r.isTrashed).map((r) => r.id));
+  return recentIds.find((id) => live.has(id)) ?? null;
 }

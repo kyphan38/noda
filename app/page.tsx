@@ -35,7 +35,7 @@ import { type ToastAction } from '@/components/Toast';
 import { ToastLayer } from '@/components/ToastLayer';
 import { getFirebaseAuth } from '@/lib/auth/firebase-client';
 import { hasAllowlistConfig, isAllowedUser } from '@/lib/auth/allowed-user';
-import { buildItemSearchString, parseItemFromSearch } from '@/lib/item-url';
+import { buildItemSearchString, parseItemFromSearch, pickLatestLessonId } from '@/lib/item-url';
 import { SENTENCE_PRE_ROLL_SECONDS } from '@/constants';
 import { cycleRepeatCount as getNextRepeatCount } from '@/lib/repeat-count';
 
@@ -417,7 +417,8 @@ export default function NodaApp() {
     urlHydratedRef.current = true;
     const parsed = parseItemFromSearch(window.location.search);
     if (!parsed) return;
-    const id = parsed.id;
+    const id = parsed.kind === 'latest' ? pickLatestLessonId(recentLessonIds, lessonsListRef.current) : parsed.id;
+    if (!id) return;
     const row = lessonsListRef.current.find((l) => l.id === id && !l.isTrashed);
     if (!row) return;
     applySelectionFromRow(row, { pushHistory: false });
@@ -427,7 +428,7 @@ export default function NodaApp() {
       '',
       `${window.location.pathname}?${qs}`
     );
-  }, [isListLoading, lessonsList, applySelectionFromRow]);
+  }, [isListLoading, lessonsList, recentLessonIds, applySelectionFromRow]);
 
   useEffect(() => {
     const onPop = () => {
