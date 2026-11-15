@@ -39,18 +39,18 @@ export async function run(page: Page, report: ReportEntry[]) {
   await pauseAudio(page);
 
   const repeatTrigger = () => page.locator('button[data-repeat-trigger]');
-  const speedTrigger = () => page.locator('button[aria-label^="Playback speed"]');
+  const speedTrigger = () => page.locator('button[data-more-trigger]');
   const repeatOption = (n: number | 'infinite') => page.locator(`button[data-repeat-option="${n}"]`);
   const speedSlider = () => page.locator('input[aria-label="Playback speed"]');
 
   // ── Speed Popover ─────────────────────────────────────────────────────────
 
-  await check(report, '14a. Speed button visible', async () => {
+  await check(report, '14a. More button visible', async () => {
     await speedTrigger().waitFor({ state: 'visible', timeout: 3_000 });
     return true;
   });
 
-  await check(report, '14b. Speed popover opens on click', async () => {
+  await check(report, '14b. More menu opens on click, with the speed slider', async () => {
     await speedTrigger().click();
     await sleep(200);
     return (await speedSlider().count()) === 1;
@@ -196,7 +196,7 @@ export async function run(page: Page, report: ReportEntry[]) {
   await pauseAudio(mobilePage);
 
   const mRepeatTrigger = () => mobilePage.locator('button[data-repeat-trigger]');
-  const mSpeedTrigger = () => mobilePage.locator('button[aria-label^="Playback speed"]');
+  const mSpeedTrigger = () => mobilePage.locator('button[data-more-trigger]');
   const mRepeatOption = (n: number | 'infinite') =>
     mobilePage.locator(`button[data-repeat-option="${n}"]`);
   const mSpeedSlider = () => mobilePage.locator('input[aria-label="Playback speed"]');

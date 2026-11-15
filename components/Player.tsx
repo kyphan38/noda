@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import {
   Play,
   Pause,
-  Gauge,
   Repeat,
   Video,
   VideoOff,
@@ -16,6 +15,7 @@ import {
   Minimize2,
   AudioLines,
   Mic,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { RepeatCount } from '@/types';
 import {
@@ -101,14 +101,30 @@ function usePopoverPosition(
   return pos;
 }
 
-function SpeedPopover({
+/**
+ * Settings that are set once and left alone (speed, video, captions), kept out of
+ * the bar so the controls used every few seconds stay one tap away.
+ */
+function MorePopover({
   speed,
-  onChange,
+  onSpeedChange,
+  showVideoToggle,
+  videoHidden,
+  onToggleVideoHidden,
+  showCaptionsToggle,
+  captionsHidden,
+  onToggleCaptions,
   onClose,
   triggerRef,
 }: {
   speed: number;
-  onChange: (s: number) => void;
+  onSpeedChange: (s: number) => void;
+  showVideoToggle: boolean;
+  videoHidden: boolean;
+  onToggleVideoHidden?: () => void;
+  showCaptionsToggle: boolean;
+  captionsHidden: boolean;
+  onToggleCaptions?: () => void;
   onClose: () => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }) {
@@ -122,38 +138,66 @@ function SpeedPopover({
       if (popoverRef.current?.contains(target)) return;
       onClose();
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [onClose, triggerRef]);
 
   if (!pos) return null;
 
+  const row =
+    'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm text-gray-300 transition-colors hover:bg-gray-800 hover:text-white';
+  const icon = 'h-4 w-4 shrink-0';
+
   return createPortal(
     <div
       ref={popoverRef}
+      data-more-menu
       style={{
         position: 'fixed',
         top: pos.top,
-        left: pos.left,
+        // The button sits at the right end of the bar: keep the 12rem menu on screen.
+        left: Math.max(104, Math.min(pos.left, window.innerWidth - 104)),
         transform: 'translate(-50%, -100%)',
       }}
-      className="z-[9999] flex flex-col items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 min-w-[140px] sm:min-w-[120px]"
+      className="z-[9999] flex w-48 flex-col gap-1 rounded-xl border border-gray-700 bg-gray-900 p-1.5"
     >
-      <span className="text-xs font-medium text-white tabular-nums">{speed.toFixed(1)}×</span>
-      <input
-        type="range"
-        min={MIN_PLAYBACK_RATE}
-        max={MAX_PLAYBACK_RATE}
-        step={0.1}
-        value={speed}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-24 sm:w-20 h-1.5 cursor-pointer appearance-none rounded-lg bg-gray-700 accent-gray-300"
-        aria-label="Playback speed"
-      />
-      <div className="flex justify-between w-24 sm:w-20">
-        <span className="text-[10px] text-gray-500">0.0</span>
-        <span className="text-[10px] text-gray-500">2.0</span>
+      <div className="flex flex-col gap-1.5 px-2 pb-1.5 pt-1">
+        <span className="text-xs font-medium tabular-nums text-white">{speed.toFixed(1)}× speed</span>
+        <input
+          type="range"
+          min={MIN_PLAYBACK_RATE}
+          max={MAX_PLAYBACK_RATE}
+          step={0.1}
+          value={speed}
+          onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-700 accent-gray-300"
+          aria-label="Playback speed"
+        />
       </div>
+      {((showVideoToggle && onToggleVideoHidden) || (showCaptionsToggle && onToggleCaptions)) && (
+        <div className="border-t border-gray-800 pt-1">
+          {showVideoToggle && onToggleVideoHidden && (
+            <button type="button" onClick={onToggleVideoHidden} className={row}>
+              {videoHidden ? <Video className={icon} aria-hidden /> : <VideoOff className={icon} aria-hidden />}
+              {videoHidden ? 'Show video' : 'Hide video'}
+            </button>
+          )}
+          {showCaptionsToggle && onToggleCaptions && (
+            <button type="button" onClick={onToggleCaptions} className={row}>
+              {captionsHidden ? <Eye className={icon} aria-hidden /> : <EyeOff className={icon} aria-hidden />}
+              <span className="flex-1">{captionsHidden ? 'Show captions' : 'Hide captions'}</span>
+              <kbd className="font-mono text-[10px] text-gray-500">H</kbd>
+            </button>
+          )}
+        </div>
+      )}
     </div>,
     document.body
   );
@@ -257,13 +301,15 @@ export function Player({
     setPrevPlaying(isPlaying);
     setToggled(true);
   }
-  const [showSpeedPopover, setShowSpeedPopover] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [showRepeatPopover, setShowRepeatPopover] = useState(false);
 
-  const speedBtnRef = useRef<HTMLButtonElement>(null);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
   const repeatBtnRef = useRef<HTMLButtonElement>(null);
 
-  const closeSpeed = useCallback(() => setShowSpeedPopover(false), []);
+  const closeMore = useCallback(() => setShowMore(false), []);
+  const moreChanged =
+    Math.abs(playbackRate - 1) > 0.001 || (showVideoToggle && videoHidden) || (showCaptionsToggle && captionsHidden);
   const closeRepeat = useCallback(() => setShowRepeatPopover(false), []);
 
   return (
@@ -349,34 +395,12 @@ export function Player({
             </button>
           )}
           <button
-            ref={speedBtnRef}
-            type="button"
-            onClick={() => {
-              setShowSpeedPopover((v) => !v);
-              setShowRepeatPopover(false);
-            }}
-            className={`${toolBtn} ${showSpeedPopover ? 'bg-gray-800 text-white' : ''}`}
-            aria-label={`Playback speed ${playbackRate.toFixed(1)}×`}
-            title={`Playback speed (${playbackRate.toFixed(1)}×)`}
-          >
-            <Gauge className="h-4 w-4 shrink-0" aria-hidden />
-          </button>
-          {showSpeedPopover && (
-            <SpeedPopover
-              speed={playbackRate}
-              onChange={onSpeedChange}
-              onClose={closeSpeed}
-              triggerRef={speedBtnRef}
-            />
-          )}
-
-          <button
             ref={repeatBtnRef}
             type="button"
             data-repeat-trigger
             onClick={() => {
               setShowRepeatPopover((v) => !v);
-              setShowSpeedPopover(false);
+              setShowMore(false);
             }}
             className={`${toolBtn} ${
               isRepeatCountActive(repeatCount)
@@ -397,38 +421,6 @@ export function Player({
             />
           )}
 
-          {showVideoToggle && onToggleVideoHidden && (
-            <button
-              type="button"
-              onClick={onToggleVideoHidden}
-              className={toolBtn}
-              aria-label={videoHidden ? 'Show video' : 'Hide video'}
-              title={videoHidden ? 'Show video' : 'Hide video'}
-            >
-              {videoHidden ? (
-                <VideoOff className="h-4 w-4 shrink-0" aria-hidden />
-              ) : (
-                <Video className="h-4 w-4 shrink-0" aria-hidden />
-              )}
-            </button>
-          )}
-
-          {showCaptionsToggle && onToggleCaptions && (
-            <button
-              type="button"
-              onClick={onToggleCaptions}
-              className={toolBtn}
-              aria-label={captionsHidden ? 'Show captions' : 'Hide captions'}
-              title={captionsHidden ? 'Show captions' : 'Hide captions'}
-            >
-              {captionsHidden ? (
-                <EyeOff className="h-4 w-4 shrink-0" aria-hidden />
-              ) : (
-                <Eye className="h-4 w-4 shrink-0" aria-hidden />
-              )}
-            </button>
-          )}
-
           {showFocusToggle && onToggleFocusMode && (
             <button
               type="button"
@@ -445,6 +437,39 @@ export function Player({
             </button>
           )}
 
+          <button
+            ref={moreBtnRef}
+            type="button"
+            data-more-trigger
+            onClick={() => {
+              setShowMore((v) => !v);
+              setShowRepeatPopover(false);
+            }}
+            className={`${toolBtn} relative ${showMore ? 'bg-gray-800 text-white' : ''}`}
+            aria-label="More: speed, video, captions"
+            aria-expanded={showMore}
+            title={`More (speed ${playbackRate.toFixed(1)}×)`}
+          >
+            <SlidersHorizontal className="h-4 w-4 shrink-0" aria-hidden />
+            {/* A setting away from its default shows here, so nothing hides behind the menu unseen. */}
+            {moreChanged && (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gray-100" aria-hidden />
+            )}
+          </button>
+          {showMore && (
+            <MorePopover
+              speed={playbackRate}
+              onSpeedChange={onSpeedChange}
+              showVideoToggle={showVideoToggle}
+              videoHidden={videoHidden}
+              onToggleVideoHidden={onToggleVideoHidden}
+              showCaptionsToggle={showCaptionsToggle}
+              captionsHidden={captionsHidden}
+              onToggleCaptions={onToggleCaptions}
+              onClose={closeMore}
+              triggerRef={moreBtnRef}
+            />
+          )}
         </div>
       </div>
     </div>

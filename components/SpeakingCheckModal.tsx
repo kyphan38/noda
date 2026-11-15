@@ -204,6 +204,7 @@ export function SpeakingCheckModal({ lessonId, transcript, media, onClose }: Spe
                     error={checkError ?? recorder.error}
                     takeUrl={take?.segmentId === s.id ? take.url : null}
                     onRecord={() => void onRecord()}
+                    onCancel={recorder.cancel}
                     onNext={i < segments.length - 1 ? () => select(i + 1) : undefined}
                   />
                 )}
@@ -226,6 +227,7 @@ function SegmentBody({
   error,
   takeUrl,
   onRecord,
+  onCancel,
   onNext,
 }: {
   segment: SpeakingSegment;
@@ -237,6 +239,8 @@ function SegmentBody({
   error: string | null;
   takeUrl: string | null;
   onRecord: () => void;
+  /** Drops the take being recorded; nothing is sent. */
+  onCancel: () => void;
   onNext?: () => void;
 }) {
   const recording = recorderStatus === 'recording';
@@ -260,6 +264,12 @@ function SegmentBody({
           {recording ? `Stop ${formatClock(elapsedMs)}` : result ? 'Try again' : 'Record'}
         </Button>
         {recording && <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-label="Recording" />}
+        {recording && (
+          <Button type="button" variant="ghost" onClick={onCancel} data-speaking-cancel>
+            <X />
+            Cancel
+          </Button>
+        )}
         {checking && <span className="text-sm text-gray-400" role="status">Checking…</span>}
         {takeUrl && !recording && !checking && <PlayTake url={takeUrl} />}
         {onNext && result && !recording && !checking && (
