@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
   basePath,
   assetPrefix: basePath || undefined,
   trailingSlash: true,
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -27,15 +24,6 @@ const nextConfig: NextConfig = {
   },
   output: 'export',
   transpilePackages: ['motion'],
-  webpack: (config, {dev}) => {
-    // Optional: set DISABLE_HMR=true to reduce file watching / HMR flicker in some dev setups.
-    if (dev && process.env.DISABLE_HMR === 'true') {
-      config.watchOptions = {
-        ignored: /.*/,
-      };
-    }
-    return config;
-  },
 };
 
 export default nextConfig;
