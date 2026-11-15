@@ -9,7 +9,7 @@
  */
 
 import { Type, type Schema } from "@google/genai";
-import { MAX_FIXES } from "../lib/speakingScore";
+import { MAX_DELIVERY_NOTES, MAX_FIXES } from "../lib/speakingScore";
 
 export interface SpeakingChecklistItem {
   type: string;
@@ -57,6 +57,18 @@ export const SPEAKING_ASSESSMENT_RESPONSE_SCHEMA: Schema = {
       },
       required: ["clarity", "stress", "intonation"],
     },
+    delivery: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          aspect: { type: Type.STRING, format: "enum", enum: ["stress", "intonation"] },
+          text: { type: Type.STRING },
+          why: { type: Type.STRING },
+        },
+        required: ["aspect", "text", "why"],
+      },
+    },
     fixes: {
       type: Type.ARRAY,
       items: {
@@ -69,7 +81,7 @@ export const SPEAKING_ASSESSMENT_RESPONSE_SCHEMA: Schema = {
       },
     },
   },
-  required: ["wordIssues", "checks", "criteria", "fixes"],
+  required: ["wordIssues", "checks", "criteria", "delivery", "fixes"],
 };
 
 export function buildSpeakingAssessmentPrompt(
@@ -118,10 +130,19 @@ Give each a whole number 1-5 using this rubric only:
 - stress: 5 the same words stand out as in the target, weak words stay light; 4 one or two stress slips; 3 stress often flat or on the wrong word; 2 almost every word given equal weight; 1 no stress pattern.
 - intonation: 5 pitch rises and falls like the target; 4 small differences; 3 mostly flat or the wrong direction at the ends of phrases; 2 flat and monotone; 1 no recognisable phrasing.
 
+## delivery
+Explain the stress and intonation levels. For "stress" and for "intonation", if you gave it less than 5, add the ONE place where it went most wrong (at most ${MAX_DELIVERY_NOTES} notes in total, none for a 5).
+- "aspect": "stress" or "intonation".
+- "text": the exact words from the text where it happened.
+- "why": what to do instead, naming the word to make stronger or lighter, or where the pitch should go up or down (e.g. "Make 'LOVE' the strongest word, keep 'of' light."; "Let your pitch fall on 'again' to finish the idea.").
+
 ## fixes
-The ${MAX_FIXES} most useful things to fix next, most important first (fewer if the reading was good, empty if nothing matters).
+The ${MAX_FIXES} most useful things to practise next, most important first (fewer if the reading was good, empty if nothing matters).
+- Pick from the checks you marked "no" or "partly", and from stress, intonation, and pace. Do NOT repeat a word that is already in wordIssues: the learner already sees those.
 - "text": the exact words from the text the fix is about.
-- "why": one imperative sentence in plain, simple English, at most 12 words, telling the learner what to DO with mouth, tongue, or breath. Do not explain theory or name rules. Never use the em dash character.
+
+## "why" fields (delivery and fixes)
+One imperative sentence in plain, simple English, at most 12 words, telling the learner what to DO with mouth, tongue, breath, or pitch. Do not explain theory or name rules. Never use the em dash character.
 
 Judge only what you hear. If the learner audio is silent or is clearly not this text, give 1 for every criterion and mark every word missing.
 

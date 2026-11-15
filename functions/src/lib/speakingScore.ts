@@ -36,6 +36,12 @@ export interface SpeakingCriteria {
   intonation: number;
 }
 
+export interface DeliveryNote {
+  aspect: "stress" | "intonation";
+  text: string;
+  why: string;
+}
+
 export interface SpeakingFix {
   text: string;
   why: string;
@@ -50,6 +56,7 @@ export interface SpeakingParts {
 }
 
 export const MAX_FIXES = 3;
+export const MAX_DELIVERY_NOTES = 2;
 
 /** A mispronounced word still carries the meaning, a missing one does not. */
 const ISSUE_WEIGHT: Record<WordIssueKind, number> = { mispronounced: 0.6, missing: 1 };
@@ -116,19 +123,23 @@ export interface NormalizedSpeaking {
   issues: WordIssue[];
   checks: SpeakingCheck[];
   criteria: SpeakingCriteria;
+  delivery: DeliveryNote[];
   fixes: SpeakingFix[];
 }
 
 /**
  * Validates Gemini's reply against the request: word indexes must exist (one issue
  * per word), check ids must be in the checklist (each once, a missing one counts
- * as "no"), criteria are whole numbers 1-5. Anything else is dropped or clamped.
+ * as "no"), criteria are whole numbers 1-5. A fix about words already listed as
+ * word issues is dropped: the learner sees those in the word list. Anything else
+ * is dropped or clamped.
  */
 export function normalizeSpeakingAssessment(
   raw: unknown,
-  wordCount: number,
+  words: string[],
   checkCount: number
 ): NormalizedSpeaking {
+  const wordCount = words.length;
   if (!raw || typeof raw !== "object") throw new SpeakingShapeError("Reply is not an object.");
   const r = raw as Record<string, unknown>;
 
@@ -171,17 +182,37 @@ export function normalizeSpeakingAssessment(
   const checks: SpeakingCheck[] = [];
   for (let id = 0; id < checkCount; id++) checks.push({ id, result: byId.get(id) ?? "no" });
 
+  const delivery: DeliveryNote[] = [];
+  const seenAspects = new Set<string>();
+  for (const item of Array.isArray(r.delivery) ? r.delivery : []) {
+    if (!item || typeof item !== "object") continue;
+    const d = item as Record<string, unknown>;
+    if (d.aspect !== "stress" && d.aspect !== "intonation") continue;
+    // A perfect level needs no note, and one note per aspect keeps it short.
+    if (criteria[d.aspect] >= 5 || seenAspects.has(d.aspect)) continue;
+    const why = str(d.why);
+    if (!why) continue;
+    seenAspects.add(d.aspect);
+    delivery.push({ aspect: d.aspect, text: str(d.text), why });
+    if (delivery.length >= MAX_DELIVERY_NOTES) break;
+  }
+
+  const issueWords = new Set(issues.map((i) => wordKey(words[i.index])));
   const fixes: SpeakingFix[] = [];
   for (const item of Array.isArray(r.fixes) ? r.fixes : []) {
     if (!item || typeof item !== "object") continue;
     const f = item as Record<string, unknown>;
     const why = str(f.why);
     if (!why) continue;
-    fixes.push({ text: str(f.text), why });
+    const text = str(f.text);
+    // "this song" when "this" is a word issue: the fix is about that word, already shown.
+    const fixWords = text.split(/\s+/).map(wordKey).filter(Boolean);
+    if (fixWords.some((w) => issueWords.has(w))) continue;
+    fixes.push({ text, why });
     if (fixes.length >= MAX_FIXES) break;
   }
 
-  return { issues, checks, criteria, fixes };
+  return { issues, checks, criteria, delivery, fixes };
 }
 
 /** Built from its code point so the character itself never appears in the source. */
@@ -190,6 +221,11 @@ const EM_DASH = String.fromCharCode(0x2014);
 function str(v: unknown): string {
   // No em dash anywhere in noda's text; the prompt asks too, this is the backstop.
   return typeof v === "string" ? v.split(EM_DASH).join(", ").trim() : "";
+}
+
+/** Lowercase letters, digits and apostrophes only, so "Song," matches "song". */
+function wordKey(w: string | undefined): string {
+  return (w ?? "").toLowerCase().replace(/[^a-z0-9']/g, "");
 }
 
 function clamp01(n: number): number {

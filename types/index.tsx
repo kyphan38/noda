@@ -209,6 +209,8 @@ export type SpeakingAttempt = {
   wordIssues: SpeakingWordIssue[];
   checks: SpeakingCheckItem[];
   criteria: { clarity: number; stress: number; intonation: number };
+  /** What went wrong in stress and intonation. Missing on attempts saved before it existed. */
+  delivery?: { aspect: 'stress' | 'intonation'; text: string; why: string }[];
   fixes: { text: string; why: string }[];
   learnerSeconds: number;
   referenceSeconds: number;

@@ -411,6 +411,18 @@ function Result({ attempt, tries, best }: { attempt: SpeakingAttempt; tries: num
         </Section>
       )}
 
+      {attempt.delivery && attempt.delivery.length > 0 && (
+        <Section title="Stress & tone">
+          {attempt.delivery.map((d) => (
+            <li key={d.aspect} className="text-sm text-gray-300">
+              <span className="text-gray-500">{d.aspect === 'stress' ? 'Stress' : 'Tone'} · </span>
+              {d.text && <span className="font-medium text-gray-100">{d.text}: </span>}
+              {d.why}
+            </li>
+          ))}
+        </Section>
+      )}
+
       {attempt.fixes.length > 0 && (
         <Section title="Fix next">
           {attempt.fixes.map((f, i) => (

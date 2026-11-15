@@ -13,6 +13,7 @@ import type { Sentence } from '../../../types';
 
 const EM_DASH = String.fromCharCode(0x2014);
 const criteria5 = { clarity: 5, stress: 5, intonation: 5 };
+const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`);
 
 describe('speaking score', () => {
   it('a clean reading scores 100', () => {
@@ -102,7 +103,7 @@ describe('normalizeSpeakingAssessment', () => {
         criteria: criteria5,
         fixes: [],
       },
-      10,
+      words(10),
       0
     );
     expect(r.issues.map((i) => i.index)).toEqual([1, 5]);
@@ -112,7 +113,7 @@ describe('normalizeSpeakingAssessment', () => {
   it('fills a check Gemini skipped with "no" and ignores unknown ids', () => {
     const r = normalizeSpeakingAssessment(
       { wordIssues: [], checks: [{ id: 1, result: 'yes' }, { id: 7, result: 'yes' }], criteria: criteria5, fixes: [] },
-      5,
+      words(5),
       3
     );
     expect(r.checks).toEqual([
@@ -130,7 +131,7 @@ describe('normalizeSpeakingAssessment', () => {
         criteria: { clarity: 9, stress: 0, intonation: 3.4 },
         fixes: [1, 2, 3, 4].map((n) => ({ text: `w${n}`, why: `do ${n} ${EM_DASH} now` })),
       },
-      5,
+      words(5),
       0
     );
     expect(r.criteria).toEqual({ clarity: 5, stress: 1, intonation: 3 });
@@ -139,7 +140,50 @@ describe('normalizeSpeakingAssessment', () => {
   });
 
   it('throws on a reply without criteria', () => {
-    expect(() => normalizeSpeakingAssessment({ wordIssues: [] }, 5, 0)).toThrow(SpeakingShapeError);
+    expect(() => normalizeSpeakingAssessment({ wordIssues: [] }, words(5), 0)).toThrow(SpeakingShapeError);
+  });
+
+  it('drops a fix about a word already listed as a word issue', () => {
+    const text = ['I', 'think', 'the', 'purest', 'form,', 'hear', 'this', 'song'];
+    const r = normalizeSpeakingAssessment(
+      {
+        wordIssues: [
+          { index: 3, kind: 'mispronounced', heard: 'peerist', tip: 'Add a y' },
+          { index: 6, kind: 'mispronounced', heard: 'a', tip: 'Say this' },
+        ],
+        checks: [],
+        criteria: criteria5,
+        delivery: [],
+        fixes: [
+          { text: 'purest', why: 'Add a y glide.' },
+          { text: 'this song', why: 'Tongue between teeth.' },
+          { text: 'Form', why: 'Hold the r.' },
+        ],
+      },
+      text,
+      0
+    );
+    expect(r.fixes.map((f) => f.text)).toEqual(['Form']);
+  });
+
+  it('keeps one delivery note per aspect, none for a level of 5', () => {
+    const r = normalizeSpeakingAssessment(
+      {
+        wordIssues: [],
+        checks: [],
+        criteria: { clarity: 5, stress: 3, intonation: 5 },
+        delivery: [
+          { aspect: 'stress', text: 'purest form', why: 'Make PUR the strongest beat.' },
+          { aspect: 'stress', text: 'love', why: 'Second stress note.' },
+          { aspect: 'intonation', text: 'again', why: 'Fall on again.' },
+          { aspect: 'tempo', text: 'x', why: 'y' },
+        ],
+        fixes: [],
+      },
+      words(5),
+      0
+    );
+    expect(r.delivery).toEqual([{ aspect: 'stress', text: 'purest form', why: 'Make PUR the strongest beat.' }]);
   });
 });
 

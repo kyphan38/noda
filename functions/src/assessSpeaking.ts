@@ -150,7 +150,7 @@ async function callGeminiOnce(
   prompt: string,
   reference: Part | null,
   learner: Part,
-  wordCount: number,
+  words: string[],
   checkCount: number
 ): Promise<NormalizedSpeaking> {
   const parts: Part[] = [{ text: prompt }];
@@ -170,7 +170,7 @@ async function callGeminiOnce(
   } catch {
     throw new GeminiJsonParseError("Gemini returned malformed JSON.");
   }
-  return normalizeSpeakingAssessment(parsed, wordCount, checkCount);
+  return normalizeSpeakingAssessment(parsed, words, checkCount);
 }
 
 async function callGeminiWithRetry(...args: Parameters<typeof callGeminiOnce>): Promise<NormalizedSpeaking> {
@@ -264,7 +264,7 @@ export const assessSpeaking = onCall(
         prompt,
         reference,
         { inlineData: { mimeType: "audio/wav", data: learnerWav.toString("base64") } },
-        words.length,
+        words,
         checklist.length
       );
 
@@ -288,6 +288,7 @@ export const assessSpeaking = onCall(
         wordIssues: labels.issues,
         checks: labels.checks.map((c) => ({ ...c, ...checklist[c.id] })),
         criteria: labels.criteria,
+        delivery: labels.delivery,
         fixes: labels.fixes,
         learnerSeconds: learner.speechSeconds,
         referenceSeconds,
