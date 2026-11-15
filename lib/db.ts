@@ -26,6 +26,7 @@ import {
 } from '@/types';
 import type { LessonProgressRecord } from '@/lib/progress';
 import { LESSON_CONTENT_DOC_ID, countDone, mergeLesson, splitLesson } from '@/lib/lessonLayout';
+import { LESSON_SUBCOLLECTIONS, type ExportInput } from './exportData';
 
 /** Full lesson row stored in IndexedDB (includes File blob when present). */
 export interface LessonRecord {
@@ -750,4 +751,25 @@ export const updateLessonProgress = async (id: string, completedSentences: Recor
     bumpLessonUpdatedAt(lesson);
     await db.put('lessons', lesson);
   }
+};
+
+/** Reads every lesson (with sub-documents) and folder once, for the JSON export. */
+export const readAllForExport = async (): Promise<ExportInput> => {
+  const uid = getCurrentUidOrThrow();
+  const db = getFirebaseFirestore();
+  const lessonsSnap = await getDocs(collection(db, getUserLessonsCollectionPath(uid)));
+  const lessons = await Promise.all(
+    lessonsSnap.docs.map(async (d) => {
+      const subs = await Promise.all(
+        LESSON_SUBCOLLECTIONS.map(async (name) => {
+          const snap = await getDocs(collection(db, getUserLessonsCollectionPath(uid), d.id, name));
+          return snap.docs.map((s) => ({ id: s.id, ...s.data() }));
+        })
+      );
+      const [content, shadowingAnalysis, speakingAttempts] = subs;
+      return { id: d.id, ...d.data(), content, shadowingAnalysis, speakingAttempts };
+    })
+  );
+  const foldersSnap = await getDocs(collection(db, getUserSidebarFoldersCollectionPath(uid)));
+  return { lessons, sidebarFolders: foldersSnap.docs.map((d) => ({ id: d.id, ...d.data() })) };
 };

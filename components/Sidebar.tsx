@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import {
   Music2,
   LogOut,
+  Download,
   PanelLeft,
   ChevronDown,
   ChevronRight,
@@ -20,6 +21,8 @@ import { SidebarSection } from './SidebarSection';
 import type { UseFoldersResult } from '@/hooks/useFolders';
 import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
 import { themeStore, type Theme } from '@/lib/theme';
+import { readAllForExport } from '@/lib/db';
+import { buildExport, exportFilename } from '@/lib/exportData';
 
 function TrashedItemRow({
   item,
@@ -193,6 +196,29 @@ function SidebarImpl({
   isMobile = false,
 }: SidebarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const exportAll = async () => {
+    setExporting(true);
+    try {
+      const now = Date.now();
+      const json = buildExport(await readAllForExport(), now);
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = exportFilename(new Date(now));
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Safari reads the blob after click returns, so revoke later.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      console.warn('[sidebar] export', err);
+    } finally {
+      setExporting(false);
+    }
+  };
   const [search, setSearch] = useState('');
 
   const searchTerm = search.trim().toLowerCase();
@@ -280,6 +306,14 @@ function SidebarImpl({
             <h2 className="text-xl font-bold text-white">noda</h2>
             <div className="flex items-center gap-1">
               <ThemeToggle />
+              <button
+                onClick={() => void exportAll()}
+                disabled={exporting}
+                className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-40"
+                title="Export all data (.json)"
+              >
+                <Download size={18} />
+              </button>
               <button
                 onClick={onLogout}
                 className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
