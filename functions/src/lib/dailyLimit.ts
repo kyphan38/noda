@@ -3,7 +3,19 @@
  * Counted only on real model calls: cached analyses are free.
  * Stored at users/{uid}/meta/aiUsage; firestore.rules give the client no access to it.
  */
-import type { Firestore } from "firebase-admin/firestore";
+/**
+ * The few Firestore calls used here, typed by hand: the app's own type check
+ * (next build) reads this file through a test, and firebase-admin only lives
+ * in functions/node_modules.
+ */
+type Tx = {
+  get(ref: unknown): Promise<{ data(): Record<string, unknown> | undefined }>;
+  set(ref: unknown, data: AiUsage): unknown;
+};
+type Db = {
+  doc(path: string): unknown;
+  runTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T>;
+};
 
 export const AI_DAILY_LIMIT = 200;
 
@@ -26,10 +38,10 @@ export function nextAiUsage(
 }
 
 /** Counts one call for today; false when the cap is reached. */
-export async function takeAiCall(db: Firestore, uid: string, now = Date.now()): Promise<boolean> {
+export async function takeAiCall(db: Db, uid: string, now = Date.now()): Promise<boolean> {
   const ref = db.doc(`users/${uid}/meta/aiUsage`);
   return db.runTransaction(async (tx) => {
-    const next = nextAiUsage((await tx.get(ref)).data(), now, AI_DAILY_LIMIT);
+    const next = nextAiUsage((await tx.get(ref)).data() as Partial<AiUsage> | undefined, now, AI_DAILY_LIMIT);
     if (next.allowed) tx.set(ref, next.usage);
     return next.allowed;
   });
