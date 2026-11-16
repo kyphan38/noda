@@ -44,4 +44,4 @@ or parsers that handle real Vietnamese text; proper names.
 - If the title already says it, add no description.
 - Otherwise one short line, about 10 words or less.
 - No reasons or history in the UI. Put those in a code comment.
-- Exception: in-app guide pages (none in noda yet).
+- Exception: in-app guide pages (`src/app/guide/page.tsx`, linked at the bottom of the sidebar). Update it with every feature change.

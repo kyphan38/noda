@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import {
   Music2,
   LogOut,
@@ -408,6 +409,12 @@ function SidebarImpl({
                 )}
               </div>
             )}
+          </div>
+
+          <div className="border-t border-gray-800 px-4 py-3">
+            <Link href="/guide" className="text-sm text-gray-400 hover:text-white transition-colors">
+              Guide
+            </Link>
           </div>
         </div>
       </div>
