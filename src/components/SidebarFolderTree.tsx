@@ -5,6 +5,17 @@ import type { LessonItem, SidebarFolder } from '@/types';
 import { SidebarFolderRow } from './SidebarFolderRow';
 import { LessonCard } from './LessonCard';
 import { InlineCreateInput } from './InlineCreateInput';
+import {
+  childrenByParent,
+  computeMidSortKey,
+  groupItemsByFolder,
+  indexFolders,
+  parseDragPayload,
+  subtreeCounts,
+  topLevelFolders,
+  wouldCreateCycle as wouldCreateCycleIn,
+  type DragPayload,
+} from '@/lib/folder-tree';
 
 function folderKey(id: string): string {
   return `folder:${id}`;
@@ -51,37 +62,16 @@ function SidebarFolderTreeImpl({
   onMoveItem: (itemId: string, folderId: string | null, sortKey: number) => void | Promise<void>;
   onMoveFolder: (folderId: string, parentId: string | null, sortKey: number) => void | Promise<void>;
 }) {
-  type DragPayload =
-    | { entity: 'item'; id: string; fromFolderId: string | null }
-    | { entity: 'folder'; id: string; fromParentId: string | null };
-
   const dragRef = useRef<DragPayload | null>(null);
 
-  const parsePayload = (e: React.DragEvent): DragPayload | null => {
-    const raw =
-      e.dataTransfer.getData('application/x-noda-sidebar-dnd') || e.dataTransfer.getData('text/plain');
-    if (!raw) return null;
-    try {
-      const j = JSON.parse(raw) as DragPayload;
-      if (!j || typeof j !== 'object') return null;
-      if (j.entity === 'item' && typeof (j as { id?: unknown }).id === 'string') return j;
-      if (j.entity === 'folder' && typeof (j as { id?: unknown }).id === 'string') return j;
-      return null;
-    } catch {
-      return null;
-    }
-  };
+  const parsePayload = (e: React.DragEvent): DragPayload | null =>
+    parseDragPayload(
+      e.dataTransfer.getData('application/x-noda-sidebar-dnd') || e.dataTransfer.getData('text/plain')
+    );
 
   const getPayload = (e: React.DragEvent): DragPayload | null => {
     // Some browsers expose types but return empty data during dragover/drop.
     return parsePayload(e) ?? dragRef.current;
-  };
-
-  const computeMidSortKey = (before?: number, after?: number): number => {
-    if (typeof before === 'number' && typeof after === 'number') return (before + after) / 2;
-    if (typeof before === 'number') return before + 1;
-    if (typeof after === 'number') return after - 1;
-    return Date.now();
   };
 
   const [expandedContainers, setExpandedContainers] = useState<Set<string>>(() => new Set());
@@ -122,91 +112,16 @@ function SidebarFolderTreeImpl({
     });
   };
 
-  const foldersById = useMemo(() => {
-    const m = new Map<string, SidebarFolder>();
-    for (const f of folders) m.set(f.id, f);
-    return m;
-  }, [folders]);
-
-  const childrenOf = useMemo(() => {
-    const m = new Map<string, SidebarFolder[]>();
-    for (const f of folders) {
-      if (!f.parentId) continue;
-      const arr = m.get(f.parentId) ?? [];
-      arr.push(f);
-      m.set(f.parentId, arr);
-    }
-    for (const [pid, arr] of m.entries()) {
-      arr.sort((a, b) => (a.sortKey ?? 0) - (b.sortKey ?? 0));
-      m.set(pid, arr);
-    }
-    return m;
-  }, [folders]);
-
-  const topFolders = useMemo(
-    () => folders.filter((f) => f.parentId == null).sort((a, b) => (a.sortKey ?? 0) - (b.sortKey ?? 0)),
-    [folders]
+  const foldersById = useMemo(() => indexFolders(folders), [folders]);
+  const childrenOf = useMemo(() => childrenByParent(folders), [folders]);
+  const topFolders = useMemo(() => topLevelFolders(folders), [folders]);
+  const itemsByFolderId = useMemo(() => groupItemsByFolder(items, foldersById), [items, foldersById]);
+  const wouldCreateCycle = (folderId: string, newParentId: string | null): boolean =>
+    wouldCreateCycleIn(folderId, newParentId, foldersById);
+  const subtreeCountByFolderId = useMemo(
+    () => subtreeCounts(folders, itemsByFolderId, childrenOf),
+    [folders, itemsByFolderId, childrenOf]
   );
-
-  const itemsByFolderId = useMemo(() => {
-    const m = new Map<string | null, LessonItem[]>();
-    for (const it of items) {
-      const raw = it.folderId ?? null;
-      const fid = raw && !foldersById.has(raw) ? null : raw;
-      const arr = m.get(fid) ?? [];
-      arr.push(it);
-      m.set(fid, arr);
-    }
-    for (const [fid, arr] of m.entries()) {
-      arr.sort((a, b) => {
-        const byName = a.name.localeCompare(b.name, undefined, {
-          sensitivity: 'base',
-          numeric: true,
-        });
-        if (byName !== 0) return byName;
-        const ak = a.sortKey;
-        const bk = b.sortKey;
-        if (typeof ak === 'number' && typeof bk === 'number' && ak !== bk) return ak - bk;
-        return a.id.localeCompare(b.id);
-      });
-      m.set(fid, arr);
-    }
-    return m;
-  }, [items, foldersById]);
-
-  const wouldCreateCycle = (folderId: string, newParentId: string | null): boolean => {
-    if (newParentId == null) return false;
-    if (newParentId === folderId) return true;
-    // Walk up the parent chain from the proposed parent to root.
-    let cur: string | null = newParentId;
-    let guard = 0;
-    while (cur && guard < 20) {
-      guard += 1;
-      if (cur === folderId) return true;
-      cur = foldersById.get(cur)?.parentId ?? null;
-    }
-    return false;
-  };
-
-  const subtreeCountByFolderId = useMemo(() => {
-    const out = new Map<string, number>();
-    const countSubtree = (fid: string, visiting: Set<string>): number => {
-      if (visiting.has(fid)) {
-        return 0;
-      }
-      visiting.add(fid);
-      const direct = itemsByFolderId.get(fid)?.length ?? 0;
-      const kids = childrenOf.get(fid) ?? [];
-      let c = direct;
-      for (const k of kids) c += countSubtree(k.id, visiting);
-      visiting.delete(fid);
-      return c;
-    };
-    for (const f of folders) {
-      out.set(f.id, countSubtree(f.id, new Set()));
-    }
-    return out;
-  }, [folders, itemsByFolderId, childrenOf]);
 
   const rootItems = itemsByFolderId.get(null) ?? [];
 

@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['scripts/test-dictation/__tests__/**/*.test.ts'],
+    include: ['scripts/test-dictation/__tests__/**/*.test.ts', 'src/**/*.test.ts'],
     globals: false,
     fileParallelism: false,
     globalSetup: ['scripts/test-dictation/__tests__/global-setup.ts'],
