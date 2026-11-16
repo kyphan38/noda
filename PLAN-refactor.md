@@ -1,5 +1,13 @@
 # PLAN-refactor (noda)
 
+Trạng thái (2026-11-16, branch `refactor/src-layout`): Phase 1 và 3 xong; Phase 2 làm một phần. Unit 271/271, dictation E2E 230/230 sau mỗi bước, build OK.
+- Phase 0: chưa làm. Cần owner quyết định có bỏ `example/*.mp4` khỏi git không.
+- Phase 1: code đã ở `src/`; `@/*`, vitest và script test-dictation trỏ vào `src/`.
+- Phase 2: đã tách `useAuthGate` và `useDictationHandlers` (page.tsx 1189 -> 1024). Còn lại: `useItemUrlSync` + `useLessonSelection`, `useLessonTrash`, `useShadowingControls`, `useResumePrompt`.
+- Phase 3: `lib/db/` (types, shared, media, lessons, shadowing, folders, local); `index.ts` giữ đúng các export cũ.
+- Phase 4, 5: chưa làm.
+- Chạy E2E trong worktree: dev server `PORT=3110 NEXT_PUBLIC_E2E_MODE=true npx next dev`, rồi `E2E_PORT=3110 npx tsx scripts/test-dictation/run-all.ts`.
+
 Mục tiêu:
 1. Đưa code vào `src/`, dọn thư mục gốc.
 2. Tách `app/page.tsx` (1189 dòng) thành các hook nhỏ.
