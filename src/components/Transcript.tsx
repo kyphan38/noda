@@ -107,35 +107,31 @@ export function Transcript({
 function ListenOptions({ showPauses }: { showPauses: boolean }) {
   const lesson = useSyncExternalStore(currentLessonStore.subscribe, currentLessonStore.get, () => null);
   const pauses = useSyncExternalStore(listenPausesStore.subscribe, listenPausesStore.get, () => false);
-  const words = useSyncExternalStore(wordCardsOnStore.subscribe, wordCardsOnStore.get, () => true);
+  const words = useSyncExternalStore(wordCardsOnStore.subscribe, wordCardsOnStore.get, () => false);
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-gray-800 px-3 py-2 text-xs">
-      <OnOff label="Words" title="Double click a word for its meaning" on={words} onChange={(v) => wordCardsOnStore.set(v)} />
+    <div className="flex items-center gap-4 px-3 pt-1.5 text-xs">
+      <Toggle label="Words" title="Double click a word for its meaning" on={words} onChange={(v) => wordCardsOnStore.set(v)} />
       {/* Uploaded files only: YouTube lessons keep playing straight through. */}
       {showPauses && lesson && !lesson.youtube && (
-        <OnOff label="Pauses" title="Silence after each sentence, to say it" on={pauses} onChange={(v) => listenPausesStore.set(v)} />
+        <Toggle label="Pauses" title="Silence after each sentence, to say it" on={pauses} onChange={(v) => listenPausesStore.set(v)} />
       )}
     </div>
   );
 }
 
-function OnOff({ label, title, on, onChange }: { label: string; title: string; on: boolean; onChange: (on: boolean) => void }) {
+/** One word that says the state ("Words off") and flips it on click. */
+function Toggle({ label, title, on, onChange }: { label: string; title: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
-    <span className="flex items-center gap-3" role="radiogroup" aria-label={label} title={title}>
-      <span className="text-gray-500">{label}</span>
-      {(['off', 'on'] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          role="radio"
-          aria-checked={on === (v === 'on')}
-          onClick={() => onChange(v === 'on')}
-          className={on === (v === 'on') ? 'text-gray-100' : 'text-gray-500 hover:text-gray-300'}
-        >
-          {v}
-        </button>
-      ))}
-    </span>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      title={title}
+      onClick={() => onChange(!on)}
+      className={on ? 'text-gray-100' : 'text-gray-500 hover:text-gray-300'}
+    >
+      {label} {on ? 'on' : 'off'}
+    </button>
   );
 }
 

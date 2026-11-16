@@ -30,8 +30,8 @@ const BLOCKS: Block[] = [
     lines: [
       'Play the lesson and read along. Tap a line to play it.',
       'Double click a word (or tap it twice) to see its IPA and a simple meaning in that sentence. One click still plays the line.',
-      'Words off turns this off.',
-      'Pauses on (uploaded files only): after each sentence, a silence as long as the sentence, so you can say it.',
+      'It is off at first: tap "Words off" above the lines to turn it on.',
+      'Tap "Pauses off" to turn pauses on (uploaded files only): after each sentence, a silence as long as the sentence, so you can say it.',
     ],
   },
   {

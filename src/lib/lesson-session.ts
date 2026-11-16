@@ -86,13 +86,13 @@ const WORDS_KEY = 'noda.wordCards';
 
 function readWordsOn(): boolean {
   try {
-    return typeof localStorage === 'undefined' || localStorage.getItem(WORDS_KEY) !== 'off';
+    return typeof localStorage !== 'undefined' && localStorage.getItem(WORDS_KEY) === 'on';
   } catch {
-    return true;
+    return false;
   }
 }
 
-/** Word cards on double click (N3): on unless turned off. Per device. */
+/** Word cards on double click (N3): off until turned on. Per device. */
 export const wordCardsOnStore = (() => {
   const s = store<boolean>(readWordsOn());
   return {
