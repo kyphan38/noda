@@ -1,5 +1,5 @@
-import { normalizeDictationTarget } from '../../../lib/utils';
-import type { Sentence } from '../../../types';
+import { normalizeDictationTarget } from '../../../src/lib/utils';
+import type { Sentence } from '../../../src/types';
 
 export interface TimingIssue {
   lineId: number;

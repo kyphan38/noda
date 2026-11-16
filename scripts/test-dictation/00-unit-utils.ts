@@ -15,7 +15,7 @@ import { ReportEntry } from './helpers.js';
 import {
   normalizeDictationTarget,
   alignDictationInput,
-} from '../../lib/utils.js';
+} from '../../src/lib/utils.js';
 
 function unitCheck(
   report: ReportEntry[],

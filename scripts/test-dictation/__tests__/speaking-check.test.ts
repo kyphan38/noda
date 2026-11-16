@@ -9,8 +9,8 @@ import {
 } from '../../../functions/src/lib/speakingScore';
 import { wavStats } from '../../../functions/src/lib/wavStats';
 import { buildChecklist } from '../../../functions/src/lib/speakingChecklist';
-import { buildSpeakingSegments } from '../../../lib/speakingSegments';
-import type { Sentence } from '../../../types';
+import { buildSpeakingSegments } from '../../../src/lib/speakingSegments';
+import type { Sentence } from '../../../src/types';
 
 const EM_DASH = String.fromCharCode(0x2014);
 const criteria5 = { clarity: 5, stress: 5, intonation: 5 };

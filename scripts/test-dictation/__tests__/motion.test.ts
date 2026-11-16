@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { drawerOffset, drawerShouldClose, reducedMotion } from '../../../lib/motion';
+import { drawerOffset, drawerShouldClose, reducedMotion } from '../../../src/lib/motion';
 
 describe('reducedMotion', () => {
   it('is true in Node, where matchMedia does not exist', () => {

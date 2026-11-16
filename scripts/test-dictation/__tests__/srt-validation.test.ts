@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseTranscript } from '../../../lib/utils';
-import type { Sentence } from '../../../types';
+import { parseTranscript } from '../../../src/lib/utils';
+import type { Sentence } from '../../../src/types';
 import {
   findTimingIssues,
   findActiveSentence,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { settleTimeTowardTarget } from '../../../lib/seekSettle';
-import { SEEK_SETTLE_TOLERANCE_S } from '../../../constants';
-import type { Sentence } from '../../../types';
+import { settleTimeTowardTarget } from '../../../src/lib/seekSettle';
+import { SEEK_SETTLE_TOLERANCE_S } from '../../../src/constants';
+import type { Sentence } from '../../../src/types';
 
 const close: Sentence[] = [
   { id: 1, text: 'First line', start: 10.0, end: 12.5 },

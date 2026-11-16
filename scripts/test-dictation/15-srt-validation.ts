@@ -14,8 +14,8 @@ import { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ReportEntry } from './helpers.js';
-import { parseTranscript, normalizeDictationTarget } from '../../lib/utils.js';
-import type { Sentence } from '../../types/index.js';
+import { parseTranscript, normalizeDictationTarget } from '../../src/lib/utils.js';
+import type { Sentence } from '../../src/types/index.js';
 
 function unitCheck(
   report: ReportEntry[],

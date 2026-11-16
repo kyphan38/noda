@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseItemFromSearch, pickLatestLessonId } from '../../../lib/item-url';
+import { parseItemFromSearch, pickLatestLessonId } from '../../../src/lib/item-url';
 
 describe('parseItemFromSearch', () => {
   it('reads ?open=latest', () => {

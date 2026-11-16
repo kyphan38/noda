@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { shouldRepeatSentenceAtEnd } from '../../../lib/repeat-count';
-import { SENTENCE_PRE_ROLL_SECONDS } from '../../../constants';
-import type { Sentence, RepeatCount, LoopMode, AppMode } from '../../../types';
+import { shouldRepeatSentenceAtEnd } from '../../../src/lib/repeat-count';
+import { SENTENCE_PRE_ROLL_SECONDS } from '../../../src/constants';
+import type { Sentence, RepeatCount, LoopMode, AppMode } from '../../../src/types';
 
 // ---------------------------------------------------------------------------
 // Helpers that replicate the playback-loop's core decision logic so we can

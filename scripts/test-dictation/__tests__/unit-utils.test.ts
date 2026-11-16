@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeDictationTarget,
   alignDictationInput,
-} from '../../../lib/utils';
+} from '../../../src/lib/utils';
 
 const target1 = 'the cat sat on the mat';
 const target2 = 'who run switzerlands trains';
