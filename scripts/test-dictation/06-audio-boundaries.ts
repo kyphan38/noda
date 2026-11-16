@@ -6,8 +6,7 @@ import {
   ReportEntry, check, sleep,
   SENTENCE_STARTS, SENTENCE_ENDS,
   activateClean, completeTyping, pressEnter, waitForActive,
-  setAudioTime, getAudioTime, playAudio, pauseAudio,
-} from './helpers.js';
+  setAudioTime, getAudioTime, playAudio } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 6. Audio Boundaries ───');

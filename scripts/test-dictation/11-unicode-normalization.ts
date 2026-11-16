@@ -11,12 +11,10 @@
  */
 import { Page } from '@playwright/test';
 import {
-  ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
-  activateClean, completeTyping, pressEnter,
-  seekToSentence, waitForActive, pauseAudio,
+  ReportEntry, check, sleep, CHAR_DELAY_MS,
+  activateClean, pressEnter,
   isRowCompleted, countChars, countStars,
-  dismissModal,
-} from './helpers.js';
+  dismissModal } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 11. Unicode Normalization ───');

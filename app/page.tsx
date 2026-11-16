@@ -91,10 +91,10 @@ export default function NodaApp() {
   const {
     setMediaFile, mediaURL, setMediaURL,
     duration, setDuration, currentTime, setCurrentTime, reportPlaybackTime, clock,
-    isPlaying, setIsPlaying, playbackRate, loopMode,
+    isPlaying, setIsPlaying, playbackRate,
     repeatCount, repeatCountRef, sentencePlayCountRef, userSeekTargetRef,
     mediaRef, loopTimeoutRef, isLoopDelayingRef, loopModeRef,
-    togglePlayPause, handleSeek, changeSpeed, toggleLoopMode, changeRepeatCount,
+    togglePlayPause, handleSeek, changeSpeed, changeRepeatCount,
   } = useMediaPlayer();
 
   const {

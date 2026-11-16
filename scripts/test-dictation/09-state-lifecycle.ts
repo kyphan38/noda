@@ -5,9 +5,8 @@ import { Page } from '@playwright/test';
 import {
   ReportEntry, check, sleep, LESSON_SENTENCES,
   activateClean, completeTyping, pressEnter, isRowCompleted,
-  seekToSentence, waitForActive, pauseAudio, getAudioTime, isAudioPaused,
-  dismissModal, clickRewriteLine,
-} from './helpers.js';
+  seekToSentence, waitForActive, getAudioTime, isAudioPaused,
+  dismissModal, clickRewriteLine } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 9. State Lifecycle ───');

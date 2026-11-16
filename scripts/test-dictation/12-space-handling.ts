@@ -9,16 +9,14 @@
  */
 import { Page } from '@playwright/test';
 import {
-  ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
-  activateClean, completeTyping, pressEnter, countChars, countStars,
-  isRowCompleted, dismissModal,
-} from './helpers.js';
+  ReportEntry, check, sleep, CHAR_DELAY_MS,
+  activateClean, completeTyping, pressEnter, countChars, isRowCompleted, dismissModal } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 12. Space Handling ───');
   await dismissModal(page);
   const idx = 0;
-  const target = LESSON_SENTENCES[idx]; // "the cat sat on the mat"
+  // Sentence idx is "the cat sat on the mat".
 
   // ── 12a. Typing space at word boundary advances cursor ──────────────────────
   await check(report, '12a. Space at word boundary advances cursor', async () => {
@@ -34,7 +32,6 @@ export async function run(page: Page, report: ReportEntry[]) {
     return page.evaluate((i: number) => {
       const row = document.querySelector(`[data-index="${i}"]`);
       if (!row) return false;
-      const spans = row.querySelectorAll('span');
       // Count green spans: t, h, e, space = 4
       const green = row.querySelectorAll('[data-char="correct"]');
       // The cursor (animate-pulse) should be AFTER the space position
@@ -58,7 +55,6 @@ export async function run(page: Page, report: ReportEntry[]) {
       if (!row) return false;
       const feedback = row.querySelector('[aria-hidden]');
       if (!feedback) return false;
-      const spans = feedback.querySelectorAll(':scope > span, :scope > :not(span) > span');
       const allGreen = feedback.querySelectorAll('[data-char="correct"]');
       // We should have 4 green (t, h, e, space) and the rest gray
       return allGreen.length === 4;

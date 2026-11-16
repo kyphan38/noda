@@ -7,10 +7,8 @@ import {
   check,
   dismissModal,
   activateClean,
-  typeAnswer,
   sleep,
-  CHAR_DELAY_MS,
-} from './helpers.js';
+  CHAR_DELAY_MS } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 17. Word Wrap ───');

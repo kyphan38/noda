@@ -23,7 +23,7 @@
       if (!u.pathname.includes('/api/timedtext') || !text) return;
       if (u.searchParams.get('kind') === 'asr') return;
       captured.set(u.searchParams.get('v') + '|' + u.searchParams.get('lang'), text);
-    } catch (_) {}
+    } catch {}
   }
 
   const open = XMLHttpRequest.prototype.open;

@@ -4,12 +4,11 @@
  */
 import { Page } from '@playwright/test';
 import {
-  ReportEntry, check, sleep, LESSON_SENTENCES, CHAR_DELAY_MS,
+  ReportEntry, check, sleep, CHAR_DELAY_MS,
   clickRewriteLine,
   SENTENCE_STARTS, SENTENCE_ENDS,
   activateClean, completeTyping, pressEnter, countChars,
-  waitForActive, seekToSentence, pauseAudio, setAudioTime, isRowCompleted,
-} from './helpers.js';
+  waitForActive, seekToSentence, pauseAudio, setAudioTime, isRowCompleted } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 5. Keyboard Shortcuts ───');

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { shouldRepeatSentenceAtEnd } from '../../../lib/repeat-count';
-import { SENTENCE_PRE_ROLL_SECONDS, REPEAT_PAUSE_MS } from '../../../constants';
+import { SENTENCE_PRE_ROLL_SECONDS } from '../../../constants';
 import type { Sentence, RepeatCount, LoopMode, AppMode } from '../../../types';
 
 // ---------------------------------------------------------------------------
@@ -259,6 +259,9 @@ function simulateEnterAdvance(
   nextSentence: Sentence,
   prevSentencePlayCount: number,
 ) {
+  // The count before Enter does not matter: Enter always resets it. The tests pass
+  // different counts to show that.
+  void prevSentencePlayCount;
   // The Enter handler (after fix) clears pending timeout and resets counters
   const loopTimeoutCleared = true;
   const isLoopDelaying = false;

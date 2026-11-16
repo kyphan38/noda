@@ -10,12 +10,9 @@
  */
 import { chromium, Page } from '@playwright/test';
 import {
-  ReportEntry, check, sleep, APP_URL, LESSON_SENTENCES,
-  SENTENCE_STARTS, SENTENCE_ENDS,
+  ReportEntry, check, sleep, APP_URL, SENTENCE_STARTS, SENTENCE_ENDS,
   seedLesson, seekToSentence, waitForActive, pauseAudio, playAudio,
-  setAudioTime, getAudioTime, isAudioPaused, dismissModal,
-  activateClean, completeTyping, pressEnter,
-} from './helpers.js';
+  setAudioTime, getAudioTime, activateClean, completeTyping, pressEnter } from './helpers.js';
 
 export async function run(_desktopPage: Page, report: ReportEntry[]) {
   console.log('\n─── 13. Mobile Audio Sync ───');

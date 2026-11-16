@@ -8,8 +8,7 @@ import {
   SENTENCE_STARTS, SENTENCE_ENDS,
   activateClean, completeTyping, pressEnter, isRowCompleted,
   seekToSentence, pauseAudio, playAudio, setAudioTime, getAudioTime,
-  dismissModal, waitForActive,
-} from './helpers.js';
+  dismissModal } from './helpers.js';
 
 export async function run(page: Page, report: ReportEntry[]) {
   console.log('\n─── 7. Audio Start Accuracy ───');

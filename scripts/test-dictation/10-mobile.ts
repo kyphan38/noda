@@ -7,12 +7,10 @@
  */
 import { chromium, Page } from '@playwright/test';
 import {
-  ReportEntry, check, sleep, APP_URL, LESSON_SENTENCES, CHAR_DELAY_MS,
-  SENTENCE_STARTS, SENTENCE_ENDS,
-  seedLesson, seekToSentence, waitForActive, pauseAudio, pressEnter,
-  isRowCompleted, countChars, countStars, getAudioTime, dismissModal,
-  clearInput, activateClean, completeTyping,
-} from './helpers.js';
+  ReportEntry, check, sleep, APP_URL, CHAR_DELAY_MS,
+  SENTENCE_ENDS,
+  seedLesson, waitForActive, pauseAudio, pressEnter,
+  isRowCompleted, countChars, countStars, activateClean, completeTyping } from './helpers.js';
 
 export async function run(_desktopPage: Page, report: ReportEntry[]) {
   console.log('\n─── 10. Mobile Viewport ───');

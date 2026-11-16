@@ -9,8 +9,6 @@ process.env.GCLOUD_PROJECT =
   process.env.FIREBASE_ADMIN_PROJECT_ID || 'kyphan38-noda-app';
 
 import admin from 'firebase-admin';
-import fs from 'node:fs';
-import path from 'node:path';
 
 const PROJECT_ID = process.env.FIREBASE_ADMIN_PROJECT_ID || 'kyphan38-noda-app';
 const BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${PROJECT_ID}.firebasestorage.app`;
@@ -97,7 +95,6 @@ async function main() {
   console.log('   status', res2.status, 'took', Date.now() - t1, 'ms');
   console.log('   body:', JSON.stringify(res2.body, null, 2));
 
-  const hitFast = Date.now() - t1 < Date.now() - t0;
   console.log('\n=== SUMMARY ===');
   console.log('Call 1 (miss) ok:', res1.status === 200);
   console.log('Cache doc written:', snap.exists);

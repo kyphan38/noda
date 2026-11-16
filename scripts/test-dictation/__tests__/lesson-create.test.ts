@@ -5,7 +5,10 @@ import { renderHook } from '@testing-library/react';
 /** A failed upload must keep the new-lesson modal open (nothing the user picked is lost). */
 
 const upload = vi.fn();
-const save = vi.fn(async (_lesson: unknown) => {});
+// The test reads the saved lesson from save.mock.calls.
+const save = vi.fn(async (lesson: unknown) => {
+  void lesson;
+});
 vi.mock('@/lib/db', () => ({
   uploadLessonMediaToFirebase: (...args: unknown[]) => upload(...args),
   saveLessonFirestore: (lesson: unknown) => save(lesson),

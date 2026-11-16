@@ -25,7 +25,6 @@ export function DictationControls({
   isCompleted,
   onDictationChange,
   onDictationKeyDown,
-  onDictationRetry,
   isMobile = false,
   justDone = false,
 }: DictationControlsProps) {
