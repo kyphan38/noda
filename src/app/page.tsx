@@ -1,13 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import {
-  findActiveTranscriptIndex,
-  scrollDictationTargetRow,
-  scrollTranscriptRowIntoView,
-} from '@/lib/transcript-scroll';
-import { completionPercent, findResumeTarget } from '@/lib/progress';
-import { restoreLessonFirestore, trashLessonFirestore } from '@/lib/db';
+import { findActiveTranscriptIndex, scrollDictationTargetRow } from '@/lib/transcript-scroll';
+import { completionPercent } from '@/lib/progress';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
 import { NewLessonModal } from '@/components/NewLessonModal';
@@ -27,6 +22,9 @@ import { useGlobalPlaybackShortcuts } from '@/hooks/useGlobalPlaybackShortcuts';
 import { useHeaderItemMenuClickOutside } from '@/hooks/useHeaderItemMenu';
 import { useMobileViewport } from '@/hooks/use-mobile';
 import { useAuthGate } from '@/hooks/useAuthGate';
+import { useLessonTrash } from '@/hooks/useLessonTrash';
+import { useResumePrompt } from '@/hooks/useResumePrompt';
+import { useShadowingControls } from '@/hooks/useShadowingControls';
 import { useDictationHandlers } from '@/hooks/useDictationHandlers';
 import { LessonItem, Sentence, type AppMode, type LessonSource } from '@/types';
 import { LessonView } from '@/components/LessonView';
@@ -34,7 +32,6 @@ import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { type ToastAction } from '@/components/Toast';
 import { ToastLayer } from '@/components/ToastLayer';
 import { buildItemSearchString, parseItemFromSearch, pickLatestLessonId } from '@/lib/item-url';
-import { cycleRepeatCount as getNextRepeatCount } from '@/lib/repeat-count';
 
 /** How long the Undo button stays up after a progress reset. */
 const RESET_UNDO_MS = 6000;
@@ -327,28 +324,13 @@ export default function NodaApp() {
     [recentLessonIds, lessonsListEffective]
   );
 
-  const handleTrashItem = useCallback(async (id: string) => {
-    try {
-      await trashLessonFirestore(id);
-      if (selectedItem?.id === id) {
-        handleNewLessonWrapper();
-      }
-    } catch {
-      setToast({ message: 'Could not move item to trash.', type: 'error' });
-    }
-  }, [selectedItem?.id, handleNewLessonWrapper]);
-
-  const handleRestoreItem = useCallback(async (id: string) => {
-    try {
-      await restoreLessonFirestore(id);
-    } catch {
-      setToast({ message: 'Could not restore item.', type: 'error' });
-    }
-  }, []);
-
-  const handleDeleteForeverMany = useCallback((ids: string[]) => {
-    setTrashDeleteIds(ids);
-  }, []);
+  const showError = useCallback((message: string) => setToast({ message, type: 'error' }), []);
+  const { handleTrashItem, handleRestoreItem, handleDeleteForeverMany } = useLessonTrash({
+    selectedId: selectedItem?.id,
+    onSelectedTrashed: handleNewLessonWrapper,
+    onError: showError,
+    askDeleteForever: setTrashDeleteIds,
+  });
 
   const handleToggleSection = useCallback((section: string, expanded: boolean) => {
     setExpandedSections((prev) => ({ ...prev, [section]: expanded }));
@@ -552,43 +534,19 @@ export default function NodaApp() {
     } catch { /* ignore parse errors */ }
   }, [isE2EMode, setTranscriptText, setIsStarted, setLessonName, setMediaURL, setYoutubeVideoId]);
 
-  const cycleRepeatCount = useCallback(() => {
-    changeRepeatCount(getNextRepeatCount(repeatCount));
-  }, [repeatCount, changeRepeatCount]);
-
-  // Shadowing: mark the current line as shadowed, then jump to the next line and play it (Enter key).
-  const handleShadowingNext = useCallback(() => {
-    const media = mediaRef.current;
-    if (!media) return;
-    const tr = transcriptRef.current;
-    const current = activeSentenceRef.current;
-    if (current && !shadowingCompletedRef.current[current.id]) {
-      setShadowingCompleted((prev) => {
-        const next = { ...prev, [current.id]: true };
-        shadowingCompletedRef.current = next;
-        return next;
-      });
-    }
-    const next = current
-      ? tr.find((s) => s.start > current.start)
-      : tr.find((s) => s.start > media.currentTime);
-    if (!next) return;
-    userSeekTargetRef.current = next.id;
-    media.currentTime = next.start;
-    setCurrentTime(next.start);
-    media.play().catch(() => {});
-  }, [mediaRef, activeSentenceRef, transcriptRef, setCurrentTime, userSeekTargetRef, shadowingCompletedRef, setShadowingCompleted]);
-
-  // Tap version of the Shadowing Enter key: phones and iPads have no Enter key outside a text
-  // field. Same steps as the keyboard path in useGlobalPlaybackShortcuts.
-  const handleShadowingNextTap = useCallback(() => {
-    if (loopTimeoutRef.current) {
-      clearTimeout(loopTimeoutRef.current);
-      isLoopDelayingRef.current = false;
-    }
-    handleShadowingNext();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loopTimeoutRef/isLoopDelayingRef are stable refs
-  }, [handleShadowingNext]);
+  const { cycleRepeatCount, handleShadowingNext, handleShadowingNextTap } = useShadowingControls({
+    repeatCount,
+    changeRepeatCount,
+    mediaRef,
+    transcriptRef,
+    activeSentenceRef,
+    shadowingCompletedRef,
+    setShadowingCompleted,
+    userSeekTargetRef,
+    setCurrentTime,
+    loopTimeoutRef,
+    isLoopDelayingRef,
+  });
 
   useGlobalPlaybackShortcuts(
     selectedItem?.type,
@@ -745,43 +703,19 @@ export default function NodaApp() {
     isStarted && !!selectedItem && selectedItem.id === currentLessonId
   );
 
-  // "Continue" prompt: built from the progress saved when the lesson was opened. It goes
-  // away once used, dismissed, or as soon as playback starts some other way.
-  const [resumeDismissedFor, setResumeDismissedFor] = useState<string | null>(null);
-  const resumeTarget = useMemo(() => {
-    if (!loadedProgress || loadedProgress.lessonId !== selectedItem?.id) return null;
-    if (resumeDismissedFor === loadedProgress.lessonId) return null;
-    return findResumeTarget(loadedProgress.lastMode, loadedProgress.progress, completedSentences, transcript);
-  }, [loadedProgress, selectedItem?.id, resumeDismissedFor, completedSentences, transcript]);
-
-  const dismissResume = useCallback(() => {
-    if (loadedProgress) setResumeDismissedFor(loadedProgress.lessonId);
-  }, [loadedProgress]);
-
-  useEffect(() => {
-    if (isPlaying) dismissResume();
-  }, [isPlaying, dismissResume]);
-
-  const handleResume = useCallback(async () => {
-    const target = resumeTarget;
-    if (!target) return;
-    dismissResume();
-    if (appModeRef.current !== target.mode) await handleModeChange(target.mode);
-    // Switching tabs remounts the lesson view (and its media element), so seek and scroll
-    // once the new view is on screen.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const media = mediaRef.current;
-        if (media) media.currentTime = target.time;
-        setCurrentTime(target.time);
-        lastScrolledIndexRef.current = -1;
-        const container = scrollContainerRef.current;
-        if (container && scrollTranscriptRowIntoView(container, target.index, 'smooth')) {
-          lastScrolledIndexRef.current = target.index;
-        }
-      });
-    });
-  }, [resumeTarget, dismissResume, appModeRef, handleModeChange, mediaRef, setCurrentTime]);
+  const { resumeTarget, dismissResume, handleResume } = useResumePrompt({
+    loadedProgress,
+    selectedId: selectedItem?.id,
+    completedSentences,
+    transcript,
+    isPlaying,
+    appModeRef,
+    handleModeChange,
+    mediaRef,
+    setCurrentTime,
+    lastScrolledIndexRef,
+    scrollContainerRef,
+  });
 
   const handleLogout = useCallback(async () => {
     await logout();
