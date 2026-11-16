@@ -26,6 +26,7 @@ import { useLessonTrash } from '@/hooks/useLessonTrash';
 import { useResumePrompt } from '@/hooks/useResumePrompt';
 import { useShadowingControls } from '@/hooks/useShadowingControls';
 import { useDictationHandlers } from '@/hooks/useDictationHandlers';
+import { useWelcomeLists } from '@/hooks/useWelcomeLists';
 import { LessonItem, Sentence, type AppMode, type LessonSource } from '@/types';
 import { LessonView } from '@/components/LessonView';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
@@ -95,7 +96,7 @@ export default function NodaApp() {
     dictationInputs, setDictationInputs, completedSentences, setCompletedSentences,
     shadowingCompleted, setShadowingCompleted, shadowingCompletedRef, loadedProgress,
     isStarted, setIsStarted,
-    lessonsList, recentLessonIds, isListLoading, isLessonLoading,
+    lessonsList, recentLessonIds, listenAgain, isListLoading, isLessonLoading,
     currentLessonId, mediaStoragePath, youtubeVideoId, setYoutubeVideoId,
     setLessonName,
     isSidebarOpen, setIsSidebarOpen, lessonToDelete, setLessonToDelete,
@@ -305,24 +306,7 @@ export default function NodaApp() {
     applySelectionFromRow(row, { pushHistory: true });
   }, [lessonsListEffective, applySelectionFromRow]);
 
-  /** Most recently opened lessons, for the welcome screen. */
-  const recentLessons = useMemo<LessonItem[]>(
-    () =>
-      recentLessonIds
-        .map((id) => lessonsListEffective.find((l) => l.id === id))
-        .filter((l): l is (typeof lessonsListEffective)[number] => !!l)
-        .map((l) => ({
-          id: l.id,
-          name: l.name,
-          language: 'en',
-          dictationProgress: l.dictationProgress,
-          shadowingProgress: l.shadowingProgress,
-          hasMedia: l.hasMedia,
-          mediaType: l.mediaType,
-          type: 'lesson',
-        })),
-    [recentLessonIds, lessonsListEffective]
-  );
+  const { recentLessons, listenAgainLessons } = useWelcomeLists(lessonsListEffective, recentLessonIds, listenAgain);
 
   const showError = useCallback((message: string) => setToast({ message, type: 'error' }), []);
   const { handleTrashItem, handleRestoreItem, handleDeleteForeverMany } = useLessonTrash({
@@ -807,6 +791,7 @@ export default function NodaApp() {
             {!selectedItem && uploadMode === 'idle' && (
               <WelcomeScreen
                 recentLessons={recentLessons}
+                listenAgainLessons={listenAgainLessons}
                 onSelectLesson={handleItemSelect}
                 onNewLesson={openNewLessonModal}
               />

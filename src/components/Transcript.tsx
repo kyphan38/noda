@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import { ParagraphDictation } from './ParagraphDictation';
+import { currentLessonStore, endSlowNow, listenPausesStore } from '@/lib/lesson-session';
 import { Sentence, AppMode, DictationInputs, CompletedSentences } from '@/types';
 import { MemoTranscriptSentence } from './TranscriptSentence';
 
@@ -47,13 +49,24 @@ export function Transcript({
   activeShadowingSentenceId,
   isShadowingPanelOpen,
 }: TranscriptProps) {
+  // Dictation one sentence at a time, or a whole part (N7). Per visit.
+  const [dictationView, setDictationView] = useState<'sentence' | 'paragraph'>('sentence');
+  // A hard sentence plays slower only in Dictation.
+  useEffect(() => {
+    if (appMode !== 'dictation') endSlowNow();
+  }, [appMode]);
+
   return (
     <div className="h-full min-h-0 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden flex flex-col">
+      {appMode === 'listen' && <ListenPauses />}
+      {appMode === 'dictation' && <DictationView value={dictationView} onChange={setDictationView} />}
       <div
         ref={scrollContainerRef}
         className="scroll-quiet flex-1 overflow-y-auto scroll-smooth p-2 md:p-3"
       >
-        {transcript.map((sentence, index) => {
+        {appMode === 'dictation' && dictationView === 'paragraph' ? (
+          <ParagraphDictation transcript={transcript} />
+        ) : transcript.map((sentence, index) => {
           const isActive = currentTime >= sentence.start && currentTime < sentence.end;
           const isPast = currentTime >= sentence.end;
 
@@ -84,6 +97,50 @@ export function Transcript({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Listen with pauses (N10), uploaded files only: silence after each sentence to repeat it. */
+function ListenPauses() {
+  const lesson = useSyncExternalStore(currentLessonStore.subscribe, currentLessonStore.get, () => null);
+  const on = useSyncExternalStore(listenPausesStore.subscribe, listenPausesStore.get, () => false);
+  if (!lesson || lesson.youtube) return null;
+  return (
+    <div className="flex items-center gap-3 border-b border-gray-800 px-3 py-2 text-xs" role="radiogroup" aria-label="Pauses">
+      <span className="text-gray-500">Pauses</span>
+      {(['off', 'on'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          aria-checked={on === (v === 'on')}
+          onClick={() => listenPausesStore.set(v === 'on')}
+          className={on === (v === 'on') ? 'text-gray-100' : 'text-gray-500 hover:text-gray-300'}
+        >
+          {v}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Dictation one sentence at a time, or a part of several sentences (N7). */
+function DictationView({ value, onChange }: { value: 'sentence' | 'paragraph'; onChange: (v: 'sentence' | 'paragraph') => void }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-gray-800 px-3 py-2 text-xs" role="radiogroup" aria-label="Dictation by">
+      {(['sentence', 'paragraph'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          aria-checked={value === v}
+          onClick={() => onChange(v)}
+          className={value === v ? 'text-gray-100' : 'text-gray-500 hover:text-gray-300'}
+        >
+          {v}
+        </button>
+      ))}
     </div>
   );
 }

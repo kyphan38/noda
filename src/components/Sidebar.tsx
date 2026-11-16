@@ -412,9 +412,17 @@ function SidebarImpl({
           </div>
 
           <div className="border-t border-gray-800 px-4 py-3">
-            <Link href="/guide" className="text-sm text-gray-400 hover:text-white transition-colors">
-              Guide
-            </Link>
+            <div className="flex gap-4">
+              <Link href="/mistakes" className="text-sm text-gray-400 hover:text-white transition-colors">
+                Mistakes
+              </Link>
+              <Link href="/speaking" className="text-sm text-gray-400 hover:text-white transition-colors">
+                Speaking
+              </Link>
+              <Link href="/guide" className="text-sm text-gray-400 hover:text-white transition-colors">
+                Guide
+              </Link>
+            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, RotateCcw, CornerDownLeft } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
+import { WordText } from './WordText';
 import { DictationControls } from './DictationControls';
 
 interface TranscriptSentenceProps {
@@ -128,7 +129,7 @@ export function TranscriptSentence({
               ${hideCaptions ? 'invisible select-none' : ''}
             `}
           >
-            {sentence.text}
+            {hideCaptions ? sentence.text : <WordText text={sentence.text} active={isActive} />}
           </p>
         )}
       </div>

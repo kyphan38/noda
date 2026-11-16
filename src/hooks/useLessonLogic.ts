@@ -6,6 +6,8 @@ import { DEFAULT_APP_MODE, DICTATION_SAVE_DEBOUNCE_MS, SAVE_PROGRESS_DELAY_MS } 
 import { parseTranscript } from '@/lib/utils';
 import type { LessonProgressRecord } from '@/lib/progress';
 import { donePercent } from '@/lib/lessonLayout';
+import { currentLessonStore } from '@/lib/lesson-session';
+import { listenAgainIds } from '@/lib/listen-again';
 import {
   deleteLessonFirestore,
   getLessonFirestore,
@@ -91,6 +93,8 @@ export function useLessonLogic(
   const [isLessonLoading, setIsLessonLoading] = useState(false);
   /** Ids of the most recently opened lessons, newest first (the snapshot is ordered by lastAccessed). */
   const [recentLessonIds, setRecentLessonIds] = useState<string[]>([]);
+  /** Lessons worked on, then left for a week (N9), for the welcome screen. */
+  const [listenAgain, setListenAgain] = useState<string[]>([]);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   /** Firebase Storage path of the loaded lesson's media (for the shadowing-pattern Cloud Function). */
   const [mediaStoragePath, setMediaStoragePath] = useState<string | null>(null);
@@ -112,6 +116,11 @@ export function useLessonLogic(
   useEffect(() => {
     appModeRef.current = appMode;
   }, [appMode]);
+
+  // Other parts (dictation misses) need the open lesson without prop drilling.
+  useEffect(() => {
+    currentLessonStore.set(currentLessonId ? { id: currentLessonId, name: lessonName, youtube: !!youtubeVideoId } : null);
+  }, [currentLessonId, lessonName, youtubeVideoId]);
 
   useEffect(() => {
     completedSentencesRef.current = completedSentences;
@@ -173,6 +182,17 @@ export function useLessonLogic(
             setLessonsList((prev) => (lessonRowsShallowEqual(prev, next) ? prev : next));
             const recent = lessons.filter((l) => !l.isTrashed).slice(0, RECENT_LESSON_COUNT).map((l) => l.id);
             setRecentLessonIds((prev) => (prev.join() === recent.join() ? prev : recent));
+            const again = listenAgainIds(
+              lessons.map((l) => ({
+                id: l.id,
+                isTrashed: !!l.isTrashed,
+                lastAccessed: l.lastAccessed,
+                dictationPercent: donePercent(l.dictationDone, l.completedSentences, l.totalSentences),
+                shadowingPercent: donePercent(l.shadowingDone, l.progress?.shadowing?.completed, l.totalSentences),
+              })),
+              Date.now(),
+            );
+            setListenAgain((prev) => (prev.join() === again.join() ? prev : again));
             if (!didReceiveFirstSnapshot) {
               didReceiveFirstSnapshot = true;
               setIsListLoading(false);
@@ -451,6 +471,7 @@ export function useLessonLogic(
     setIsStarted,
     lessonsList,
     recentLessonIds,
+    listenAgain,
     isListLoading,
     isLessonLoading,
     currentLessonId,

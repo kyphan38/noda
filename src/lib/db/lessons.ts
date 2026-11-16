@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -81,6 +82,13 @@ export const subscribeLessonsFirestore = (
   );
 };
 
+
+/** Every lesson doc once (no transcripts), newest opened first. For pages beside the lesson screen. */
+export const listLessonsFirestore = async (): Promise<LessonRecord[]> => {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(query(collection(getFirebaseFirestore(), getUserLessonsCollectionPath(uid)), orderBy('lastAccessed', 'desc')));
+  return snap.docs.map((item) => fromFirestoreLessonRecord(item.id, item.data() as FirestoreLessonRecord));
+};
 
 export const patchLessonSidebarPlacementFirestore = async (
   lessonId: string,

@@ -11,3 +11,4 @@ export * from './lessons';
 export * from './shadowing';
 export * from './folders';
 export * from './local';
+export * from './misses';

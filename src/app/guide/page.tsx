@@ -12,6 +12,7 @@ const BLOCKS: Block[] = [
       'Tap + Audio to make a lesson. Drop an audio or video file and its .srt subtitles. Several files at once make several lessons.',
       'Or paste a YouTube link. The video needs English subtitles from the channel (auto captions do not count). Then drop the .srt for it.',
       'The start page lists recent lessons. A lesson opens where you stopped, with a Continue bar.',
+      'Listen again: up to 3 lessons you did half or more of, then left for a week.',
     ],
   },
   {
@@ -21,11 +22,16 @@ const BLOCKS: Block[] = [
       'Make folders and drag lessons into them.',
       'Swipe left to close it on a phone.',
       'At the top: theme, export all data (.json) and log out.',
+      'At the bottom: Mistakes, Speaking and this Guide.',
     ],
   },
   {
     title: 'Listen',
-    lines: ['Play the lesson and read along. Tap a line to play it.'],
+    lines: [
+      'Play the lesson and read along. Tap a line to play it.',
+      'Tap a word in the line that is playing to see its IPA and a simple meaning in that sentence. Pause first if the line moves on too fast.',
+      'Pauses on (uploaded files only): after each sentence, a silence as long as the sentence, so you can say it.',
+    ],
   },
   {
     title: 'Shadowing',
@@ -33,6 +39,7 @@ const BLOCKS: Block[] = [
       'Listen to a line, then say it out loud with the speaker.',
       'Enter (or the tap button) marks the line done and plays the next one.',
       'H hides the captions so you only listen.',
+      'Tap a word in the playing line to see its IPA and meaning.',
       'The AI button on the player shows how a line sounds: stressed syllables, linked words, pauses. Auto analyzes the next lines too.',
       'The speaking check splits the lesson into short parts. Record each one to get a score, the words that went wrong and the top fixes.',
     ],
@@ -43,6 +50,8 @@ const BLOCKS: Block[] = [
       'Listen to a line and type what you hear. A right letter appears, a wrong one shakes.',
       'Tab (or the hint button) shows the next letter.',
       'Control plays the line again.',
+      'After 2 misses on a line (wrong letters or hints), it plays again at 0.8x. The next line is back to your speed.',
+      'paragraph: play a part of about 5 sentences, write it all in one box, then Check to see the missed words and your %. Practice only, not saved.',
     ],
   },
   {
@@ -51,6 +60,20 @@ const BLOCKS: Block[] = [
       'The bars show how much of the lesson is done in Shadowing and in Dictation.',
       'Reset clears the progress of the current tab. Undo works for a few seconds.',
       'When both are done, noda offers to move the lesson to Trash.',
+    ],
+  },
+  {
+    title: 'Mistakes',
+    lines: [
+      'The lines you wrote wrong most often, in every lesson.',
+      'Tap one to hear it and write it again. Right, and it leaves the list. YouTube lines open in their lesson.',
+    ],
+  },
+  {
+    title: 'Speaking',
+    lines: [
+      'Your speaking-check score by day, the sound habits that keep going wrong (for example elision · /t/), and the words said wrong most.',
+      'Inside a speaking check, a chart shows the scores of that lesson.',
     ],
   },
   {

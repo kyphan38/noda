@@ -1,5 +1,5 @@
 // Shadowing analysis and speaking attempts in Firestore.
-import { collection, getDoc, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
+import { collection, collectionGroup, getDoc, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { getFirebaseFirestore } from '@/lib/auth/firebase-client';
 import {
   SHADOWING_ANALYSIS_VERSION,
@@ -48,4 +48,23 @@ export const listSpeakingAttemptsFirestore = async (lessonId: string): Promise<S
       return { ...data, id: d.id, createdAt: data.createdAt?.toMillis() ?? Date.now() };
     })
     .filter((a) => a.version === SPEAKING_ATTEMPT_VERSION);
+};
+
+/**
+ * Every speaking-check attempt of every lesson (collection group), oldest first,
+ * with its lesson id. For the Speaking page.
+ */
+export const listAllSpeakingAttemptsFirestore = async (): Promise<(SpeakingAttempt & { lessonId: string })[]> => {
+  const uid = getCurrentUidOrThrow();
+  // No orderBy: a collection-group order needs its own index; a sort here is enough.
+  const snapshot = await getDocs(collectionGroup(getFirebaseFirestore(), 'speakingAttempts'));
+  const mine = `users/${uid}/lessons/`;
+  return snapshot.docs
+    .filter((d) => d.ref.path.startsWith(mine))
+    .map((d) => {
+      const data = d.data() as Omit<SpeakingAttempt, 'id' | 'createdAt'> & { createdAt?: Timestamp };
+      return { ...data, id: d.id, lessonId: d.ref.parent.parent?.id ?? '', createdAt: data.createdAt?.toMillis() ?? Date.now() };
+    })
+    .filter((a) => a.version === SPEAKING_ATTEMPT_VERSION)
+    .sort((a, b) => a.createdAt - b.createdAt);
 };

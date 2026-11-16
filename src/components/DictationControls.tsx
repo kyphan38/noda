@@ -1,4 +1,6 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { SLOW_FACTOR } from '@/lib/dictation-misses';
+import { slowSentenceStore } from '@/lib/lesson-session';
 import { Lightbulb } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
@@ -28,6 +30,7 @@ export function DictationControls({
   isMobile = false,
   justDone = false,
 }: DictationControlsProps) {
+  const slowId = useSyncExternalStore(slowSentenceStore.subscribe, slowSentenceStore.get, () => null);
   const targetNorm = useMemo(() => normalizeDictationTarget(sentence.text), [sentence.text]);
   const inputNorm = alignDictationInput(dictationInput, targetNorm);
 
@@ -217,6 +220,11 @@ export function DictationControls({
             data-caret
             className="dictation-caret border-l border-gray-100"
           />
+        )}
+        {isActive && slowId === sentence.id && (
+          <span className="ml-2 font-sans text-xs text-gray-500" title="Hard sentence: replays are slower">
+            {SLOW_FACTOR}x
+          </span>
         )}
       </div>
 

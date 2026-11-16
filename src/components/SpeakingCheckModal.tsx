@@ -7,6 +7,8 @@ import { ModalShell } from '@/components/ModalShell';
 import { Button } from '@/components/ui/button';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { listSpeakingAttemptsFirestore } from '@/lib/db';
+import { attemptScores } from '@/lib/speaking-stats';
+import { ScoreChart } from '@/components/ScoreChart';
 import type { ShadowingMediaSource } from '@/lib/shadowingAnalysis';
 import { requestSpeakingCheck } from '@/lib/speakingCheck';
 import { buildSpeakingSegments, type SpeakingSegment } from '@/lib/speakingSegments';
@@ -165,6 +167,11 @@ export function SpeakingCheckModal({ lessonId, transcript, media, onClose }: Spe
       </div>
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+        {attempts.length > 1 && (
+          <div className="mb-3 px-1">
+            <ScoreChart points={attemptScores(attempts)} label="latest" />
+          </div>
+        )}
         {segments.length === 0 && <p className="px-1 text-sm text-gray-400">No text to read.</p>}
         <ol className="grid grid-cols-[minmax(0,1fr)] gap-2">
           {segments.map((s, i) => {

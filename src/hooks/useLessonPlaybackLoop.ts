@@ -3,6 +3,8 @@ import type { AppMode, LoopMode, RepeatCount, Sentence } from '@/types';
 import { REPEAT_PAUSE_MS, SEEK_SETTLE_TOLERANCE_S, SEEK_GUARD_TIMEOUT_MS } from '@/constants';
 import { shouldRepeatSentenceAtEnd } from '@/lib/repeat-count';
 import { settleTimeTowardTarget } from '@/lib/seekSettle';
+import { currentLessonStore, listenPausesStore, playRangeStore, setRangePlayer } from '@/lib/lesson-session';
+import { listenPauseMs } from '@/lib/listen-pause';
 
 type RefBool = MutableRefObject<boolean>;
 type RefMode = MutableRefObject<AppMode>;
@@ -26,6 +28,21 @@ export function useLessonPlaybackLoop(
   sentencePlayCountRef: MutableRefObject<number>,
   userSeekTargetRef: MutableRefObject<number | null>
 ) {
+  // Paragraph dictation plays a stretch of several sentences in one go.
+  useEffect(() => {
+    setRangePlayer((start, end) => {
+      const media = audioRef.current;
+      if (!media) return;
+      if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
+      isLoopDelayingRef.current = false;
+      replayOnceRef.current = null;
+      playRangeStore.set({ start, end });
+      media.currentTime = start;
+      media.play().catch(() => {});
+    });
+    return () => setRangePlayer(null);
+  }, [audioRef, loopTimeoutRef, isLoopDelayingRef, replayOnceRef]);
+
   useEffect(() => {
     let animationFrameId: number;
     let lastActiveSentenceId: number | null = null;
@@ -64,6 +81,23 @@ export function useLessonPlaybackLoop(
           } else if (seekGuardStartedAt !== null) {
             seekGuardStartedAt = null;
           }
+        }
+
+        // A stretch for paragraph dictation: no per-sentence stops, just the end.
+        let range = playRangeStore.get();
+        // Moved somewhere else (a click, another tab): back to the normal rules.
+        if (range && (time < range.start - 0.5 || time > range.end + 0.5)) {
+          playRangeStore.set(null);
+          range = null;
+        }
+        if (range) {
+          if (time >= range.end - 0.03) {
+            audioRef.current.pause();
+            playRangeStore.set(null);
+          }
+          reportPlaybackTime(time, audioRef.current.paused);
+          animationFrameId = requestAnimationFrame(updateProgress);
+          return;
         }
 
         // Sticky target: right after a deliberate seek (click / Enter / Control replay,
@@ -183,6 +217,25 @@ export function useLessonPlaybackLoop(
               audioRef.current.pause();
               time = activeSentenceRef.current.end - 0.03;
               audioRef.current.currentTime = time;
+              sentencePlayCountRef.current = 0;
+            } else if (
+              appModeRef.current === 'listen' &&
+              listenPausesStore.get() &&
+              !currentLessonStore.get()?.youtube &&
+              !isLoopDelayingRef.current
+            ) {
+              // Listen with pauses (N10): silence to repeat the sentence, then go on.
+              isLoopDelayingRef.current = true;
+              audioRef.current.pause();
+              const done = activeSentenceRef.current;
+              loopTimeoutRef.current = setTimeout(() => {
+                if (audioRef.current) {
+                  // Just past the end, so this sentence does not pause again.
+                  audioRef.current.currentTime = done.end + 0.02;
+                  audioRef.current.play().catch(() => {});
+                }
+                isLoopDelayingRef.current = false;
+              }, listenPauseMs(done));
               sentencePlayCountRef.current = 0;
             } else {
               sentencePlayCountRef.current = 0;

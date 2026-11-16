@@ -2,8 +2,11 @@
 
 // Sentence click and the dictation input handlers of the lesson view.
 
-import React, { useCallback, type RefObject } from 'react';
+import React, { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
+import { newWrongLetters, SLOW_AFTER_MISSES, SLOW_FACTOR } from '@/lib/dictation-misses';
+import { recordMiss } from '@/lib/db/misses';
+import { currentLessonStore, setSlowEnd, slowSentenceStore } from '@/lib/lesson-session';
 import { scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
 import { useMediaPlayer } from '@/hooks/useMediaPlayer';
 import { useLessonLogic } from '@/hooks/useLessonLogic';
@@ -48,7 +51,46 @@ export function useDictationHandlers({
   transcriptRef: RefObject<LessonLogic['transcript']>;
   userSeekTargetRef: MediaPlayer['userSeekTargetRef'];
 }) {
+  // Misses this visit, per "lessonId:sentenceId" (N4 slows from SLOW_AFTER_MISSES).
+  const missCountRef = useRef(new Map<string, number>());
+  // The speed chosen before a hard sentence slowed down.
+  const baseRateRef = useRef<number | null>(null);
+
+  const endSlow = useCallback(() => {
+    const media = mediaRef.current;
+    if (slowSentenceStore.get() !== null && media && baseRateRef.current !== null) media.playbackRate = baseRateRef.current;
+    baseRateRef.current = null;
+    slowSentenceStore.set(null);
+  }, [mediaRef]);
+
+  useEffect(() => {
+    setSlowEnd(endSlow);
+    // Another lesson: its sentences are not slow.
+    const unsub = currentLessonStore.subscribe(endSlow);
+    return () => {
+      unsub();
+      setSlowEnd(null);
+    };
+  }, [endSlow]);
+
+  const addMiss = useCallback((sentence: Sentence, n: number) => {
+    if (n <= 0) return;
+    const lesson = currentLessonStore.get();
+    if (lesson) recordMiss(lesson, sentence, n);
+    const key = `${lesson?.id ?? ''}:${sentence.id}`;
+    const total = (missCountRef.current.get(key) ?? 0) + n;
+    missCountRef.current.set(key, total);
+    const media = mediaRef.current;
+    if (total >= SLOW_AFTER_MISSES && slowSentenceStore.get() !== sentence.id && media) {
+      if (slowSentenceStore.get() !== null) endSlow();
+      baseRateRef.current = media.playbackRate;
+      media.playbackRate = Math.round(media.playbackRate * SLOW_FACTOR * 100) / 100;
+      slowSentenceStore.set(sentence.id);
+    }
+  }, [mediaRef, endSlow]);
+
   const handleSentenceClick = useCallback((sentence: Sentence) => {
+    if (slowSentenceStore.get() !== null && slowSentenceStore.get() !== sentence.id) endSlow();
     if (mediaRef.current) {
       const inDictation = appModeRef.current === 'dictation';
       // The "pre-roll" (a fraction of a second of lead-in before the clicked
@@ -85,11 +127,12 @@ export function useDictationHandlers({
         mediaRef.current.play().catch(() => {});
       }
     }
-  }, [mediaRef, appModeRef, setCurrentTime, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, scrollContainerRef, sentencePlayCountRef, userSeekTargetRef]);
+  }, [mediaRef, appModeRef, setCurrentTime, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, transcriptRef, scrollContainerRef, sentencePlayCountRef, userSeekTargetRef, endSlow]);
 
   const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
     const targetNorm = normalizeDictationTarget(sentence.text);
     const aligned = alignDictationInput(val, targetNorm);
+    addMiss(sentence, newWrongLetters(dictationInputsRef.current[sentence.id] || '', aligned, targetNorm));
     setDictationInputs((prev) => ({ ...prev, [sentence.id]: aligned }));
 
     const targetLetters = targetNorm.replace(/ /g, '');
@@ -117,7 +160,7 @@ export function useDictationHandlers({
         lastScrolledIndexRef.current = idx;
       }
     }
-  }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef, transcriptRef, scrollContainerRef, lastScrolledIndexRef]);
+  }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef, transcriptRef, scrollContainerRef, lastScrolledIndexRef, addMiss, dictationInputsRef]);
 
   const handleDictationKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => {
     if (e.key === 'Enter') {
@@ -128,6 +171,7 @@ export function useDictationHandlers({
       const tr = transcriptRef.current;
       const idx = tr.findIndex((s) => s.id === sentence.id);
       const nextSentence = idx >= 0 && idx < tr.length - 1 ? tr[idx + 1] : null;
+      endSlow();
 
       if (mediaRef.current) {
         // Clean up any pending repeat timeout from the previous sentence
@@ -165,6 +209,8 @@ export function useDictationHandlers({
       let li = 0;
       while (li < curLetters.length && li < tLetters.length && curLetters[li] === tLetters[li]) li++;
       if (li >= tLetters.length) return;
+      // A hint counts as a miss.
+      addMiss(sentence, 1);
       handleDictationChange(sentence, tLetters.slice(0, li + 1));
     } else if (e.key === 'Control') {
       e.preventDefault();
@@ -180,7 +226,7 @@ export function useDictationHandlers({
         mediaRef.current.play().catch(() => {});
       }
     }
-  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange, sentencePlayCountRef, userSeekTargetRef]);
+  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange, sentencePlayCountRef, userSeekTargetRef, addMiss, endSlow]);
 
   const handleDictationRetry = useCallback((sentence: Sentence) => {
     setCompletedSentences((prev) => {

@@ -16,6 +16,10 @@ service cloud.firestore {
     match /users/{userId}/sidebarFolders/{folderId} {
       allow read, write: if isOwner(userId);
     }
+    // Dictation misses per lesson, for the Mistakes page.
+    match /users/{userId}/misses/{lessonId} {
+      allow read, write: if isOwner(userId);
+    }
     // Heavy half of a lesson (transcript, drafts, progress), read only when it opens.
     match /users/{userId}/lessons/{lessonId}/content/{docId} {
       allow read, write: if isOwner(userId);
@@ -27,6 +31,12 @@ service cloud.firestore {
     match /users/{userId}/lessons/{lessonId}/speakingAttempts/{attemptId} {
       allow read: if isOwner(userId);
       allow write: if false; // only Cloud Function (Admin SDK) writes here
+    }
+
+    // The Speaking page reads every lesson's attempts in one collection-group query.
+    // The only allowed account owns them all; the app keeps only its own path.
+    match /{path=**}/speakingAttempts/{attemptId} {
+      allow read: if allowed();
     }
 
     match /{document=**} {
