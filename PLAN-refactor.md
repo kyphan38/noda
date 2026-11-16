@@ -1,7 +1,7 @@
 # PLAN-refactor (noda)
 
 Trạng thái (2026-11-16, branch `refactor/src-layout`): Phase 1 và 3 xong; Phase 2 làm một phần. Unit 271/271, dictation E2E 230/230 sau mỗi bước, build OK.
-- Phase 0: owner giữ `example/*.mp4` trong git (2026-11-16). Đã bỏ `.eslintrc.json` (ESLint 9 không đọc). `converted_script.py` và `metadata.json` chờ owner quyết định.
+- Phase 0: owner giữ `example/*.mp4` trong git (2026-11-16). Đã bỏ `.eslintrc.json` (ESLint 9 không đọc). `converted_script.py` chuyển vào `scripts/` (owner chọn); `metadata.json` để nguyên.
 - Phase 1: code đã ở `src/`; `@/*`, vitest và script test-dictation trỏ vào `src/`.
 - Phase 2: đã tách `useAuthGate`, `useDictationHandlers`, `useLessonTrash`, `useShadowingControls`, `useResumePrompt` (page.tsx 1189 -> 958). Còn lại `useItemUrlSync` + `useLessonSelection`: phần chọn bài và đồng bộ URL nằm rải rác giữa nhiều effect, tách ra sẽ đổi thứ tự effect. Chỉ làm khi sắp sửa phần đó, và chạy lại toàn bộ E2E.
 - Phase 3: `lib/db/` (types, shared, media, lessons, shadowing, folders, local); `index.ts` giữ đúng các export cũ.
