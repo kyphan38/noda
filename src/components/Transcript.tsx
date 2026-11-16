@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { ParagraphDictation } from './ParagraphDictation';
-import { currentLessonStore, endSlowNow, listenPausesStore } from '@/lib/lesson-session';
+import { currentLessonStore, endSlowNow, listenPausesStore, openWordStore, wordCardsOnStore } from '@/lib/lesson-session';
 import { Sentence, AppMode, DictationInputs, CompletedSentences } from '@/types';
 import { MemoTranscriptSentence } from './TranscriptSentence';
 
@@ -54,11 +54,13 @@ export function Transcript({
   // A hard sentence plays slower only in Dictation.
   useEffect(() => {
     if (appMode !== 'dictation') endSlowNow();
+    // A word card belongs to the tab it was opened in.
+    openWordStore.set(null);
   }, [appMode]);
 
   return (
     <div className="h-full min-h-0 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden flex flex-col">
-      {appMode === 'listen' && <ListenPauses />}
+      {appMode !== 'dictation' && <ListenOptions showPauses={appMode === 'listen'} />}
       {appMode === 'dictation' && <DictationView value={dictationView} onChange={setDictationView} />}
       <div
         ref={scrollContainerRef}
@@ -101,27 +103,39 @@ export function Transcript({
   );
 }
 
-/** Listen with pauses (N10), uploaded files only: silence after each sentence to repeat it. */
-function ListenPauses() {
+/** Options above the lines in Listen and Shadowing: word cards (N3) and, in Listen, pauses (N10). */
+function ListenOptions({ showPauses }: { showPauses: boolean }) {
   const lesson = useSyncExternalStore(currentLessonStore.subscribe, currentLessonStore.get, () => null);
-  const on = useSyncExternalStore(listenPausesStore.subscribe, listenPausesStore.get, () => false);
-  if (!lesson || lesson.youtube) return null;
+  const pauses = useSyncExternalStore(listenPausesStore.subscribe, listenPausesStore.get, () => false);
+  const words = useSyncExternalStore(wordCardsOnStore.subscribe, wordCardsOnStore.get, () => true);
   return (
-    <div className="flex items-center gap-3 border-b border-gray-800 px-3 py-2 text-xs" role="radiogroup" aria-label="Pauses">
-      <span className="text-gray-500">Pauses</span>
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-gray-800 px-3 py-2 text-xs">
+      <OnOff label="Words" title="Double click a word for its meaning" on={words} onChange={(v) => wordCardsOnStore.set(v)} />
+      {/* Uploaded files only: YouTube lessons keep playing straight through. */}
+      {showPauses && lesson && !lesson.youtube && (
+        <OnOff label="Pauses" title="Silence after each sentence, to say it" on={pauses} onChange={(v) => listenPausesStore.set(v)} />
+      )}
+    </div>
+  );
+}
+
+function OnOff({ label, title, on, onChange }: { label: string; title: string; on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <span className="flex items-center gap-3" role="radiogroup" aria-label={label} title={title}>
+      <span className="text-gray-500">{label}</span>
       {(['off', 'on'] as const).map((v) => (
         <button
           key={v}
           type="button"
           role="radio"
           aria-checked={on === (v === 'on')}
-          onClick={() => listenPausesStore.set(v === 'on')}
+          onClick={() => onChange(v === 'on')}
           className={on === (v === 'on') ? 'text-gray-100' : 'text-gray-500 hover:text-gray-300'}
         >
           {v}
         </button>
       ))}
-    </div>
+    </span>
   );
 }
 

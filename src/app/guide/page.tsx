@@ -29,7 +29,8 @@ const BLOCKS: Block[] = [
     title: 'Listen',
     lines: [
       'Play the lesson and read along. Tap a line to play it.',
-      'Tap a word in the line that is playing to see its IPA and a simple meaning in that sentence. Pause first if the line moves on too fast.',
+      'Double click a word (or tap it twice) to see its IPA and a simple meaning in that sentence. One click still plays the line.',
+      'Words off turns this off.',
       'Pauses on (uploaded files only): after each sentence, a silence as long as the sentence, so you can say it.',
     ],
   },
@@ -39,7 +40,7 @@ const BLOCKS: Block[] = [
       'Listen to a line, then say it out loud with the speaker.',
       'Enter (or the tap button) marks the line done and plays the next one.',
       'H hides the captions so you only listen.',
-      'Tap a word in the playing line to see its IPA and meaning.',
+      'Double click a word (or tap it twice) to see its IPA and meaning.',
       'The AI button on the player shows how a line sounds: stressed syllables, linked words, pauses. Auto analyzes the next lines too.',
       'The speaking check splits the lesson into short parts. Record each one to get a score, the words that went wrong and the top fixes.',
     ],
@@ -51,7 +52,7 @@ const BLOCKS: Block[] = [
       'Tab (or the hint button) shows the next letter.',
       'Control plays the line again.',
       'After 2 misses on a line (wrong letters or hints), it plays again at 0.8x. The next line is back to your speed.',
-      'paragraph: play a part of about 5 sentences, write it all in one box, then Check to see the missed words and your %. Practice only, not saved.',
+      'paragraph: play a part of about 5 sentences, write it all in one box, then Check to see the missed words and your %. Control plays the part again. Practice only, not saved.',
     ],
   },
   {
@@ -66,7 +67,7 @@ const BLOCKS: Block[] = [
     title: 'Mistakes',
     lines: [
       'The lines you wrote wrong most often, in every lesson.',
-      'Tap one to hear it and write it again. Right, and it leaves the list. YouTube lines open in their lesson.',
+      'Tap one to hear it and write it again. Control plays it again. Right, and it leaves the list. YouTube lines open in their lesson.',
     ],
   },
   {

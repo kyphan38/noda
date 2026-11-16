@@ -81,3 +81,33 @@ export function setRangePlayer(fn: ((start: number, end: number) => void) | null
 export function playRange(start: number, end: number): void {
   rangePlayer?.(start, end);
 }
+
+const WORDS_KEY = 'noda.wordCards';
+
+function readWordsOn(): boolean {
+  try {
+    return typeof localStorage === 'undefined' || localStorage.getItem(WORDS_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+/** Word cards on double click (N3): on unless turned off. Per device. */
+export const wordCardsOnStore = (() => {
+  const s = store<boolean>(readWordsOn());
+  return {
+    get: s.get,
+    set(on: boolean) {
+      s.set(on);
+      try {
+        localStorage.setItem(WORDS_KEY, on ? 'on' : 'off');
+      } catch {
+        // private mode: the choice lasts this visit only
+      }
+    },
+    subscribe: s.subscribe,
+  };
+})();
+
+/** The one word card open: its sentence and word index, or null. */
+export const openWordStore = store<{ sentenceId: number; index: number } | null>(null);

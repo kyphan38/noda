@@ -124,7 +124,14 @@ function Practice({ row, lesson, onClose, onRight }: { row: MissRow; lesson: Les
                 setText(e.target.value);
                 if (state === 'wrong') setState('idle');
               }}
-              placeholder="Type what you hear"
+              onKeyDown={(e) => {
+                // Same key as Dictation: Control plays the line again.
+                if (e.key === 'Control') {
+                  e.preventDefault();
+                  play();
+                }
+              }}
+              placeholder="Type what you hear. Control plays it again."
               autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"

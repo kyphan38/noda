@@ -129,7 +129,7 @@ export function TranscriptSentence({
               ${hideCaptions ? 'invisible select-none' : ''}
             `}
           >
-            {hideCaptions ? sentence.text : <WordText text={sentence.text} active={isActive} />}
+            {hideCaptions ? sentence.text : <WordText text={sentence.text} sentenceId={sentence.id} />}
           </p>
         )}
       </div>

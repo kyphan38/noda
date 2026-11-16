@@ -47,8 +47,15 @@ export function ParagraphDictation({ transcript }: { transcript: Sentence[] }) {
           setText(e.target.value);
           setResult(null);
         }}
+        onKeyDown={(e) => {
+          // Same key as sentence dictation: Control plays the part again.
+          if (e.key === 'Control') {
+            e.preventDefault();
+            play();
+          }
+        }}
         rows={5}
-        placeholder="Write the whole part, then Check."
+        placeholder="Write the whole part, then Check. Control plays it again."
         autoComplete="off"
         autoCapitalize="off"
         autoCorrect="off"
