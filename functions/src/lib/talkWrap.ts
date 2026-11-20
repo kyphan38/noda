@@ -11,6 +11,18 @@ export const MAX_SWAPS = 4;
 export const MAX_PICKS = 3;
 /** Older phrases sent to check for Active use; keeps the prompt small. */
 export const MAX_KNOWN = 40;
+export const MAX_REMEMBER = 3;
+/** Facts kept per topic (its character): the newest win. */
+export const MAX_MEMORY = 8;
+
+export type MemoryFact = { fact: string; at: number };
+
+/** Adds new facts to a topic's memory: no repeats (any case), newest last, capped. */
+export function mergeMemory(old: MemoryFact[], add: string[], now: number, max = MAX_MEMORY): MemoryFact[] {
+  const fresh = add.map((fact) => ({ fact, at: now }));
+  const keys = new Set(fresh.map((f) => f.fact.toLowerCase()));
+  return [...old.filter((f) => !keys.has(f.fact.toLowerCase())), ...fresh].slice(-max);
+}
 
 export interface WrapRequest {
   sessionId: string;
@@ -30,6 +42,8 @@ export interface TalkWrap {
   closingPicks: { turn: number; idea: string; target: string }[];
   activeKeys: string[];
   focus: string;
+  /** Facts about the learner a real person would remember next time. */
+  remember: string[];
 }
 
 const line = (v: unknown, max: number) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "");
@@ -75,6 +89,7 @@ export function buildWrapPrompt(
     "  target: the natural version of that turn, at most 25 words.",
     "- activeKeys: keys of 'phrases learned before' that the learner used with the right meaning (other forms are fine).",
     "- focus: one thing to work on next time, at most 15 words.",
+    `- remember: at most ${MAX_REMEMBER} short facts about the learner as a person (job, team, plans, dates, likes, how they feel) that they said in this talk and a friend or colleague would remember next time. Each a short note of at most 12 words with no he, she, his or her (never guess gender), for example "Moving to Da Nang next month". Not details of this practice situation. Fewer is fine.`,
   ].join("\n");
 }
 
@@ -115,5 +130,6 @@ export function parseWrap(
     (k, i, all): k is string => typeof k === "string" && knownKeys.includes(k) && all.indexOf(k) === i
   );
   if (turnCount > 0 && closingPicks.length === 0) throw new WrapShapeError("No closing picks.");
-  return { missedChances, swaps, closingPicks, activeKeys, focus: line(d.focus, 160) };
+  const remember = (Array.isArray(d.remember) ? d.remember : []).map((r) => line(r, 100)).filter(Boolean).slice(0, MAX_REMEMBER);
+  return { missedChances, swaps, closingPicks, activeKeys, focus: line(d.focus, 160), remember };
 }

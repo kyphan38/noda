@@ -44,7 +44,8 @@ type TopicDoc = {
   presetId?: string;
   persona?: { name: string; role: string; style: string };
   phrases?: { id: string; text: string }[];
-  scenarios?: { id: string; facts: string[] }[];
+  scenarios?: { id: string; facts: string[]; mood?: string }[];
+  memory?: { fact: string }[];
 };
 
 export const talkTurn = onCall(
@@ -107,6 +108,8 @@ export const talkTurn = onCall(
         persona: topic.persona,
         targets,
         facts: topic.scenarios?.find((s) => s.id === req.scenarioId)?.facts ?? [],
+        mood: topic.scenarios?.find((s) => s.id === req.scenarioId)?.mood,
+        memory: (topic.memory ?? []).map((m) => m.fact).slice(-4),
       });
       const audio = { inlineData: { mimeType: "audio/wav", data: wav.toString("base64") } };
       for (let attempt = 1; ; attempt++) {

@@ -174,6 +174,14 @@ ví dụ chứa đúng cụm (điền chỗ trống dùng được hết), nghĩ
 lượt: share không hỏi, question có hỏi, invite kết thúc bằng câu hỏi mời mình hỏi lại (đã siết prompt 2026-11-20).
 Retell: ý bỏ cố ý bị đánh dấu thiếu. Help: 3 cụm ngắn, không phải câu hoàn chỉnh.
 
+Giống người thật hơn (2026-11-20), eval thật đều đạt:
+- **Nhớ**: `talkWrap` lưu tối đa 3 ghi chú/buổi về bản thân (không he/she), giữ 8 cái mới nhất trên
+  topic (`memory`); `talkTurn` nhắc lại 1 lần đầu buổi. Trang topic hiện và có nút Forget.
+- **Recast**: nói sai thì nhân vật nhắc lại ý đúng trong câu trả lời, không nói là sai.
+- **Mood + giọng nói tự nhiên**: mỗi tình huống có `mood`; câu ngắn, rút gọn, cảm xúc; biết giờ
+  ("Friday afternoon").
+- **Phản ứng cách nói**: trả lời quá ngắn thì hỏi thêm; ngập ngừng (≥ 3 uh/um) thì "No rush" trước.
+
 Rủi ro cần test trước khi làm UI:
 - Transcript có giữ lỗi không? Thử 10 câu cố ý nói sai.
 - Gemini có bịa câu không (xem memory về argon)? Kiểm tra shape giống

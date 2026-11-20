@@ -6,6 +6,8 @@
  *   a "question" line asks.
  * - retell: a point left out on purpose is marked as missed.
  * - hint: short chunks, never a full answer.
+ * - human: memory, natural correction, short and hesitant answers, spoken
+ *   style, and facts kept for next time.
  *
  * Run from functions/ (uses the emulator key, never printed):
  *   npx tsx --env-file=.secret.local scripts/talk-eval-prompts.ts
@@ -17,7 +19,8 @@ import * as os from "os";
 import * as path from "path";
 
 import { generateStructuredJson } from "../src/lib/geminiClient";
-import { HINT_SCHEMA, SPEECH_SCHEMA, TOPIC_SCHEMA } from "../src/lib/talkSchemas";
+import { HINT_SCHEMA, SPEECH_SCHEMA, TOPIC_SCHEMA, WRAP_SCHEMA } from "../src/lib/talkSchemas";
+import { buildWrapPrompt, parseWrap } from "../src/lib/talkWrap";
 import { buildHintPrompt, checkHintRequest, parseHints } from "../src/lib/talkHint";
 import { buildSpeechPrompt, checkSpeechRequest, parseSpeech } from "../src/lib/talkSpeech";
 import { buildTopicPrompt, checkTopicRequest, parseTopicContent } from "../src/lib/talkTopic";
@@ -59,6 +62,7 @@ async function evalTopic() {
     [`${leaks.length} meanings repeat the phrase's main word (want at most 10%)${leaks.length ? `: ${leaks.slice(0, 3).map((p) => p.text).join(", ")}` : ""}`, leaks.length / n <= 0.1],
     [`${c.scenarios.length} scenarios with 3-4 facts each`, c.scenarios.length === 5 && c.scenarios.every((s) => s.facts.length >= 3)],
     [`${longIdeas.length} idea notes over 6 words`, longIdeas.length === 0],
+    [`moods: ${c.scenarios.map((s) => s.mood ?? "-").join(", ")}`, c.scenarios.every((s) => !!s.mood)],
   ]);
 }
 
@@ -73,7 +77,7 @@ async function evalKinds(dir: string) {
       kind === "share"
         ? ["shares and asks nothing (no '?')", !t.includes("?")]
         : kind === "invite"
-          ? ["ends with a direct question asking the learner to ask", /\?\s*$/.test(t) && /\b(ask|questions?|curious|want to know)\b/i.test(t) && !/let me know|if you need/i.test(t)]
+          ? ["ends with a direct question asking the learner to ask", /\?\s*$/.test(t) && /\b(ask|questions?|curious|(want|like) to know|from (me|my side))\b/i.test(t) && !/let me know|if you need/i.test(t)]
           : ["asks a question", t.includes("?")];
     report(`kind ${kind}: "${t}"`, [check]);
   }
@@ -103,6 +107,62 @@ async function evalHint() {
   ]);
 }
 
+async function evalHuman(dir: string) {
+  const ctx = { level: "B2" as const, topicTitle: "Daily standup", persona: { name: "Dana", role: "Engineering manager", style: "Warm and direct." }, targets: [], facts: [], mood: "cheerful" };
+  const turn = async (said: string, name: string, extra: Record<string, unknown> = {}, ctxExtra: Record<string, unknown> = {}) => {
+    const req = checkTurnRequest({ topicId: "eval-b2", scenarioId: "s0", aiLine: "How was your week so far?", replyKind: "question", when: "Monday morning", ...extra });
+    const raw = await generateStructuredJson([{ role: "user", parts: [{ text: buildTurnPrompt(req, { ...ctx, ...ctxExtra }) }, audio(sayWav(said, dir, name))] }], TURN_SCHEMA, OPTS);
+    return parseTurnResult(raw, []).reply.text;
+  };
+
+  const memory = await turn("Pretty good, I had a quiet weekend.", "memory", {}, { memory: ["Had a big release planned for Friday"] });
+  report(`memory: "${memory}"`, [["brings up the Friday release", /release|friday/i.test(memory)]]);
+
+  const recast = await turn("Yesterday I go to the client office and I meet their team.", "recast");
+  report(`recast: "${recast}"`, [["echoes the idea correctly (went / met)", /\b(went|met)\b/i.test(recast)], ["does not call it a mistake", !/mistake|wrong|correct(ly)? (is|would be)/i.test(recast)]]);
+
+  const short = await turn("It's fine.", "short");
+  report(`short answer: "${short}"`, [["asks for a bit more", /\?/.test(short) && /\b(more|tell me|what|how|anything)\b/i.test(short)]]);
+
+  const hesitant = await turn("Um... uh... so... um, we, uh, we fixed the, um, the bug, I think.", "hesitant");
+  report(`hesitant answer: "${hesitant}"`, [["encourages first", /no rush|take your time|no worries|it's okay|that's okay|all good/i.test(hesitant)]]);
+
+  const all = [memory, recast, short, hesitant].join(" ");
+  report("spoken style", [["uses contractions", /\b\w+'(s|re|ll|ve|d|t|m)\b/i.test(all)], ["no lists", !/^\s*[-*\d]+[.)]?\s/m.test(all)]]);
+
+  const wrap = parseWrap(
+    await generateStructuredJson(
+      [
+        {
+          role: "user",
+          parts: [
+            {
+              text: buildWrapPrompt(
+                [
+                  { ai: "How was your week?", you: "Busy. I am moving to Da Nang next month with my wife.", natural: "Busy. I'm moving to Da Nang next month with my wife." },
+                  { ai: "Oh nice! And work?", you: "We have a big migration to Kubernetes in December.", natural: "We have a big Kubernetes migration in December." },
+                ],
+                [],
+                [],
+                []
+              ),
+            },
+          ],
+        },
+      ],
+      WRAP_SCHEMA,
+      OPTS
+    ),
+    2,
+    [],
+    []
+  );
+  report(`remember: ${wrap.remember.join(" | ")}`, [
+    ["keeps the move or the migration", wrap.remember.some((r) => /da nang|moving|kubernetes|migration/i.test(r))],
+    ["never guesses gender (no he/she/his/her)", !wrap.remember.some((r) => /\b(he|she|his|her|him)\b/i.test(r))],
+  ]);
+}
+
 async function main() {
   if (!process.env.GEMINI_API_KEY) throw new Error("No GEMINI_API_KEY: run with --env-file=.secret.local from functions/.");
   const dir = mkdtempSync(path.join(os.tmpdir(), "talk-eval-"));
@@ -111,6 +171,7 @@ async function main() {
     await evalKinds(dir);
     await evalRetell(dir);
     await evalHint();
+    await evalHuman(dir);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

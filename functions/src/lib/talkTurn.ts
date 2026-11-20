@@ -46,6 +46,8 @@ export interface TurnRequest {
   curveball: boolean;
   isLast: boolean;
   replyKind: ReplyKind;
+  /** The learner's local time, for example "Friday afternoon". */
+  when: string;
 }
 
 /** Answer frames for topics where structure matters. */
@@ -78,6 +80,10 @@ export interface TurnContext {
   targets: { id: string; text: string }[];
   /** Facts of the session's situation, so the talk stays on one consistent story. */
   facts: string[];
+  /** How the persona feels in this situation. */
+  mood?: string;
+  /** Facts about the learner from earlier talks with this character. */
+  memory?: string[];
 }
 
 export interface TalkFix {
@@ -114,7 +120,8 @@ export function checkTurnRequest(data: unknown): TurnRequest {
     .filter((id): id is string => typeof id === "string" && /^p\d{1,3}$/.test(id))
     .slice(0, MAX_TARGETS);
   const replyKind = REPLY_KINDS.find((k) => k === d.replyKind) ?? "question";
-  return { topicId, scenarioId, aiLine, history, targetIds, curveball: d.curveball === true, isLast: d.isLast === true, replyKind };
+  const when = /^[A-Za-z ]{3,40}$/.test(line(d.when, 40)) ? line(d.when, 40) : "";
+  return { topicId, scenarioId, aiLine, history, targetIds, curveball: d.curveball === true, isLast: d.isLast === true, replyKind, when };
 }
 
 const LEVEL_NOTES: Record<Level, string> = {
@@ -149,6 +156,11 @@ export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
     `Topic: ${ctx.topicTitle}`,
     `You play ${p.name}, ${p.role}. Style: ${p.style}`,
     `Level: ${LEVEL_NOTES[ctx.level]}`,
+    ctx.mood ? `Your mood in this situation: ${ctx.mood}. Let it show in how you talk.` : "",
+    req.when ? `For the learner it is ${req.when} now.` : "",
+    ctx.memory?.length
+      ? `What you remember about the learner from earlier talks:\n${ctx.memory.map((m) => `- ${m}`).join("\n")}\nIf it fits, bring one up once early in the talk, like a real person would (ask how it went). Do not repeat it later.`
+      : "",
     ctx.facts.length ? `Situation (facts the learner can use; keep the talk consistent with them):\n${ctx.facts.map((f) => `- ${f}`).join("\n")}` : "",
     "",
     history ? `Talk so far:\n${history}` : "",
@@ -174,6 +186,9 @@ export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
     "3. reply: what you say next, as " + p.name + ".",
     answerFirst,
     replyRule,
+    "- Sound like a real person talking, not writing: contractions, short sentences, small spoken reactions (Oh, Hmm, Right, Oh no) and real feelings (surprise, worry, relief, a light joke) when they fit. No lists, no formal phrases.",
+    "- If the learner made a clear mistake in an important word or verb, echo their idea back correctly inside your reply, the way people do in conversation (they say \"I go to the office yesterday\", you say \"Oh, you went in yesterday?\"). Never say they made a mistake.",
+    "- Listen to how they spoke: if the answer was very short (a few words), kindly ask for a bit more. If they hesitated a lot (long pauses, or 3 or more uh/um in your transcript), your reply MUST start with a short encouraging phrase (No rush, Take your time, No worries) before anything else.",
     "   Set curveball to true only when this reply is a curveball.",
     req.isLast
       ? "   ideas: an empty list."

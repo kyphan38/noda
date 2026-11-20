@@ -30,6 +30,7 @@ export type TalkStore = {
   getSession(id: string): Promise<TalkSession | null>;
   setStar(topicId: string, p: TalkPhrase, starred: boolean, prev?: TalkPhraseProgress): Promise<TalkPhraseProgress>;
   listStarred(): Promise<TalkPhraseProgress[]>;
+  forgetMemory(topicId: string): Promise<void>;
   hint(topicId: string, aiLine: string, idea: string): Promise<fsdb.TalkHint[]>;
   speech(p: { mode: 'transcribe' | 'retell'; source: string; recording: string; recordingMimeType: string }): Promise<fsdb.SpeechResult>;
   listCapsules(): Promise<TalkCapsule[]>;
@@ -59,6 +60,7 @@ const firestoreStore: TalkStore = {
   getSession: fsdb.getTalkSession,
   setStar: fsdb.setPhraseStar,
   listStarred: fsdb.listStarredPhrases,
+  forgetMemory: fsdb.forgetTopicMemory,
   hint: fsdb.requestTalkHint,
   speech: fsdb.requestTalkSpeech,
   listCapsules: fsdb.listTalkCapsules,
@@ -206,6 +208,10 @@ function memoryStore(): TalkStore {
       { text: 'hit a bottleneck', use: 'when one part slows everything' },
       { text: 'under heavy load', use: 'with many users at once' },
     ],
+    forgetMemory: async (topicId) => {
+      const t = topics.get(topicId);
+      if (t) topics.set(topicId, { ...t, memory: [] });
+    },
     listStarred: async () => [...progress.values()].flatMap((m) => [...m.values()]).filter((p) => p.starred),
     markCapturesUsed: async (ids, topicId) => ids.forEach((id) => captures.has(id) && captures.set(id, { ...captures.get(id)!, usedInTopicId: topicId })),
     findOpenSession: async (topicId, setIndex) =>

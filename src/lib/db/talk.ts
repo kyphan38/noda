@@ -112,6 +112,7 @@ export type TurnPayload = {
   curveball: boolean;
   isLast: boolean;
   replyKind: 'question' | 'share' | 'invite';
+  when: string;
   recording: string;
   recordingMimeType: string;
 };
@@ -281,4 +282,10 @@ export async function saveTalkCapsule(month: string, blob: Blob, seconds: number
   const row: TalkCapsule = { month, storagePath, url: await getDownloadURL(objectRef), seconds, transcript, createdAt: Date.now() };
   await setDoc(doc(getFirebaseFirestore(), capsulesPath(uid), month), row);
   return row;
+}
+
+/** Makes the topic's character forget what it remembered about you. */
+export async function forgetTopicMemory(topicId: string): Promise<void> {
+  const uid = getCurrentUidOrThrow();
+  await updateDoc(doc(getFirebaseFirestore(), topicsPath(uid), topicId), { memory: [] });
 }

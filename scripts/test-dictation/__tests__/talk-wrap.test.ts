@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { buildWrapPrompt, checkWrapRequest, MAX_KNOWN, parseWrap, WrapShapeError } from '../../../functions/src/lib/talkWrap';
+import { buildWrapPrompt, checkWrapRequest, MAX_KNOWN, mergeMemory, parseWrap, WrapShapeError } from '../../../functions/src/lib/talkWrap';
+
+describe('talk memory', () => {
+  it('adds new facts last, drops repeats and keeps the newest', () => {
+    const old = [
+      { fact: 'Has a release on Friday', at: 1 },
+      { fact: 'Manager is Linh', at: 1 },
+    ];
+    expect(mergeMemory(old, ['manager is linh', 'Moving house next month'], 5)).toEqual([
+      { fact: 'Has a release on Friday', at: 1 },
+      { fact: 'manager is linh', at: 5 },
+      { fact: 'Moving house next month', at: 5 },
+    ]);
+    expect(mergeMemory(old, ['a', 'b', 'c'], 5, 3).map((f) => f.fact)).toEqual(['a', 'b', 'c']);
+  });
+});
 
 describe('talk wrap request', () => {
   it('keeps valid known phrase keys only, up to the cap', () => {
@@ -53,6 +68,7 @@ describe('talk wrap parsing', () => {
       ],
       activeKeys: ['t-b2__p2', 't-b2__p2', 'nope'],
       focus: 'Use past tense for things that are done.',
+      remember: ['Works on the payment team', '', 'Has a trip to Da Nang next week', 'x', 'y'],
       ...extra,
     });
 
@@ -62,6 +78,7 @@ describe('talk wrap parsing', () => {
     expect(w.swaps).toEqual([{ from: 'very big', to: 'huge', why: 'Shorter and stronger.' }]);
     expect(w.closingPicks.map((p) => p.turn)).toEqual([0, 1]);
     expect(w.activeKeys).toEqual(['t-b2__p2']);
+    expect(w.remember).toEqual(['Works on the payment team', 'Has a trip to Da Nang next week', 'x']);
   });
   it('throws a shape error on bad JSON or no closing picks', () => {
     expect(() => parseWrap('nope', 2, [], [])).toThrow(WrapShapeError);

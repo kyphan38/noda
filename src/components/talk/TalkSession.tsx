@@ -10,7 +10,7 @@ import { TalkToggle as Toggle } from '@/components/talk/TalkToggle';
 import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
-import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, replyKindFor, TURN_COUNT, type ReplyKind } from '@/lib/talk/session';
+import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, replyKindFor, TURN_COUNT, whenLabel, type ReplyKind } from '@/lib/talk/session';
 import { speak, stopSpeaking } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
 import { DEFAULT_PREFS, readLastScenario, readPrefs, writeLastScenario, writePrefs, type TalkPrefs as Prefs } from '@/lib/talk/prefs';
@@ -149,6 +149,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         targetIds: phrases.filter((p) => !used.has(p.id)).map((p) => p.id),
         curveball: curveAt !== null && idx + 1 === curveAt,
         replyKind: replyKindFor(idx + 1, total),
+        when: whenLabel(Date.now()),
         isLast: idx === total - 1,
         recording: await blobToBase64(blob),
         recordingMimeType: blob.type || 'audio/webm',

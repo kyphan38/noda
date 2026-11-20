@@ -16,7 +16,7 @@ export type TalkPhrase = {
 };
 
 /** A concrete situation inside a topic: facts to talk from, never a ready answer. */
-export type TalkScenario = { id: string; title: string; facts: string[]; opening: string; ideas: string[] };
+export type TalkScenario = { id: string; title: string; facts: string[]; opening: string; ideas: string[]; mood?: string };
 
 export type TalkTopic = {
   id: string;
@@ -30,6 +30,8 @@ export type TalkTopic = {
   /** Your own notes the topic was made from: an agenda or ticket (context), or lines you got stuck on. */
   notes?: string;
   notesKind?: 'context' | 'stuck';
+  /** What this topic's character remembers about you, newest last (written by talkWrap). */
+  memory?: { fact: string; at: number }[];
   phrases: TalkPhrase[];
   version: number;
   createdAt: number;
@@ -83,6 +85,7 @@ export type TalkWrap = {
   closingPicks: { turn: number; idea: string; target: string }[];
   activeKeys: string[];
   focus: string;
+  remember?: string[];
 };
 
 export type TalkSession = {

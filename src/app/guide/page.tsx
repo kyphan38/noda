@@ -66,6 +66,8 @@ const BLOCKS: Block[] = [
       'Speaking uses your browser (Chrome or Edge). If the mic does not work, type the answer.',
       'Talk: each talk is one situation with a few facts to use, so you never have to make up a story. 8 answers. Tap the mic (or Space) to answer, tap again to send.',
       'Stuck? opens all hints in one place: Ideas (what to talk about), Phrases (from the set), Buy time (ways to pause) and Help (type your idea, get word groups). Never a full answer.',
+      'The partner talks like a real person: a mood that fits the situation, feelings, short spoken replies, and the time of day. If you say something wrong, they say it back the right way, like people do, without stopping the talk. Short or hesitant answers get a kind push or a "No rush".',
+      'They remember you: after each talk, a few facts you shared (plans, team, dates) are kept for that topic, and come up next time. The topic page shows them; Forget clears them.',
       'It is a conversation, not an interview: sometimes the other person shares something and waits for you to react, and once they ask you to ask them something. Ask them anything; they answer first.',
       'After each answer: your words with the mistakes marked. Fix them in your head, then Show answer for three versions (Correct, Natural, Level up), the top fixes and Say it again.',
       'I said it right hides a fix when the speech-to-text heard you wrong.',

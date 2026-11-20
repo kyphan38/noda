@@ -120,7 +120,15 @@ then send the file back.
 - [ ] **Stuck?** opens one panel with Ideas, Phrases, Buy time and Help.
 - [ ] The Talk page is short: level and buttons on one line, "This week" on one line, topics in tabs. The tab you pick is remembered.
 
-## 15. Theme and phone
+## 15. Feels like a real person
+
+- [ ] Say something wrong on purpose ("Yesterday I go to the office"): the next line repeats it the right way ("Oh, you went in yesterday?") without calling it a mistake.
+- [ ] Answer in 2-3 words: the partner asks for a bit more.
+- [ ] Answer with many "uh/um": the partner starts with "No rush" or "Take your time".
+- [ ] Share something personal in a talk (a trip, a plan). After the talk, the topic page shows "[name] remembers: ...". Start a new talk on that topic: they bring it up. **Forget** clears it.
+- [ ] The replies sound spoken (short, "Oh", "Hmm") and fit the time of day.
+
+## 16. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

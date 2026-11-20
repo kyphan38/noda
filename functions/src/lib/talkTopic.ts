@@ -53,6 +53,8 @@ export interface TalkScenario {
   opening: string;
   /** Short notes of what the learner could say first. Ideas, never a ready answer. */
   ideas: string[];
+  /** How the persona feels here, one word (stressed, relaxed...). */
+  mood?: string;
 }
 
 export interface TopicContent {
@@ -119,6 +121,7 @@ export function buildTopicPrompt(req: TopicRequest): string {
     "  facts: 3 or 4 short facts the learner can talk about (what happened, numbers, names of systems, times), each at most 12 words, written as notes, not full sentences;",
     "  opening: the first thing the persona says to start the talk, one or two sentences, a question the learner must answer;",
     "  ideas: 2 or 3 notes of what the learner could mention in the first answer, each at most 6 words. Notes only, never a sentence the learner could read out.",
+    "  mood: how the persona feels in this situation, one word (for example stressed, relaxed, worried, excited, tired, cheerful).",
   ]
     .filter((l, i, all) => l !== "" || all[i - 1] !== "")
     .join("\n");
@@ -160,7 +163,7 @@ export function parseTopicContent(raw: string | undefined): TopicContent {
     const opening = oneLine(s.opening, 300);
     const facts = notes(s.facts, 4, 100);
     if (!opening || facts.length === 0) continue;
-    scenarios.push({ id: `s${scenarios.length}`, title: oneLine(s.title, 80) || `Situation ${scenarios.length + 1}`, facts, opening, ideas: notes(s.ideas, 3, 60) });
+    scenarios.push({ id: `s${scenarios.length}`, title: oneLine(s.title, 80) || `Situation ${scenarios.length + 1}`, facts, opening, ideas: notes(s.ideas, 3, 60), ...(oneLine(s.mood, 20) ? { mood: oneLine(s.mood, 20).toLowerCase() } : {}) });
     if (scenarios.length === SCENARIO_COUNT) break;
   }
 

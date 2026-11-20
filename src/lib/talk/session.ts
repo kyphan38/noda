@@ -146,3 +146,13 @@ export function replyKindFor(i: number, total: number): ReplyKind {
   if (total >= 5 && i === Math.ceil(total / 2)) return 'invite';
   return i % 3 === 2 ? 'share' : 'question';
 }
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** "Friday afternoon": the learner's local time, so the partner can say "Morning!" or "Almost the weekend". */
+export function whenLabel(ts: number): string {
+  const d = new Date(ts);
+  const h = d.getHours();
+  const part = h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 17 ? 'afternoon' : h >= 17 && h < 22 ? 'evening' : 'night';
+  return `${DAYS[d.getDay()]} ${part}`;
+}

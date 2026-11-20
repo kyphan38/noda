@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countFillers, replyKindFor, curveballTurn, fixSegments, hintPhrases, pickScenario, topSessionFixes, wordsPerMinute } from './session';
+import { countFillers, replyKindFor, whenLabel, curveballTurn, fixSegments, hintPhrases, pickScenario, topSessionFixes, wordsPerMinute } from './session';
 import type { TalkFix, TalkPhrase, TalkTurn } from './types';
 
 const fix = (wrong: string, kind: TalkFix['kind'] = 'grammar', pattern = 'other'): TalkFix => ({ kind, wrong, right: `${wrong}!`, why: '', pattern });
@@ -90,5 +90,14 @@ describe('replyKindFor', () => {
     expect([1, 2, 3, 4, 5, 6, 7].map((i) => replyKindFor(i, 8))).toEqual(['question', 'share', 'question', 'invite', 'share', 'question', 'question']);
     expect([1, 2].map((i) => replyKindFor(i, 3))).toEqual(['question', 'share']);
     expect(replyKindFor(8, 8)).toBe('question');
+  });
+});
+
+describe('whenLabel', () => {
+  it('names the day and part of the day', () => {
+    expect(whenLabel(new Date(2026, 10, 20, 9).getTime())).toBe('Friday morning');
+    expect(whenLabel(new Date(2026, 10, 20, 15).getTime())).toBe('Friday afternoon');
+    expect(whenLabel(new Date(2026, 10, 22, 20).getTime())).toBe('Sunday evening');
+    expect(whenLabel(new Date(2026, 10, 23, 2).getTime())).toBe('Monday night');
   });
 });

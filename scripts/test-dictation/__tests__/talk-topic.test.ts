@@ -55,7 +55,7 @@ describe('talk topic parsing', () => {
     JSON.stringify({
       persona: { name: 'Dana', role: 'Engineering manager', style: 'Calm and direct.' },
       scenarios: [
-        { title: 'Redis memory alert', facts: ['Redis at 95% memory', '2am page'], opening: 'What happened last night?', ideas: ['the alert', 'first check'] },
+        { title: 'Redis memory alert', facts: ['Redis at 95% memory', '2am page'], opening: 'What happened last night?', ideas: ['the alert', 'first check'], mood: 'Stressed' },
         { title: 'No facts', facts: [], opening: 'Skipped?', ideas: [] },
       ],
       phrases: Array.from({ length: n }, (_, i) => phrase(i)),
@@ -69,7 +69,7 @@ describe('talk topic parsing', () => {
     expect(c.phrases[SET_SIZE].setIndex).toBe(1);
     expect(c.persona.name).toBe('Dana');
     expect(c.scenarios).toEqual([
-      { id: 's0', title: 'Redis memory alert', facts: ['Redis at 95% memory', '2am page'], opening: 'What happened last night?', ideas: ['the alert', 'first check'] },
+      { id: 's0', title: 'Redis memory alert', facts: ['Redis at 95% memory', '2am page'], opening: 'What happened last night?', ideas: ['the alert', 'first check'], mood: 'stressed' },
     ]);
   });
   it('drops duplicates and phrases with no meaning', () => {

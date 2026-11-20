@@ -12,8 +12,8 @@ export const TOPIC_SCHEMA: Schema = {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
-        properties: { title: STR, facts: { type: Type.ARRAY, items: STR }, opening: STR, ideas: { type: Type.ARRAY, items: STR } },
-        required: ["title", "facts", "opening", "ideas"],
+        properties: { title: STR, facts: { type: Type.ARRAY, items: STR }, opening: STR, ideas: { type: Type.ARRAY, items: STR }, mood: STR },
+        required: ["title", "facts", "opening", "ideas", "mood"],
       },
     },
     phrases: {
@@ -50,4 +50,24 @@ export const SPEECH_SCHEMA: Schema = {
     },
   },
   required: ["transcript", "points", "model", "fixes"],
+};
+
+const INT = { type: Type.INTEGER };
+export const WRAP_SCHEMA: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    missedChances: {
+      type: Type.ARRAY,
+      items: { type: Type.OBJECT, properties: { turn: INT, phraseId: STR, said: STR, better: STR }, required: ["turn", "phraseId", "said", "better"] },
+    },
+    swaps: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { from: STR, to: STR, why: STR }, required: ["from", "to", "why"] } },
+    closingPicks: {
+      type: Type.ARRAY,
+      items: { type: Type.OBJECT, properties: { turn: INT, idea: STR, target: STR }, required: ["turn", "idea", "target"] },
+    },
+    activeKeys: { type: Type.ARRAY, items: STR },
+    focus: STR,
+    remember: { type: Type.ARRAY, items: STR },
+  },
+  required: ["missedChances", "swaps", "closingPicks", "activeKeys", "focus", "remember"],
 };

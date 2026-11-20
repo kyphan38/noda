@@ -5,37 +5,17 @@
  * A second call returns the saved notes: no model call, not counted.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Type, type Schema } from "@google/genai";
+import { WRAP_SCHEMA } from "./lib/talkSchemas";
 import { getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { generateStructuredJson } from "./lib/geminiClient";
 import { QUOTA_MESSAGE, isGeminiQuotaError, isGeminiTimeoutError } from "./lib/geminiErrors";
 import { takeAiCall } from "./lib/dailyLimit";
-import { buildWrapPrompt, checkWrapRequest, parseWrap, WrapShapeError, type TalkWrap, type WrapTurn } from "./lib/talkWrap";
+import { buildWrapPrompt, checkWrapRequest, mergeMemory, parseWrap, WrapShapeError, type MemoryFact, type TalkWrap, type WrapTurn } from "./lib/talkWrap";
 
 /** Keep in sync with NODA_DB_ID in analyzeShadowingPattern.ts and lib/firebase-db-id.ts. */
 const NODA_DB_ID = "(default)";
 const GEMINI_TIMEOUT_MS = 45000;
-
-const STR = { type: Type.STRING };
-const INT = { type: Type.INTEGER };
-const WRAP_SCHEMA: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    missedChances: {
-      type: Type.ARRAY,
-      items: { type: Type.OBJECT, properties: { turn: INT, phraseId: STR, said: STR, better: STR }, required: ["turn", "phraseId", "said", "better"] },
-    },
-    swaps: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { from: STR, to: STR, why: STR }, required: ["from", "to", "why"] } },
-    closingPicks: {
-      type: Type.ARRAY,
-      items: { type: Type.OBJECT, properties: { turn: INT, idea: STR, target: STR }, required: ["turn", "idea", "target"] },
-    },
-    activeKeys: { type: Type.ARRAY, items: STR },
-    focus: STR,
-  },
-  required: ["missedChances", "swaps", "closingPicks", "activeKeys", "focus"],
-};
 
 type SessionDoc = {
   topicId?: string;
@@ -43,7 +23,7 @@ type SessionDoc = {
   wrap?: TalkWrap;
   turns?: { ai?: { text?: string }; transcript?: string; review?: { natural?: string }; usedPhraseIds?: string[] }[];
 };
-type TopicDoc = { phrases?: { id: string; text: string; setIndex: number; removed?: boolean }[] };
+type TopicDoc = { phrases?: { id: string; text: string; setIndex: number; removed?: boolean }[]; memory?: MemoryFact[] };
 
 export const talkWrap = onCall(
   {
@@ -77,7 +57,8 @@ export const talkWrap = onCall(
     }));
     if (turns.length === 0) throw new HttpsError("failed-precondition", "This talk has no answers yet.");
 
-    const topic = (await db.doc(`users/${uid}/talkTopics/${session.topicId}`).get()).data() as TopicDoc | undefined;
+    const topicRef = db.doc(`users/${uid}/talkTopics/${session.topicId}`);
+    const topic = (await topicRef.get()).data() as TopicDoc | undefined;
     const targets = (topic?.phrases ?? []).filter((p) => p.setIndex === session.setIndex && !p.removed).map((p) => ({ id: p.id, text: p.text }));
     const usedIds = (session.turns ?? []).flatMap((t) => t.usedPhraseIds ?? []);
 
@@ -99,6 +80,10 @@ export const talkWrap = onCall(
             req.known.map((k) => k.key)
           );
           await sessionRef.set({ wrap }, { merge: true });
+          // The topic's character remembers you next time.
+          if (topic && wrap.remember.length > 0) {
+            await topicRef.set({ memory: mergeMemory(topic.memory ?? [], wrap.remember, Date.now()) }, { merge: true });
+          }
           return wrap;
         } catch (e) {
           if (!(e instanceof WrapShapeError) || attempt >= 2) throw e;

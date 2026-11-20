@@ -58,6 +58,17 @@ describe('talk turn prompt', () => {
     expect(frameFor('small-talk')).toBeUndefined();
     expect(frameFor(undefined)).toBeUndefined();
   });
+  it('adds mood, time, memory, spoken style, recasts and delivery rules', () => {
+    const p = buildTurnPrompt({ ...base, when: 'Friday afternoon' }, { ...ctx, mood: 'stressed', memory: ['Has a release on Friday'] });
+    expect(p).toContain('Your mood in this situation: stressed.');
+    expect(p).toContain('For the learner it is Friday afternoon now.');
+    expect(p).toContain('- Has a release on Friday');
+    expect(p).toContain('Sound like a real person talking');
+    expect(p).toContain('echo their idea back correctly');
+    expect(p).toContain('No rush, Take your time');
+    expect(buildTurnPrompt(base, ctx)).not.toContain('What you remember');
+    expect(checkTurnRequest({ topicId: 'standup-b2', scenarioId: 's0', aiLine: 'Hi', when: 'Friday<script>' }).when).toBe('');
+  });
   it('switches the reply rule for a curveball and for the last turn', () => {
     expect(buildTurnPrompt({ ...base, curveball: true }, ctx)).toContain('Curveball');
     expect(buildTurnPrompt({ ...base, isLast: true }, ctx)).toContain('close the talk politely');

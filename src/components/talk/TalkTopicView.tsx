@@ -82,6 +82,18 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
         <p className="text-sm text-gray-400">
           With {topic.persona.name}, {topic.persona.role}
         </p>
+        {topic.memory && topic.memory.length > 0 && (
+          <p className="mt-1 text-xs text-gray-500">
+            {topic.persona.name} remembers: {topic.memory.map((m) => m.fact).join(' · ')}{' '}
+            <button
+              type="button"
+              onClick={() => void getTalkStore().forgetMemory(topic.id).then(() => onChange({ ...topic, memory: [] }))}
+              className="underline-offset-2 hover:text-gray-100 hover:underline"
+            >
+              Forget
+            </button>
+          </p>
+        )}
       </div>
 
       {progress === null ? (
