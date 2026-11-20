@@ -5,6 +5,7 @@ import { Star, Volume2 } from 'lucide-react';
 
 import { TalkLearn } from '@/components/talk/TalkLearn';
 import { TalkSession } from '@/components/talk/TalkSession';
+import { ankiFileName, phrasesToAnki } from '@/lib/talk/anki';
 import { stageAtLeast, summarizeSets } from '@/lib/talk/phrase-stage';
 import { speak } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
@@ -46,6 +47,17 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
       />
     );
   }
+
+  /** Downloads this set's phrases you do not own yet as an Anki cards file. */
+  const exportAnki = (setIndex: number) => {
+    const text = phrasesToAnki(topic.phrases.filter((p) => p.setIndex === setIndex), progress ?? new Map(), topic.level, topic.title);
+    if (!text) return window.alert('Every phrase in this set is already yours.');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text + '\n'], { type: 'text/plain' }));
+    a.download = ankiFileName(topic.title, setIndex);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   const toggleStar = async (p: TalkPhrase) => {
     const prev = progress?.get(p.id);
@@ -93,6 +105,7 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
                 </button>
               </div>
               {openSet === s.setIndex && (
+                <>
                 <ul className="divide-y divide-gray-800 border-t border-gray-800">
                   {topic.phrases
                     .filter((p) => p.setIndex === s.setIndex)
@@ -120,6 +133,14 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
                       </li>
                     ))}
                 </ul>
+                <button
+                  type="button"
+                  onClick={() => exportAnki(s.setIndex)}
+                  className="w-full border-t border-gray-800 px-4 py-2 text-left text-xs text-gray-500 hover:text-gray-100"
+                >
+                  Export to Anki (.txt for /anki-import)
+                </button>
+                </>
               )}
             </li>
           ))}

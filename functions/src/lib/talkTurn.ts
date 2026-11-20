@@ -43,8 +43,31 @@ export interface TurnRequest {
   isLast: boolean;
 }
 
+/** Answer frames for topics where structure matters. */
+export type Frame = "bluf" | "star";
+const FRAME_BY_PRESET: Record<string, Frame> = {
+  incident: "bluf",
+  "on-call": "bluf",
+  postmortem: "bluf",
+  pipeline: "bluf",
+  standup: "bluf",
+  change: "bluf",
+  "one-on-one": "bluf",
+  "explain-pm": "bluf",
+  interview: "star",
+};
+export const frameFor = (presetId?: string): Frame | undefined => (presetId ? FRAME_BY_PRESET[presetId] : undefined);
+
+const FRAME_RULES: Record<Frame, string> = {
+  bluf: "BLUF: the main point or answer first, then the reasons and details.",
+  star: "STAR: Situation, Task, Action, Result, in that order, with a clear result.",
+};
+/** Answers shorter than this are not judged on structure. */
+export const FRAME_MIN_WORDS = 35;
+
 export interface TurnContext {
   level: Level;
+  frame?: Frame;
   topicTitle: string;
   persona: { name: string; role: string; style: string };
   targets: { id: string; text: string }[];
@@ -63,7 +86,7 @@ export interface TalkFix {
 export interface TurnResult {
   transcript: string;
   reply: { text: string; curveball: boolean; ideas: string[] };
-  review: { correct: string; natural: string; levelUp: string; fixes: TalkFix[] };
+  review: { correct: string; natural: string; levelUp: string; fixes: TalkFix[]; structure?: string };
   usedPhraseIds: string[];
 }
 
@@ -138,6 +161,9 @@ export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
       ? "   ideas: an empty list."
       : "   ideas: 2 or 3 notes of what the learner could mention when answering your reply, each at most 6 words, from the situation or common sense. Notes only, never a sentence the learner could read out.",
     "4. usedPhraseIds: ids of the target phrases the learner used with the right meaning (other verb forms are fine).",
+    ctx.frame
+      ? `5. structure: this topic uses ${FRAME_RULES[ctx.frame]} Only if the answer has at least ${FRAME_MIN_WORDS} words and does not follow it, say in one sentence (at most 20 simple words) how to reorder it. Otherwise an empty string.`
+      : "5. structure: an empty string.",
     targets ? `Target phrases:\n${targets}` : "Target phrases: none.",
   ]
     .filter((l, i, all) => l !== "" || all[i - 1] !== "")
@@ -185,7 +211,7 @@ export function parseTurnResult(raw: string | undefined, targetIds: string[]): T
       curveball: reply.curveball === true,
       ideas: (Array.isArray(reply.ideas) ? reply.ideas : []).map((x) => line(x, 60)).filter(Boolean).slice(0, 3),
     },
-    review: { correct, natural, levelUp: line(review.levelUp, 2000) || natural, fixes },
+    review: { correct, natural, levelUp: line(review.levelUp, 2000) || natural, fixes, ...(line(review.structure, 200) ? { structure: line(review.structure, 200) } : {}) },
     usedPhraseIds: used,
   };
 }

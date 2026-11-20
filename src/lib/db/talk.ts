@@ -3,7 +3,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore, getFirebaseFunctions } from '@/lib/auth/firebase-client';
-import { TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME, TALK_WRAP_FUNCTION_NAME } from '@/constants';
+import { TALK_HINT_FUNCTION_NAME, TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME, TALK_WRAP_FUNCTION_NAME } from '@/constants';
 import type { TalkCapture } from '@/lib/talk/capture';
 import type { TalkMistake } from '@/lib/talk/mistake-bank';
 import { progressId, raiseStage } from '@/lib/talk/phrase-stage';
@@ -234,4 +234,14 @@ export async function listStarredPhrases(): Promise<TalkPhraseProgress[]> {
   const uid = getCurrentUidOrThrow();
   const snap = await getDocs(query(collection(getFirebaseFirestore(), progressPath(uid)), where('starred', '==', true)));
   return snap.docs.map((d) => d.data() as TalkPhraseProgress);
+}
+
+export type TalkHint = { text: string; use: string };
+
+/** Hint level 2: chunks to say an idea typed in simple words (one small model call). */
+export async function requestTalkHint(topicId: string, aiLine: string, idea: string): Promise<TalkHint[]> {
+  const call = httpsCallable<{ topicId: string; aiLine: string; idea: string }, { hints: TalkHint[] }>(getFirebaseFunctions(), TALK_HINT_FUNCTION_NAME, {
+    timeout: 40_000,
+  });
+  return (await call({ topicId, aiLine, idea })).data.hints;
 }

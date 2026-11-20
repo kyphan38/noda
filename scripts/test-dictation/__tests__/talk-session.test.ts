@@ -53,6 +53,7 @@ vi.mock('@/lib/talk/store', () => ({
     markActive: async () => {},
     listMistakes: async () => [...mistakes.values()],
     saveMistakes: async (rows: TalkMistake[]) => rows.forEach((m) => mistakes.set(m.pattern, m)),
+    hint: async () => [{ text: 'hit a bottleneck', use: 'one part slows the rest' }],
     getSession: async (id: string) => saved.get(id) ?? null,
     listSessions: async () => [...saved.values()],
     findOpenSession: async (topicId: string, setIndex: number) =>
@@ -115,6 +116,10 @@ describe('TalkSession', () => {
     expect(screen.queryByText('the runner update')).toBeNull();
     click('Ideas');
     expect(screen.getByText('the runner update')).toBeTruthy();
+    click('Help');
+    fireEvent.change(screen.getByPlaceholderText('Your idea in simple words'), { target: { value: 'builds were slow' } });
+    click('Get words');
+    await waitFor(() => screen.getByText('hit a bottleneck'));
 
     await answer();
     // Fix it yourself first: the mistake is marked, the answer is hidden.

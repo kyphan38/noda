@@ -49,6 +49,12 @@ export function TalkReviewCard({ turn, selfRepair, onChange }: Props) {
           </div>
         )}
         {shown && fixes.length === 0 && <p className="mt-2 text-sm text-gray-400">No mistakes found.</p>}
+        {shown && turn.review.structure && (
+          <p className="mt-2 text-sm text-gray-300">
+            <span className="mr-2 rounded bg-gray-800 px-1.5 py-0.5 text-[11px] text-gray-400">order</span>
+            {turn.review.structure}
+          </p>
+        )}
       </div>
 
       {shown && (

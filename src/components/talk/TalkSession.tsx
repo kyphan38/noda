@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Mic, Square, Volume2, Zap } from 'lucide-react';
 
+import { TalkHelp } from '@/components/talk/TalkHelp';
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
 import { TalkSessionEnd } from '@/components/talk/TalkSessionEnd';
 import { TalkToggle as Toggle } from '@/components/talk/TalkToggle';
@@ -43,6 +44,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const [showIdeas, setShowIdeas] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [showStall, setShowStall] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const recorder = useVoiceRecorder();
   /** Bumped by Cancel, so a check that comes back late is ignored. */
   const attemptRef = useRef(0);
@@ -123,6 +125,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     setShowIdeas(false);
     setShowHints(false);
     setShowStall(false);
+    setShowHelp(false);
     if (s.turns.length >= (s.length ?? TURN_COUNT)) {
       const done = { ...s, endedAt: Date.now() };
       setSession(done);
@@ -403,7 +406,11 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
                   <button type="button" onClick={() => setShowStall((v) => !v)} className="text-gray-400 hover:text-gray-100">
                     Buy time
                   </button>
+                  <button type="button" onClick={() => setShowHelp((v) => !v)} className="text-gray-400 hover:text-gray-100">
+                    Help
+                  </button>
                 </div>
+                {showHelp && <TalkHelp key={line.text} topicId={topic.id} aiLine={line.text} />}
                 {showIdeas && (
                   <ul className="list-disc pl-5 text-sm text-gray-300">
                     {line.ideas.map((i) => (

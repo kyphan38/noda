@@ -25,6 +25,7 @@ import {
   checkTurnRequest,
   FIX_KINDS,
   FIX_PATTERNS,
+  frameFor,
   parseTurnResult,
   TurnShapeError,
   type Level,
@@ -50,6 +51,7 @@ const TURN_SCHEMA: Schema = {
         correct: STR,
         natural: STR,
         levelUp: STR,
+        structure: STR,
         fixes: {
           type: Type.ARRAY,
           items: {
@@ -80,6 +82,7 @@ const TURN_SCHEMA: Schema = {
 type TopicDoc = {
   title?: string;
   level?: Level;
+  presetId?: string;
   persona?: { name: string; role: string; style: string };
   phrases?: { id: string; text: string }[];
   scenarios?: { id: string; facts: string[] }[];
@@ -140,6 +143,7 @@ export const talkTurn = onCall(
 
       const prompt = buildTurnPrompt(req, {
         level: topic.level,
+        frame: frameFor(topic.presetId),
         topicTitle: topic.title ?? "",
         persona: topic.persona,
         targets,

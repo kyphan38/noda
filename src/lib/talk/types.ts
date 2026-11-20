@@ -56,7 +56,7 @@ export type TalkTurnResult = {
   transcript: string;
   seconds: number;
   reply: { text: string; curveball: boolean; ideas: string[] };
-  review: { correct: string; natural: string; levelUp: string; fixes: TalkFix[] };
+  review: { correct: string; natural: string; levelUp: string; fixes: TalkFix[]; structure?: string };
   usedPhraseIds: string[];
 };
 

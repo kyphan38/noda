@@ -29,6 +29,7 @@ export type TalkStore = {
   getSession(id: string): Promise<TalkSession | null>;
   setStar(topicId: string, p: TalkPhrase, starred: boolean, prev?: TalkPhraseProgress): Promise<TalkPhraseProgress>;
   listStarred(): Promise<TalkPhraseProgress[]>;
+  hint(topicId: string, aiLine: string, idea: string): Promise<fsdb.TalkHint[]>;
 };
 
 const firestoreStore: TalkStore = {
@@ -54,6 +55,7 @@ const firestoreStore: TalkStore = {
   getSession: fsdb.getTalkSession,
   setStar: fsdb.setPhraseStar,
   listStarred: fsdb.listStarredPhrases,
+  hint: fsdb.requestTalkHint,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -179,6 +181,10 @@ function memoryStore(): TalkStore {
       progress.set(topicId, m);
       return row;
     },
+    hint: async () => [
+      { text: 'hit a bottleneck', use: 'when one part slows everything' },
+      { text: 'under heavy load', use: 'with many users at once' },
+    ],
     listStarred: async () => [...progress.values()].flatMap((m) => [...m.values()]).filter((p) => p.starred),
     markCapturesUsed: async (ids, topicId) => ids.forEach((id) => captures.has(id) && captures.set(id, { ...captures.get(id)!, usedInTopicId: topicId })),
     findOpenSession: async (topicId, setIndex) =>

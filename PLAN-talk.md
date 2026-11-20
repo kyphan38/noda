@@ -301,16 +301,18 @@ Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
    số lượt; bảng "Last time → now" (từ/lượt, từ/phút, lỗi/lượt, cụm đã dùng).
 4. **Time Capsule**: mỗi tháng 1 đề cố định 60 giây, lưu audio, nghe so sánh.
 5. **Read-to-Speak**: dán Slack thread / PR, ẩn đi, nói tóm tắt 60 giây, AI kiểm tra thiếu ý.
-6. **Khung BLUF / STAR**: tự gắn theo loại topic, chỉ nhận xét câu trả lời dài.
+6. **Khung BLUF / STAR** - XONG (2026-11-20): gắn theo preset (incident, standup... BLUF; interview
+   STAR); `review.structure` chỉ khi câu trả lời ≥ 35 từ.
 7. **Chế độ 5 phút** + streak có ngày nghỉ - XONG (2026-11-20): Quick = 3 lượt; streak cho phép
    2 ngày nghỉ trong 7 ngày.
 8. **Stalling phrases** - XONG (2026-11-20): nút "Buy time" (8 cụm cố định), đếm uh/um mỗi lượt
    ở màn kết thúc và bảng so sánh (transcript Gemini đã giữ filler).
-9. **Hint tầng 2**: gõ ý bằng tiếng Anh đơn giản (nói vòng), nhận lại 2-3 cụm mồi.
+9. **Hint tầng 2** - XONG (2026-11-20): nút "Help", function `talkHint` trả 2-3 cụm (≤ 8 từ).
 10. **4/3/2 (60s → 45s → 30s)**, kiểm tra cả "còn đủ ý chính".
 11. **Signature Phrasebook** - XONG (2026-11-20): sao trên cụm trong set; "Starred phrases" trên
     `/talk` với mức Learning / Known / Used with help / Yours.
-12. **Đẩy cụm sang Anki** (dùng skill `anki-import`). Cụm Active thì không đẩy.
+12. **Đẩy cụm sang Anki** - XONG (2026-11-20): "Export to Anki" trong set, file .txt đúng định dạng
+    `anki-import`; bỏ cụm Active. Bước import do người dùng làm (xem MANUAL-talk.md).
 13. **Báo cáo tuần** - XONG (2026-11-20): thẻ "This week" trên `/talk` (streak, số buổi, phút,
     từ/phút, 3 lỗi hay gặp nhất).
 

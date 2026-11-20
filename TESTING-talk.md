@@ -96,7 +96,13 @@ then send the file back.
 - [ ] On a topic, open a set and tap the **star** on a phrase. It fills in.
 - [ ] Back on Talk, **Starred phrases** lists it with its level (Learning, Known, Used with help, Yours).
 
-## 11. Theme and phone
+## 11. Help, answer order, Anki
+
+- [ ] In a talk, **Help**: type your idea in simple words, **Get words**. You get 2-3 short word groups, not a full sentence.
+- [ ] On a work topic (incident, standup), give a long answer with the main point at the end: the review shows an **order** note.
+- [ ] In an open set, **Export to Anki** downloads a .txt file. Open it: each card has the phrase in **bold** in the example.
+
+## 12. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

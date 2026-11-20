@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTurnPrompt, checkTurnRequest, MAX_FIXES, parseTurnResult, TurnShapeError } from '../../../functions/src/lib/talkTurn';
+import { buildTurnPrompt, checkTurnRequest, frameFor, MAX_FIXES, parseTurnResult, TurnShapeError } from '../../../functions/src/lib/talkTurn';
 
 const ctx = {
   level: 'B2' as const,
@@ -48,6 +48,13 @@ describe('talk turn prompt', () => {
     expect(p).toContain('ideas: 2 or 3 notes');
     expect(p).toContain('Every fix must agree with those versions.');
   });
+  it('asks for structure notes only on framed topics', () => {
+    expect(buildTurnPrompt(base, ctx)).toContain('5. structure: an empty string.');
+    expect(buildTurnPrompt(base, { ...ctx, frame: 'bluf' })).toContain('BLUF: the main point or answer first');
+    expect(frameFor('interview')).toBe('star');
+    expect(frameFor('small-talk')).toBeUndefined();
+    expect(frameFor(undefined)).toBeUndefined();
+  });
   it('switches the reply rule for a curveball and for the last turn', () => {
     expect(buildTurnPrompt({ ...base, curveball: true }, ctx)).toContain('Curveball');
     expect(buildTurnPrompt({ ...base, isLast: true }, ctx)).toContain('close the talk politely');
@@ -84,6 +91,8 @@ describe('talk turn parsing', () => {
     expect(r.usedPhraseIds).toEqual(['p0']);
     expect(r.reply.curveball).toBe(false);
     expect(r.reply.ideas).toEqual(['the API keys', 'who can help', 'x']);
+    expect(r.review.structure).toBeUndefined();
+    expect(parseTurnResult(answer({ review: { correct: 'a', natural: 'b', levelUp: 'c', fixes: [], structure: ' Say the result first. ' } }), []).review.structure).toBe('Say the result first.');
   });
   it('throws a shape error on bad JSON or no reply', () => {
     expect(() => parseTurnResult('oops', [])).toThrow(TurnShapeError);
