@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { TalkCaptureBox } from '@/components/talk/TalkCaptureBox';
 import { TalkTopicView } from '@/components/talk/TalkTopicView';
+import { TalkDrills } from '@/components/talk/drills/TalkDrills';
 import { TalkStarredList } from '@/components/talk/TalkStarredList';
 import { TalkWeekCard } from '@/components/talk/TalkWeekCard';
 import { TALK_CATEGORIES, TALK_PRESETS, presetTopicId, randomPreset, type TalkPreset } from '@/lib/talk/presets';
@@ -142,6 +143,8 @@ export function TalkView() {
           ))}
         </TopicList>
       )}
+
+      <TalkDrills />
 
       {TALK_CATEGORIES.map((c) => (
         <TopicList key={c} title={c}>

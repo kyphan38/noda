@@ -79,6 +79,7 @@ export const TALK_TOPIC_FUNCTION_NAME = 'talkTopic';
 export const TALK_TURN_FUNCTION_NAME = 'talkTurn';
 export const TALK_WRAP_FUNCTION_NAME = 'talkWrap';
 export const TALK_HINT_FUNCTION_NAME = 'talkHint';
+export const TALK_SPEECH_FUNCTION_NAME = 'talkSpeech';
 /** Segment size for the speaking check: long enough to judge, short enough to remember. */
 export const SPEAKING_SEGMENT_MIN_WORDS = 30;
 export const SPEAKING_SEGMENT_MAX_WORDS = 50;

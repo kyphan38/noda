@@ -2,9 +2,11 @@
 // The talkTopic Cloud Function makes a topic; the app reads it, hides phrases and saves progress.
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { getFirebaseFirestore, getFirebaseFunctions } from '@/lib/auth/firebase-client';
-import { TALK_HINT_FUNCTION_NAME, TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME, TALK_WRAP_FUNCTION_NAME } from '@/constants';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getFirebaseFirestore, getFirebaseFunctions, getFirebaseStorage } from '@/lib/auth/firebase-client';
+import { TALK_HINT_FUNCTION_NAME, TALK_SPEECH_FUNCTION_NAME, TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME, TALK_WRAP_FUNCTION_NAME } from '@/constants';
 import type { TalkCapture } from '@/lib/talk/capture';
+import type { TalkCapsule } from '@/lib/talk/drills';
 import type { TalkMistake } from '@/lib/talk/mistake-bank';
 import { progressId, raiseStage } from '@/lib/talk/phrase-stage';
 import type { PhraseStage, TalkLevel, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from '@/lib/talk/types';
@@ -244,4 +246,38 @@ export async function requestTalkHint(topicId: string, aiLine: string, idea: str
     timeout: 40_000,
   });
   return (await call({ topicId, aiLine, idea })).data.hints;
+}
+
+export type SpeechResult = {
+  transcript: string;
+  seconds: number;
+  points: { point: string; covered: boolean }[];
+  model: string;
+  fixes: import('@/lib/talk/types').TalkFix[];
+};
+
+/** A longer recording: exact words (transcribe) or a retell of `source` checked for key points. */
+export async function requestTalkSpeech(p: { mode: 'transcribe' | 'retell'; source: string; recording: string; recordingMimeType: string }): Promise<SpeechResult> {
+  const call = httpsCallable<typeof p, SpeechResult>(getFirebaseFunctions(), TALK_SPEECH_FUNCTION_NAME, { timeout: 160_000 });
+  return (await call(p)).data;
+}
+
+const capsulesPath = (uid: string) => `users/${uid}/talkCapsules`;
+
+export async function listTalkCapsules(): Promise<TalkCapsule[]> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(collection(getFirebaseFirestore(), capsulesPath(uid)));
+  return snap.docs.map((d) => d.data() as TalkCapsule).sort((a, b) => a.month.localeCompare(b.month));
+}
+
+/** Uploads this month's recording and saves it with its transcript. */
+export async function saveTalkCapsule(month: string, blob: Blob, seconds: number, transcript: string): Promise<TalkCapsule> {
+  const uid = getCurrentUidOrThrow();
+  const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+  const storagePath = `users/${uid}/talkCapsules/${month}.${ext}`;
+  const objectRef = ref(getFirebaseStorage(), storagePath);
+  await uploadBytes(objectRef, blob, { contentType: blob.type || 'audio/webm' });
+  const row: TalkCapsule = { month, storagePath, url: await getDownloadURL(objectRef), seconds, transcript, createdAt: Date.now() };
+  await setDoc(doc(getFirebaseFirestore(), capsulesPath(uid), month), row);
+  return row;
 }

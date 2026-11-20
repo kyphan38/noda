@@ -299,8 +299,10 @@ Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
    "Things I got stuck on" (notesKind `stuck`), đánh dấu câu đã luyện.
 3. **Làm lại bài** - XONG (2026-11-20): nút "Talk this again" ở cuối buổi, cùng tình huống và cùng
    số lượt; bảng "Last time → now" (từ/lượt, từ/phút, lỗi/lượt, cụm đã dùng).
-4. **Time Capsule**: mỗi tháng 1 đề cố định 60 giây, lưu audio, nghe so sánh.
-5. **Read-to-Speak**: dán Slack thread / PR, ẩn đi, nói tóm tắt 60 giây, AI kiểm tra thiếu ý.
+4. **Time Capsule** - XONG (2026-11-20): đề cố định, ghi tối đa 90 giây, audio ở Storage
+   `users/{uid}/talkCapsules/`, doc `talkCapsules/{YYYY-MM}`, nghe lại từng tháng kèm số liệu.
+5. **Read-to-Speak** - XONG (2026-11-20): dán text (≤ 4000), đọc, ẩn, kể lại tối đa 90 giây;
+   `talkSpeech` (mode retell) trả key points đã nói / thiếu, bản kể mẫu, 3 lỗi.
 6. **Khung BLUF / STAR** - XONG (2026-11-20): gắn theo preset (incident, standup... BLUF; interview
    STAR); `review.structure` chỉ khi câu trả lời ≥ 35 từ.
 7. **Chế độ 5 phút** + streak có ngày nghỉ - XONG (2026-11-20): Quick = 3 lượt; streak cho phép
@@ -308,7 +310,8 @@ Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
 8. **Stalling phrases** - XONG (2026-11-20): nút "Buy time" (8 cụm cố định), đếm uh/um mỗi lượt
    ở màn kết thúc và bảng so sánh (transcript Gemini đã giữ filler).
 9. **Hint tầng 2** - XONG (2026-11-20): nút "Help", function `talkHint` trả 2-3 cụm (≤ 8 từ).
-10. **4/3/2 (60s → 45s → 30s)**, kiểm tra cả "còn đủ ý chính".
+10. **4/3/2 (60s → 45s → 30s)** - XONG (2026-11-20): `talkSpeech` (mode transcribe), bảng từ /
+    từ mỗi phút / uh-um mỗi vòng. Chưa kiểm tra "đủ ý chính" (thêm khi cần).
 11. **Signature Phrasebook** - XONG (2026-11-20): sao trên cụm trong set; "Starred phrases" trên
     `/talk` với mức Learning / Known / Used with help / Yours.
 12. **Đẩy cụm sang Anki** - XONG (2026-11-20): "Export to Anki" trong set, file .txt đúng định dạng

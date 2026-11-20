@@ -3,6 +3,7 @@
 import * as fsdb from '@/lib/db';
 import { raiseStage } from './phrase-stage';
 import type { TalkCapture } from './capture';
+import type { TalkCapsule } from './drills';
 import type { TalkMistake } from './mistake-bank';
 import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from './types';
 
@@ -30,6 +31,9 @@ export type TalkStore = {
   setStar(topicId: string, p: TalkPhrase, starred: boolean, prev?: TalkPhraseProgress): Promise<TalkPhraseProgress>;
   listStarred(): Promise<TalkPhraseProgress[]>;
   hint(topicId: string, aiLine: string, idea: string): Promise<fsdb.TalkHint[]>;
+  speech(p: { mode: 'transcribe' | 'retell'; source: string; recording: string; recordingMimeType: string }): Promise<fsdb.SpeechResult>;
+  listCapsules(): Promise<TalkCapsule[]>;
+  saveCapsule(month: string, blob: Blob, seconds: number, transcript: string): Promise<TalkCapsule>;
 };
 
 const firestoreStore: TalkStore = {
@@ -56,6 +60,9 @@ const firestoreStore: TalkStore = {
   setStar: fsdb.setPhraseStar,
   listStarred: fsdb.listStarredPhrases,
   hint: fsdb.requestTalkHint,
+  speech: fsdb.requestTalkSpeech,
+  listCapsules: fsdb.listTalkCapsules,
+  saveCapsule: fsdb.saveTalkCapsule,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -101,6 +108,7 @@ function memoryStore(): TalkStore {
   const sessions = new Map<string, TalkSession>();
   const mistakes = new Map<string, TalkMistake>();
   const captures = new Map<string, TalkCapture>();
+  const capsules = new Map<string, TalkCapsule>();
   return {
     listTopics: async () => [...topics.values()],
     ensureTopic: async (req) => {
@@ -179,6 +187,19 @@ function memoryStore(): TalkStore {
       const m = progress.get(topicId) ?? new Map();
       m.set(p.id, row);
       progress.set(topicId, m);
+      return row;
+    },
+    speech: async (p) => ({
+      transcript: p.mode === 'retell' ? 'So the deploy is fail and uh we rolled it back.' : 'Uh, so I work on the pipeline and um it is going well.',
+      seconds: 6,
+      points: p.mode === 'retell' ? [{ point: 'The deploy failed', covered: true }, { point: 'Users saw errors for 20 minutes', covered: false }] : [],
+      model: p.mode === 'retell' ? 'The deploy failed, users saw errors for 20 minutes, and we rolled it back.' : '',
+      fixes: p.mode === 'retell' ? [{ kind: 'grammar', wrong: 'is fail', right: 'failed', why: 'Use the past for things that happened.', pattern: 'verb_form' }] : [],
+    }),
+    listCapsules: async () => [...capsules.values()],
+    saveCapsule: async (month, blob, seconds, transcript) => {
+      const row = { month, storagePath: `mem/${month}`, url: URL.createObjectURL(blob), seconds, transcript, createdAt: Date.now() };
+      capsules.set(month, row);
       return row;
     },
     hint: async () => [

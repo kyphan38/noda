@@ -102,7 +102,13 @@ then send the file back.
 - [ ] On a work topic (incident, standup), give a long answer with the main point at the end: the review shows an **order** note.
 - [ ] In an open set, **Export to Anki** downloads a .txt file. Open it: each card has the phrase in **bold** in the example.
 
-## 12. Theme and phone
+## 12. Drills
+
+- [ ] **60 · 45 · 30**: answer the same question 3 times. Each round stops by itself at its time. A table shows words, words per minute and uh/um.
+- [ ] **Read and retell**: paste a real Slack thread or PR, **Read it**, **Hide it and tell me**. You get key points (✓/✗), what you said, a natural retell and fixes.
+- [ ] **Time Capsule**: record once. It says "This month is saved". The month shows with an audio player you can play.
+
+## 13. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

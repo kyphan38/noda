@@ -19,6 +19,14 @@ service firebase.storage {
       allow create, update: if allowed() && request.auth.uid == userId && validMedia();
     }
 
+    // Talk Time Capsule: one short voice recording per month.
+    match /users/{userId}/talkCapsules/{file} {
+      allow read, delete: if allowed() && request.auth.uid == userId;
+      allow create, update: if allowed() && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

@@ -18,7 +18,11 @@ Needs Anki open on your Mac, with the AnkiConnect add-on.
 - [ ] In Claude Code, run `/anki-import` with that file (for example `/anki-import ~/Downloads/noda-talk-daily-standup-set1.txt`).
 - [ ] Phrases that are already "Yours" are not in the file, so you only review what you still need.
 
-## 3. Natural voice (Chirp 3 HD)
+## 3. Time Capsule each month
+
+- [ ] Once a month, open Talk → Drills → **Time Capsule** and record one minute. After a few months, play the old ones.
+
+## 4. Natural voice (Chirp 3 HD)
 
 Right now the AI partner speaks with your browser's voice. A better Google
 voice (Chirp 3 HD) needs one API turned on in your Google Cloud project. It is
