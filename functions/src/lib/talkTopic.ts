@@ -12,7 +12,8 @@ export const SET_COUNT = 4;
 export const PHRASE_COUNT = SET_SIZE * SET_COUNT;
 /** Fewer than this after clean-up means the answer is not usable. */
 export const MIN_PHRASES = SET_SIZE * 2;
-export const TOPIC_VERSION = 1;
+/** 2: English-only (meaning instead of a Vietnamese line). */
+export const TOPIC_VERSION = 2;
 
 const MAX_TITLE = 80;
 const MAX_DESCRIPTION = 400;
@@ -30,14 +31,14 @@ export interface TalkPhrase {
   id: string;
   text: string;
   ipa: string;
-  vi: string;
+  meaning: string;
   example: string;
   setIndex: number;
 }
 
 export interface TopicContent {
   persona: { name: string; role: string; style: string };
-  opening: { text: string; vi: string };
+  opening: { text: string };
   phrases: TalkPhrase[];
 }
 
@@ -68,7 +69,7 @@ const LEVEL_NOTES: Record<TalkLevel, string> = {
 
 export function buildTopicPrompt(req: TopicRequest): string {
   return [
-    "You make speaking lessons for a Vietnamese software engineer who learns English for work.",
+    "You make speaking lessons for a software engineer who learns English for work. Write everything in English only.",
     `Topic: ${req.title}`,
     req.description ? `Details: ${req.description}` : "",
     `Level: ${LEVEL_NOTES[req.level]}`,
@@ -80,12 +81,12 @@ export function buildTopicPrompt(req: TopicRequest): string {
     "- No two phrases with the same meaning.",
     "- text: the phrase in its base form, lowercase unless it starts a sentence or has a name.",
     "- ipa: American English IPA of the whole phrase, between slashes.",
-    "- vi: a short, natural Vietnamese meaning (not word for word), at most 8 words.",
+    "- meaning: what the phrase means, in simple English (B1 words), at most 12 words. Do not use the phrase's own key words.",
     "- example: one spoken sentence about this topic, at most 15 words, that contains the phrase text EXACTLY as written (same words, same form).",
     "",
     "Also return:",
     "- persona: the other person in the conversation. name (a first name), role (job title), style (one short line on how they talk).",
-    "- opening: the first thing the persona says to start the talk (text, one or two sentences), and vi (its Vietnamese meaning).",
+    "- opening: the first thing the persona says to start the talk (text, one or two sentences), in English.",
   ]
     .filter((l, i, all) => l !== "" || all[i - 1] !== "")
     .join("\n");
@@ -104,15 +105,15 @@ export function parseTopicContent(raw: string | undefined): TopicContent {
     const p = (item ?? {}) as Record<string, unknown>;
     const text = oneLine(p.text, 60);
     const key = text.toLowerCase();
-    const vi = oneLine(p.vi, 80);
-    if (!text || !vi || seen.has(key)) continue;
+    const meaning = oneLine(p.meaning, 120);
+    if (!text || !meaning || seen.has(key)) continue;
     seen.add(key);
     const i = phrases.length;
     phrases.push({
       id: `p${i}`,
       text,
       ipa: oneLine(p.ipa, 120),
-      vi,
+      meaning,
       example: oneLine(p.example, 160),
       setIndex: Math.floor(i / SET_SIZE),
     });
@@ -122,7 +123,7 @@ export function parseTopicContent(raw: string | undefined): TopicContent {
 
   const content: TopicContent = {
     persona: { name: oneLine(persona.name, 40), role: oneLine(persona.role, 60), style: oneLine(persona.style, 160) },
-    opening: { text: oneLine(opening.text, 300), vi: oneLine(opening.vi, 300) },
+    opening: { text: oneLine(opening.text, 300) },
     phrases,
   };
   if (!content.persona.name || !content.opening.text) throw new Error("Missing persona or opening.");

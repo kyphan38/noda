@@ -21,13 +21,13 @@ const TOPIC_SCHEMA: Schema = {
   type: Type.OBJECT,
   properties: {
     persona: { type: Type.OBJECT, properties: { name: STR, role: STR, style: STR }, required: ["name", "role", "style"] },
-    opening: { type: Type.OBJECT, properties: { text: STR, vi: STR }, required: ["text", "vi"] },
+    opening: { type: Type.OBJECT, properties: { text: STR }, required: ["text"] },
     phrases: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
-        properties: { text: STR, ipa: STR, vi: STR, example: STR },
-        required: ["text", "ipa", "vi", "example"],
+        properties: { text: STR, ipa: STR, meaning: STR, example: STR },
+        required: ["text", "ipa", "meaning", "example"],
       },
     },
   },

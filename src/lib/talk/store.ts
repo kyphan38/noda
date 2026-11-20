@@ -23,16 +23,16 @@ const firestoreStore: TalkStore = {
 };
 
 const SAMPLE: [string, string, string][] = [
-  ['wrap up', 'hoàn tất', 'I need to wrap up the login refactor today.'],
-  ['pick up a ticket', 'nhận một ticket', 'After that I will pick up a ticket from the backlog.'],
-  ['I am blocked on', 'tôi đang bị chặn bởi', 'I am blocked on the API keys from the platform team.'],
-  ['ship it', 'đưa lên production', 'If the tests pass, we can ship it this afternoon.'],
-  ['run into an issue', 'gặp một vấn đề', 'Yesterday I ran into an issue with the cache.'],
-  ['on track', 'đúng tiến độ', 'The payment work is still on track for Friday.'],
-  ['sync offline', 'trao đổi riêng sau', 'Can we sync offline about the schema change?'],
-  ['take a look at', 'xem qua', 'Could someone take a look at my pull request?'],
-  ['a quick update', 'cập nhật nhanh', 'Just a quick update on the search bug.'],
-  ['nothing major', 'không có gì lớn', 'Nothing major from my side today.'],
+  ['wrap up', 'finish the last part of some work', 'I need to wrap up the login refactor today.'],
+  ['pick up a ticket', 'start working on a task from the list', 'After that I will pick up a ticket from the backlog.'],
+  ['I am blocked on', 'I cannot go on until something is done', 'I am blocked on the API keys from the platform team.'],
+  ['ship it', 'release the work to users', 'If the tests pass, we can ship it this afternoon.'],
+  ['run into an issue', 'meet a problem you did not expect', 'Yesterday I ran into an issue with the cache.'],
+  ['on track', 'going as planned, not late', 'The payment work is still on track for Friday.'],
+  ['sync offline', 'talk about it later, outside the meeting', 'Can we sync offline about the schema change?'],
+  ['take a look at', 'check something quickly', 'Could someone take a look at my pull request?'],
+  ['a quick update', 'short news about how work is going', 'Just a quick update on the search bug.'],
+  ['nothing major', 'no big problems or news', 'Nothing major from my side today.'],
 ];
 
 function sampleTopic(): TalkTopic {
@@ -44,8 +44,8 @@ function sampleTopic(): TalkTopic {
     presetId: 'standup',
     level: 'B2',
     persona: { name: 'Dana', role: 'Engineering manager', style: 'Calm and direct.' },
-    opening: { text: 'Morning! What did you work on yesterday?', vi: 'Chào buổi sáng! Hôm qua bạn làm gì?' },
-    phrases: SAMPLE.map(([text, vi, example], i) => ({ id: `p${i}`, text, ipa: '', vi, example, setIndex: 0 })),
+    opening: { text: 'Morning! What did you work on yesterday?' },
+    phrases: SAMPLE.map(([text, meaning, example], i) => ({ id: `p${i}`, text, ipa: '', meaning, example, setIndex: 0 })),
     version: 1,
     createdAt: 0,
   };

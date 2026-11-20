@@ -18,12 +18,12 @@ const topic: TalkTopic = {
   kind: 'preset',
   level: 'B2',
   persona: { name: 'Dana', role: 'Manager', style: '' },
-  opening: { text: 'Hi', vi: 'Chào' },
+  opening: { text: 'Hi' },
   phrases: [
-    { id: 'p0', text: 'wrap up', ipa: '', vi: 'hoàn tất', example: 'I need to wrap up the refactor.', setIndex: 0 },
-    { id: 'p1', text: 'on track', ipa: '', vi: 'đúng tiến độ', example: 'No blank in this one.', setIndex: 0 },
-    { id: 'p2', text: 'ship it', ipa: '', vi: 'đưa lên production', example: 'We can ship it today.', setIndex: 0 },
-    { id: 'p3', text: 'hidden one', ipa: '', vi: 'ẩn', example: '', setIndex: 0, removed: true },
+    { id: 'p0', text: 'wrap up', ipa: '', meaning: 'finish the last part', example: 'I need to wrap up the refactor.', setIndex: 0 },
+    { id: 'p1', text: 'on track', ipa: '', meaning: 'going as planned', example: 'No blank in this one.', setIndex: 0 },
+    { id: 'p2', text: 'ship it', ipa: '', meaning: 'release to users', example: 'We can ship it today.', setIndex: 0 },
+    { id: 'p3', text: 'hidden one', ipa: '', meaning: 'hidden', example: '', setIndex: 0, removed: true },
   ],
   version: 1,
   createdAt: 0,
@@ -48,10 +48,10 @@ describe('TalkLearn', () => {
 
     // Matching: one wrong pick, then all right.
     click('wrap up');
-    click('đúng tiến độ');
-    for (const [en, vi] of [['wrap up', 'hoàn tất'], ['on track', 'đúng tiến độ'], ['ship it', 'đưa lên production']]) {
+    click('going as planned');
+    for (const [en, meaning] of [['wrap up', 'finish the last part'], ['on track', 'going as planned'], ['ship it', 'release to users']]) {
       click(en);
-      click(vi);
+      click(meaning);
     }
     await waitFor(() => expect(screen.getByRole('button', { name: 'Check' })).toBeTruthy(), { timeout: 2000 });
     expect(saveStages).toHaveBeenCalledWith('t1', expect.any(Array), 'recognized', expect.any(Map));
@@ -64,8 +64,8 @@ describe('TalkLearn', () => {
     const seen: string[] = [];
     let wrongOnce = false;
     for (let guard = 0; guard < 12 && !screen.queryByText(/Set learned/); guard++) {
-      const vi = ['hoàn tất', 'đúng tiến độ', 'đưa lên production'].find((m) => screen.queryByText(m));
-      const phrase = topic.phrases.find((p) => p.vi === vi)!;
+      const meaning = ['finish the last part', 'going as planned', 'release to users'].find((m) => screen.queryByText(m));
+      const phrase = topic.phrases.find((p) => p.meaning === meaning)!;
       seen.push(phrase.id);
       answer(wrongOnce ? phrase.text : 'something else');
       expect(screen.getByText(wrongOnce ? 'Right' : 'Not quite')).toBeTruthy();

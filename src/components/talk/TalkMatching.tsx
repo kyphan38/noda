@@ -92,7 +92,7 @@ function Round({ items, onMiss, onDone }: { items: TalkPhrase[]; onMiss: (id: st
                   : 'border-gray-800 text-gray-300 hover:border-gray-600'
             }`}
           >
-            {p.vi}
+            {p.meaning}
           </button>
         ))}
       </div>

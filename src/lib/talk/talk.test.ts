@@ -96,7 +96,7 @@ describe('phrase stage', () => {
     expect(progressId('t1', 'p3')).toBe('t1__p3');
   });
   it('summarizes sets and skips removed phrases', () => {
-    const p = (id: string, setIndex: number, removed = false): TalkPhrase => ({ id, text: id, ipa: '', vi: '', example: '', setIndex, removed });
+    const p = (id: string, setIndex: number, removed = false): TalkPhrase => ({ id, text: id, ipa: '', meaning: '', example: '', setIndex, removed });
     const prog = new Map<string, TalkPhraseProgress>([
       ['a', { topicId: 't', phraseId: 'a', text: 'a', stage: 'recalled', usedCount: 0, updatedAt: 0 }],
       ['b', { topicId: 't', phraseId: 'b', text: 'b', stage: 'recognized', usedCount: 0, updatedAt: 0 }],

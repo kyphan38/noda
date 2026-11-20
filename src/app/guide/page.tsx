@@ -61,7 +61,7 @@ const BLOCKS: Block[] = [
       'Learn useful phrases for a work topic, then (soon) speak them with an AI colleague.',
       'Pick your level (B1, B2, C1) and a topic, or make your own topic. A new topic takes up to a minute to make, then it is saved.',
       'Each topic has 4 sets of 10 phrases. Open a set to see its phrases. Hide one that sounds odd.',
-      'Learn a set: read the cards (tap to hear), match phrases to meanings, then fill the blanks and say each phrase from its Vietnamese meaning.',
+      'Learn a set: read the cards (tap to hear), match phrases to meanings, then fill the blanks and say each phrase from its meaning. Everything is in English.',
       'A wrong answer comes back a few items later. The set is done when nothing is wrong.',
       'Speaking uses your browser (Chrome or Edge). If the mic does not work, type the answer.',
     ],

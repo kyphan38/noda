@@ -86,9 +86,9 @@ function Item(props: { item: DrillItem; phrase: TalkPhrase; result: Result; onRe
           {cloze.after}
         </p>
       ) : (
-        <p className="text-base text-gray-100">Say it in English</p>
+        <p className="text-base text-gray-100">Say the phrase that means:</p>
       )}
-      <p className="text-sm text-gray-400">{phrase.vi}</p>
+      <p className="text-sm text-gray-400">{phrase.meaning}</p>
 
       {!result && (
         <div className="flex gap-2">

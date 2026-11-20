@@ -10,7 +10,7 @@ export const MISS_GAP = 3;
 
 /**
  * Two drills per phrase: the blank first (when the example has one), then
- * saying the phrase from its Vietnamese meaning. Blanks for all phrases come
+ * saying the phrase from its meaning. Blanks for all phrases come
  * before the recall round, so the two drills of one phrase are apart.
  */
 export function buildQueue(phrases: { id: string; hasCloze: boolean }[]): LearnQueue {

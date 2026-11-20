@@ -96,7 +96,7 @@ function Cards({ phrases, onStart }: { phrases: TalkPhrase[]; onStart: () => voi
               <span className="text-base text-gray-100">{p.text}</span>
               {p.ipa && <span className="font-mono text-xs text-gray-500">{p.ipa}</span>}
             </div>
-            <p className="mt-1 text-sm text-gray-400">{p.vi}</p>
+            <p className="mt-1 text-sm text-gray-400">{p.meaning}</p>
             {p.example && (
               <button type="button" onClick={() => speak(p.example)} className="mt-1 text-left text-sm italic text-gray-500 hover:text-gray-300">
                 {p.example}

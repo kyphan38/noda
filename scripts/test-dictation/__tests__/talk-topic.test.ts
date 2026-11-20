@@ -35,11 +35,11 @@ describe('talk topic prompt', () => {
 });
 
 describe('talk topic parsing', () => {
-  const phrase = (i: number) => ({ text: `phrase number ${i}`, ipa: '/x/', vi: `nghĩa ${i}`, example: `I use phrase number ${i} here.` });
+  const phrase = (i: number) => ({ text: `phrase number ${i}`, ipa: '/x/', meaning: `what phrase ${i} means`, example: `I use phrase number ${i} here.` });
   const answer = (n: number, extra: Record<string, unknown> = {}) =>
     JSON.stringify({
       persona: { name: 'Dana', role: 'Engineering manager', style: 'Calm and direct.' },
-      opening: { text: 'Hi, how was your week?', vi: 'Chào, tuần của bạn thế nào?' },
+      opening: { text: 'Hi, how was your week?' },
       phrases: Array.from({ length: n }, (_, i) => phrase(i)),
       ...extra,
     });
@@ -52,7 +52,7 @@ describe('talk topic parsing', () => {
     expect(c.persona.name).toBe('Dana');
   });
   it('drops duplicates and phrases with no meaning', () => {
-    const list = [phrase(0), { ...phrase(0), text: 'PHRASE NUMBER 0' }, { ...phrase(1), vi: '' }, ...Array.from({ length: 25 }, (_, i) => phrase(i + 2))];
+    const list = [phrase(0), { ...phrase(0), text: 'PHRASE NUMBER 0' }, { ...phrase(1), meaning: '' }, ...Array.from({ length: 25 }, (_, i) => phrase(i + 2))];
     const c = parseTopicContent(answer(0, { phrases: list }));
     expect(c.phrases.map((p) => p.text)).not.toContain('phrase number 1');
     expect(c.phrases.filter((p) => p.text.toLowerCase() === 'phrase number 0')).toHaveLength(1);

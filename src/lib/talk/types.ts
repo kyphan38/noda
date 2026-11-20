@@ -8,7 +8,8 @@ export type TalkPhrase = {
   id: string;
   text: string;
   ipa: string;
-  vi: string;
+  /** Simple English meaning, without the phrase's own words. */
+  meaning: string;
   example: string;
   setIndex: number;
   removed?: boolean;
@@ -22,7 +23,7 @@ export type TalkTopic = {
   presetId?: string;
   level: TalkLevel;
   persona: { name: string; role: string; style: string };
-  opening: { text: string; vi: string };
+  opening: { text: string };
   phrases: TalkPhrase[];
   version: number;
   createdAt: number;

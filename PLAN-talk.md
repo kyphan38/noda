@@ -15,6 +15,9 @@ cuối buổi.
 - Thời gian: 15-30 phút/ngày. Có chế độ ngắn cho ngày bận (V2).
 - Ngân sách AI: 100-200k VND/tháng. Ước tính: 75-115k VND/tháng năm 2026,
   150-230k từ 2027 khi giá Flash tăng (xem phần Chi phí).
+- **100% tiếng Anh** trong app (đã chốt 2026-11-20): không có nghĩa tiếng Việt,
+  không có nút dịch. Nghĩa và giải thích đều bằng tiếng Anh đơn giản (khoảng B1).
+  Lý do: luyện trong môi trường tiếng Anh hoàn toàn.
 - Mục tiêu học: nói đúng hơn, tự nhiên hơn, và **tự bật ra** được cụm đã học.
 
 ## Quyết định đã chốt
@@ -51,14 +54,14 @@ cuối buổi.
    - **Flow Mode**: nói liền 8 lượt, review ở cuối.
    - 1 **curveball** mỗi buổi (lượt 3-5), có icon ⚡. Tắt ở B1.
 4. **Notes (3 phút)**: cụm đã dùng, cơ hội bỏ lỡ, swap list, lỗi lặp lại.
-5. **Chốt hạ 60s**: 3 câu lủng củng nhất, nhìn tiếng Việt nói lại bản Natural.
+5. **Chốt hạ 60s**: 3 câu lủng củng nhất, nhìn ý chính (tiếng Anh đơn giản) rồi nói lại bản Natural.
 
 ### Card review của một lượt
 
 1. **Self-Repair** (bật/tắt): transcript có gạch vàng chỗ sai. Bạn tự nói lại.
    Bấm "Show answer" để xem đáp án. Nút "I said it right" nếu STT nghe sai.
 2. **3 mức**: Correct (giữ từ của bạn) / Natural / Level up.
-3. **Tối đa 3 lỗi**, mỗi lỗi có nhãn và 1 dòng tiếng Việt. Nhãn:
+3. **Tối đa 3 lỗi**, mỗi lỗi có nhãn và 1 dòng giải thích bằng tiếng Anh đơn giản. Nhãn:
    `grammar`, `word`, `natural`, `tone` (nghe cộc, cần nói mềm hơn),
    `vietlish` (dịch từng chữ từ tiếng Việt).
 4. **Say it again**: nói lại bản Natural, chấm word diff.
@@ -91,7 +94,7 @@ Việc cần làm:
   production, code review, phỏng vấn backend, small talk đầu cuộc họp, từ chối
   / phản biện lịch sự, giải thích kỹ thuật cho PM, ước lượng task, xin nghỉ / báo trễ.
 - Cloud Function `talkTopic`: từ tiêu đề + mô tả + level, tạo 40 cụm
-  (4 set × 10), mỗi cụm có IPA, nghĩa tiếng Việt, câu ví dụ trong đúng topic.
+  (4 set × 10), mỗi cụm có IPA, nghĩa bằng tiếng Anh đơn giản, câu ví dụ trong đúng topic.
   Cũng tạo nhân vật (tên, vai, tính cách) và câu mở đầu. Lưu lại, tạo 1 lần.
 - Topic có sẵn cũng tạo bằng `talkTopic` ở lần mở đầu tiên (không viết tay 400 cụm).
 - Màn Learn: thẻ (có nút nghe TTS) → Matching → điền chỗ trống → nói ra cụm.
@@ -104,23 +107,23 @@ Prompt `talkTopic` (ý chính):
 - Cụm **phổ biến, hay dùng trong công việc tech thật**. Ưu tiên collocation
   (động từ + danh từ, cụm nối câu), không ưu tiên từ đơn hiếm.
 - Hợp level. Câu ví dụ ngắn (≤ 15 từ), đúng ngữ cảnh topic.
-- Không trùng nhau. Nghĩa tiếng Việt ngắn, tự nhiên.
+- Không trùng nhau. Nghĩa bằng tiếng Anh đơn giản (≤ 12 từ), không dùng lại từ chính của cụm.
 
 Kiểm tra: lint, unit test, build. Thử 2 topic có sẵn + 1 custom.
 
 ### Phase 2 - Talk + review mỗi lượt
 
 Việc cần làm:
-- Màn Talk: câu của nhân vật (TTS + nút hiện tiếng Việt), nút mic (Space),
+- Màn Talk: câu của nhân vật (TTS + nút hiện chữ), nút mic (Space),
   checklist cụm, Hint tầng 1 (2-3 cụm trong set hợp với câu hỏi, chọn ở client,
   miễn phí).
 - Dùng lại `useVoiceRecorder` và `blobToBase64`.
 - Cloud Function `talkTurn`: nhận audio + vài lượt trước (chỉ text) + cụm
   chưa dùng + level + mode + có cần curveball không. Trả về:
   - `transcript` (đúng từng chữ, giữ lỗi), `durationSec`
-  - `reply`: `{ text, vi, curveball }` (câu nhân vật nói tiếp, dựa vào ý bạn vừa nói)
+  - `reply`: `{ text, curveball }` (câu nhân vật nói tiếp, dựa vào ý bạn vừa nói)
   - `review`: `{ correct, natural, levelUp, fixes[≤3] }`, mỗi fix có
-    `{ kind, wrong, right, vi, pattern }`. `wrong` phải là đoạn có thật trong
+    `{ kind, wrong, right, why, pattern }` (`why`: tiếng Anh đơn giản). `wrong` phải là đoạn có thật trong
     transcript (để gạch vàng).
   - `usedPhrases`: id các cụm trong danh sách mà bạn đã dùng đúng (kể cả đổi dạng).
 - `pattern` chọn từ danh sách cố định (ví dụ `plural_s`, `present_perfect`,
@@ -147,7 +150,7 @@ Rủi ro cần test trước khi làm UI:
 Việc cần làm:
 - Cloud Function `talkWrap` (1 lần/buổi, chỉ gửi text các lượt): `missedChances`
   (lượt nào lẽ ra dùng được cụm nào), `swaps` (từ hay dùng → nên thay),
-  `closingPicks` (3 lượt lủng củng nhất, có câu tiếng Việt + bản Natural).
+  `closingPicks` (3 lượt lủng củng nhất, có ý chính bằng tiếng Anh đơn giản + bản Natural).
 - Trang Notes: Used / Missed chances / Swap list / top 3 lỗi lặp lại / Chốt hạ 60s.
 - Ngân hàng lỗi: gom `fixes` theo `pattern`. Warm-up buổi sau có 3-5 câu luyện
   đúng các pattern đó (lấy từ chính câu sai cũ, không gọi AI). Đúng 5 lần liền
@@ -160,8 +163,9 @@ Việc cần làm:
 ### Phase 4 - Hộp "Vừa bị bí" (Capture)
 
 Việc cần làm:
-- Nút nhỏ trên trang `/talk` (và trong menu sidebar): gõ hoặc nói tiếng Việt
-  (Web Speech `vi-VN`), lưu lại. Mất 5 giây.
+- Nút nhỏ trên trang `/talk` (và trong menu sidebar): gõ câu mình muốn nói
+  mà bị bí (UI tiếng Anh; nội dung gõ bằng gì cũng được, vì đó chính là câu
+  chưa nói ra được). Lưu lại, mất 5 giây.
 - Chỉ lưu và hiện danh sách. Dựng buổi luyện từ hộp này để V2.
 - Lý do làm sớm: dữ liệu cần thời gian tích luỹ.
 
@@ -177,12 +181,12 @@ type TalkTopic = {
   title: string; description: string; kind: 'preset' | 'custom';
   level: 'B1' | 'B2' | 'C1';
   persona: { name: string; role: string; style: string };
-  opening: { text: string; vi: string };
+  opening: { text: string };
   phrases: TalkPhrase[];          // 40, chia set theo setIndex (10 cụm/set)
   version: number; createdAt: number;
 };
 type TalkPhrase = {
-  id: string; text: string; ipa: string; vi: string; example: string;
+  id: string; text: string; ipa: string; meaning: string; example: string;
   setIndex: number; removed?: boolean;
 };
 
@@ -201,13 +205,13 @@ type TalkSession = {
   wrap?: TalkWrap; startedAt: number; endedAt?: number;
 };
 type TalkTurn = {
-  ai: { text: string; vi: string; curveball: boolean };
+  ai: { text: string; curveball: boolean };
   transcript: string; durationSec: number;
   review: { correct: string; natural: string; levelUp: string; fixes: TalkFix[] };
   usedPhraseIds: string[]; dismissedFixes?: number[]; retryPercent?: number;
 };
 type TalkFix = { kind: 'grammar' | 'word' | 'natural' | 'tone' | 'vietlish';
-  wrong: string; right: string; vi: string; pattern: string };
+  wrong: string; right: string; why: string; pattern: string };
 
 // talkMistakes/{pattern}
 type TalkMistake = { pattern: string; hits: number; cleanStreak: number;
@@ -238,7 +242,7 @@ Từ 2027, dùng 30 phút mỗi ngày sẽ vượt ngân sách 200k. Cách giữ
 - Context caching cho phần prompt cố định (persona, danh sách cụm): giá cache
   chỉ khoảng 10%.
 - Chỉ gửi 3 lượt gần nhất, không gửi cả buổi.
-- Giữ review ngắn: tối đa 3 lỗi, mỗi dòng tiếng Việt ngắn.
+- Giữ review ngắn: tối đa 3 lỗi, mỗi dòng giải thích ngắn.
 - Thử Flash-Lite cho `talkTurn` nếu nó giữ được transcript đúng từng chữ.
 - Thêm số token (vào, ra, thinking) vào log của function để biết chi phí thật.
 
@@ -263,7 +267,7 @@ Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
 6. **Khung BLUF / STAR**: tự gắn theo loại topic, chỉ nhận xét câu trả lời dài.
 7. **Chế độ 5 phút** + streak có ngày nghỉ.
 8. **Stalling phrases**: bộ cụm câu giờ ghim sẵn, kèm đếm "uh/um" (cần transcript Gemini).
-9. **Hint tầng 2**: gỡ bí bằng tiếng Việt.
+9. **Hint tầng 2**: gõ ý bằng tiếng Anh đơn giản (nói vòng), nhận lại 2-3 cụm mồi.
 10. **4/3/2 (60s → 45s → 30s)**, kiểm tra cả "còn đủ ý chính".
 11. **Signature Phrasebook**: gắn sao cụm "hợp miệng", theo dõi riêng.
 12. **Đẩy cụm sang Anki** (dùng skill `anki-import`). Cụm Active thì không đẩy.
