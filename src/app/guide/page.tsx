@@ -63,6 +63,7 @@ const BLOCKS: Block[] = [
       'Each topic has 4 sets of 10 phrases. Open a set to see its phrases. Hide one that sounds odd.',
       'Learn a set: read the cards (tap to hear), match phrases to meanings, then fill the blanks and say each phrase from its meaning. Everything is in English.',
       'A wrong answer comes back a few items later. The set is done when nothing is wrong.',
+      'Leave Learn halfway (in Match or Recall) and it goes on where you stopped next time, even on another device. Start over begins the set again.',
       'Speaking uses your browser (Chrome or Edge). If the mic does not work, type the answer.',
       'Talk: each talk is one situation with a few facts to use, so you never have to make up a story. 8 answers. Tap the mic (or Space) to answer, tap again to send.',
       'Stuck? opens all hints in one place: Ideas (what to talk about), Phrases (from the set), Buy time (ways to pause) and Help (type your idea, get word groups). Never a full answer.',

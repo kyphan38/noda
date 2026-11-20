@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Volume2 } from 'lucide-react';
 
 import { TalkDrill } from '@/components/talk/TalkDrill';
 import { TalkMatching } from '@/components/talk/TalkMatching';
+import { matchingRounds } from '@/lib/talk/learn-queue';
+import { addMisses, isUsableState, phraseSetKey, stateLabel, type LearnState } from '@/lib/talk/learn-state';
 import { speak } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
 import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkTopic } from '@/lib/talk/types';
@@ -29,6 +31,52 @@ export function TalkLearn({ topic, setIndex, progress, onProgress, onExit }: Pro
   const phrases = useMemo(() => topic.phrases.filter((p) => p.setIndex === setIndex && !p.removed), [topic.phrases, setIndex]);
   const [step, setStep] = useState<Step>('cards');
   const [misses, setMisses] = useState<Record<string, number>>({});
+  const [loaded, setLoaded] = useState(false);
+  /** The saved place this visit started from (handed to Match or Recall once). */
+  const [resume, setResume] = useState<LearnState | null>(null);
+  /** Bumped by Start over, so Match and Recall start fresh. */
+  const [run, setRun] = useState(0);
+  const saved = useRef<LearnState | null>(null);
+  const setKey = useMemo(() => phraseSetKey(phrases), [phrases]);
+
+  // Go on from where you stopped on this set, if the set has not changed since.
+  useEffect(() => {
+    let alive = true;
+    getTalkStore()
+      .getLearnState(topic.id, setIndex)
+      .catch(() => null)
+      .then((st) => {
+        if (!alive) return;
+        if (isUsableState(st, phrases)) {
+          saved.current = st;
+          setResume(st);
+          setMisses(st.matchMisses);
+          setStep(st.step);
+        }
+        setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic.id, setIndex]);
+
+  const persist = (patch: Partial<LearnState>) => {
+    const next: LearnState = { setKey, step: 'match', matchOrder: [], matchRound: 0, matchMisses: {}, ...saved.current, ...patch, updatedAt: Date.now() };
+    saved.current = next;
+    void getTalkStore().saveLearnState(topic.id, setIndex, next).catch(() => {});
+  };
+  const forget = () => {
+    saved.current = null;
+    void getTalkStore().clearLearnState(topic.id, setIndex).catch(() => {});
+  };
+  const startOver = () => {
+    forget();
+    setResume(null);
+    setMisses({});
+    setRun((n) => n + 1);
+    setStep('cards');
+  };
 
   const save = (stage: PhraseStage) => {
     // Progress is a nice-to-have: a failed write must not stop the lesson.
@@ -53,32 +101,45 @@ export function TalkLearn({ topic, setIndex, progress, onProgress, onExit }: Pro
         </ol>
       </div>
 
-      {step === 'cards' && <Cards phrases={phrases} onStart={() => setStep('match')} />}
+      {!loaded && <p className="breathe text-sm text-gray-500">Loading…</p>}
+      {loaded && resume && step !== 'done' && step !== 'cards' && (
+        <p className="text-xs text-gray-500">
+          Picked up where you left off: {stateLabel(resume, matchingRounds(phrases).length)}.{' '}
+          <button type="button" onClick={startOver} className="underline-offset-2 hover:text-gray-100 hover:underline">
+            Start over
+          </button>
+        </p>
+      )}
+      {loaded && step === 'cards' && <Cards phrases={phrases} onStart={() => setStep('match')} />}
       {step === 'match' && (
         <TalkMatching
+          key={`m${run}`}
           phrases={phrases}
+          resume={resume?.step === 'match' ? { order: resume.matchOrder, round: resume.matchRound, misses: resume.matchMisses } : undefined}
+          onRound={(p) => persist({ step: 'match', matchOrder: p.order, matchRound: p.round, matchMisses: p.misses, queue: undefined })}
           onDone={(m) => {
             setMisses(m);
             save('recognized');
+            persist({ step: 'drill', matchMisses: m });
             setStep('drill');
           }}
         />
       )}
       {step === 'drill' && (
         <TalkDrill
+          key={`d${run}`}
           phrases={phrases}
+          resume={resume?.step === 'drill' ? resume.queue : undefined}
+          onQueue={(q) => persist({ step: 'drill', queue: q })}
           onDone={(m) => {
-            setMisses((prev) => {
-              const out = { ...prev };
-              for (const [id, n] of Object.entries(m)) out[id] = (out[id] ?? 0) + n;
-              return out;
-            });
+            setMisses((prev) => addMisses(prev, m));
             save('recalled');
+            forget();
             setStep('done');
           }}
         />
       )}
-      {step === 'done' && <Done phrases={phrases} misses={misses} onAgain={() => setStep('cards')} onExit={onExit} />}
+      {step === 'done' && <Done phrases={phrases} misses={misses} onAgain={startOver} onExit={onExit} />}
     </div>
   );
 }

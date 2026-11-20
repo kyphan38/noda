@@ -1,13 +1,24 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { TalkPhraseProgress, TalkTopic } from '@/lib/talk/types';
+import type { LearnState } from '@/lib/talk/learn-state';
 
 /** Walks one Learn set from the cards to the end, with one wrong answer on the way. */
 
 const saveStages = vi.fn(async (_t: string, _p: unknown, _s: string, current: Map<string, TalkPhraseProgress>) => current);
-vi.mock('@/lib/talk/store', () => ({ getTalkStore: () => ({ saveStages }) }));
+const states = new Map<string, LearnState>();
+vi.mock('@/lib/talk/store', () => ({
+  getTalkStore: () => ({
+    saveStages,
+    getLearnState: async (t: string, i: number) => states.get(`${t}__${i}`) ?? null,
+    saveLearnState: async (t: string, i: number, st: LearnState) => void states.set(`${t}__${i}`, structuredClone(st)),
+    clearLearnState: async (t: string, i: number) => void states.delete(`${t}__${i}`),
+  }),
+}));
+
+afterEach(cleanup);
 
 const { TalkLearn } = await import('@/components/talk/TalkLearn');
 
@@ -42,7 +53,7 @@ describe('TalkLearn', () => {
     render(createElement(TalkLearn, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit }));
 
     // Cards: live phrases only.
-    expect(screen.getByText('wrap up')).toBeTruthy();
+    await waitFor(() => screen.getByText('wrap up'));
     expect(screen.queryByText('hidden one')).toBeNull();
     click('Start');
 
@@ -80,5 +91,49 @@ describe('TalkLearn', () => {
     expect(saveStages).toHaveBeenCalledWith('t1', expect.any(Array), 'recalled', expect.any(Map));
     click('Done');
     expect(onExit).toHaveBeenCalled();
+  });
+
+  it('goes on from the middle of Recall after leaving', async () => {
+    states.clear();
+    const props = { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} };
+    const first = render(createElement(TalkLearn, props));
+    await waitFor(() => screen.getByRole('button', { name: 'Start' }));
+    click('Start');
+    for (const [en, meaning] of [['wrap up', 'finish the last part'], ['on track', 'going as planned'], ['ship it', 'release to users']]) {
+      click(en);
+      click(meaning);
+    }
+    await waitFor(() => screen.getByRole('button', { name: 'Check' }), { timeout: 2000 });
+    // Answer the first Recall item right, then leave.
+    const meaning = ['finish the last part', 'going as planned', 'release to users'].find((m) => screen.queryByText(m))!;
+    answer(topic.phrases.find((p) => p.meaning === meaning)!.text);
+    await act(async () => click('Next'));
+    expect(states.get('t1__0')?.queue?.done).toBe(1);
+    first.unmount();
+
+    // Back again: no cards, no matching, Recall at item 2 of 5.
+    render(createElement(TalkLearn, props));
+    await waitFor(() => screen.getByText(/Picked up where you left off: Recall 2\/5/));
+    expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Check' })).toBeTruthy();
+
+    // Start over goes back to the cards and forgets the place.
+    click('Start over');
+    expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy();
+    await waitFor(() => expect(states.has('t1__0')).toBe(false));
+  });
+
+  it('goes on from the match round you left', async () => {
+    states.clear();
+    const props = { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} };
+    const first = render(createElement(TalkLearn, props));
+    await waitFor(() => screen.getByRole('button', { name: 'Start' }));
+    click('Start');
+    await waitFor(() => expect(states.get('t1__0')?.step).toBe('match'));
+    const order = states.get('t1__0')!.matchOrder;
+    first.unmount();
+    render(createElement(TalkLearn, props));
+    await waitFor(() => screen.getByText(/Match round 1\/1/));
+    expect(states.get('t1__0')!.matchOrder).toEqual(order);
   });
 });

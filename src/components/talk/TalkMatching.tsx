@@ -1,16 +1,38 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { matchingRounds, shuffle } from '@/lib/talk/learn-queue';
 import { speak } from '@/lib/talk/speak';
 import type { TalkPhrase } from '@/lib/talk/types';
 
+export type MatchProgress = { order: string[]; round: number; misses: Record<string, number> };
+
+type Props = {
+  phrases: TalkPhrase[];
+  /** A saved shuffle and round to go on from; a fresh shuffle when missing. */
+  resume?: MatchProgress;
+  /** Called when a round starts, so the place can be saved. */
+  onRound?: (p: MatchProgress) => void;
+  onDone: (misses: Record<string, number>) => void;
+};
+
 /** Pair each phrase with its meaning, a few at a time. Reports wrong tries per phrase. */
-export function TalkMatching({ phrases, onDone }: { phrases: TalkPhrase[]; onDone: (misses: Record<string, number>) => void }) {
-  const rounds = useMemo(() => matchingRounds(shuffle(phrases)), [phrases]);
-  const [round, setRound] = useState(0);
-  const [misses, setMisses] = useState<Record<string, number>>({});
+export function TalkMatching({ phrases, resume, onRound, onDone }: Props) {
+  // Shuffled once; a resumed set keeps its old order, so its rounds are the same.
+  const [order] = useState(() => resume?.order ?? shuffle(phrases).map((p) => p.id));
+  const rounds = useMemo(() => {
+    const byId = new Map(phrases.map((p) => [p.id, p]));
+    return matchingRounds(order.map((id) => byId.get(id)).filter((p): p is TalkPhrase => !!p));
+  }, [order, phrases]);
+  const [round, setRound] = useState(() => Math.min(resume?.round ?? 0, Math.max(0, rounds.length - 1)));
+  const [misses, setMisses] = useState<Record<string, number>>(() => resume?.misses ?? {});
+
+  useEffect(() => {
+    onRound?.({ order, round, misses });
+    // Only when a round starts: a miss is saved with the next round.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round]);
 
   const items = rounds[round] ?? [];
   return (

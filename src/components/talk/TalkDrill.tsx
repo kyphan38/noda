@@ -4,18 +4,33 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mic, Volume2 } from 'lucide-react';
 
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { answerItem, buildQueue, currentItem, isQueueDone, type DrillItem } from '@/lib/talk/learn-queue';
+import { answerItem, buildQueue, currentItem, isQueueDone, type DrillItem, type LearnQueue } from '@/lib/talk/learn-queue';
 import { isPhraseSpoken, isPhraseTyped, makeCloze, phraseHint } from '@/lib/talk/phrase-check';
 import { speak } from '@/lib/talk/speak';
 import type { TalkPhrase } from '@/lib/talk/types';
 
 type Result = { right: boolean; heard?: string } | null;
 
+type Props = {
+  phrases: TalkPhrase[];
+  /** A saved queue to go on from; a fresh one when missing. */
+  resume?: LearnQueue;
+  /** Called with the queue at the start and after every answer, so the place can be saved. */
+  onQueue?: (q: LearnQueue) => void;
+  onDone: (misses: Record<string, number>) => void;
+};
+
 /** Fill the blank, then say each phrase from its meaning. A miss comes back a few items later. */
-export function TalkDrill({ phrases, onDone }: { phrases: TalkPhrase[]; onDone: (misses: Record<string, number>) => void }) {
+export function TalkDrill({ phrases, resume, onQueue, onDone }: Props) {
   const byId = useMemo(() => new Map(phrases.map((p) => [p.id, p])), [phrases]);
-  const [queue, setQueue] = useState(() => buildQueue(phrases.map((p) => ({ id: p.id, hasCloze: makeCloze(p.example, p.text) !== null }))));
+  const [queue, setQueue] = useState(() => resume ?? buildQueue(phrases.map((p) => ({ id: p.id, hasCloze: makeCloze(p.example, p.text) !== null }))));
   const [result, setResult] = useState<Result>(null);
+
+  useEffect(() => {
+    onQueue?.(queue);
+    // Once at the start; answers report below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const item = currentItem(queue);
   const phrase = item ? byId.get(item.phraseId) : undefined;
@@ -25,7 +40,10 @@ export function TalkDrill({ phrases, onDone }: { phrases: TalkPhrase[]; onDone: 
     const q = answerItem(queue, result.right);
     setResult(null);
     if (isQueueDone(q)) onDone(q.misses);
-    else setQueue(q);
+    else {
+      setQueue(q);
+      onQueue?.(q);
+    }
   };
 
   if (!item || !phrase) return null;

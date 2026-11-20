@@ -8,6 +8,7 @@ import { TALK_HINT_FUNCTION_NAME, TALK_SPEECH_FUNCTION_NAME, TALK_TOPIC_FUNCTION
 import type { TalkCapture } from '@/lib/talk/capture';
 import type { TalkCapsule } from '@/lib/talk/drills';
 import type { TalkMistake } from '@/lib/talk/mistake-bank';
+import type { LearnState } from '@/lib/talk/learn-state';
 import { progressId, raiseStage } from '@/lib/talk/phrase-stage';
 import type { PhraseStage, TalkLevel, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from '@/lib/talk/types';
 import { getCurrentUidOrThrow } from './shared';
@@ -288,4 +289,24 @@ export async function saveTalkCapsule(month: string, blob: Blob, seconds: number
 export async function forgetTopicMemory(topicId: string): Promise<void> {
   const uid = getCurrentUidOrThrow();
   await updateDoc(doc(getFirebaseFirestore(), topicsPath(uid), topicId), { memory: [] });
+}
+
+const learnStateRef = (uid: string, topicId: string, setIndex: number) =>
+  doc(getFirebaseFirestore(), `users/${uid}/talkLearnState`, `${topicId}__${setIndex}`);
+
+/** Where you stopped in Learn on this set, or null. */
+export async function getLearnState(topicId: string, setIndex: number): Promise<LearnState | null> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDoc(learnStateRef(uid, topicId, setIndex));
+  return snap.exists() ? (snap.data() as LearnState) : null;
+}
+
+export async function saveLearnState(topicId: string, setIndex: number, state: LearnState): Promise<void> {
+  const uid = getCurrentUidOrThrow();
+  await setDoc(learnStateRef(uid, topicId, setIndex), JSON.parse(JSON.stringify(state)));
+}
+
+export async function clearLearnState(topicId: string, setIndex: number): Promise<void> {
+  const uid = getCurrentUidOrThrow();
+  await deleteDoc(learnStateRef(uid, topicId, setIndex));
 }

@@ -4,6 +4,7 @@ import * as fsdb from '@/lib/db';
 import { raiseStage } from './phrase-stage';
 import type { TalkCapture } from './capture';
 import type { TalkCapsule } from './drills';
+import type { LearnState } from './learn-state';
 import type { TalkMistake } from './mistake-bank';
 import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from './types';
 
@@ -31,6 +32,9 @@ export type TalkStore = {
   setStar(topicId: string, p: TalkPhrase, starred: boolean, prev?: TalkPhraseProgress): Promise<TalkPhraseProgress>;
   listStarred(): Promise<TalkPhraseProgress[]>;
   forgetMemory(topicId: string): Promise<void>;
+  getLearnState(topicId: string, setIndex: number): Promise<LearnState | null>;
+  saveLearnState(topicId: string, setIndex: number, state: LearnState): Promise<void>;
+  clearLearnState(topicId: string, setIndex: number): Promise<void>;
   hint(topicId: string, aiLine: string, idea: string): Promise<fsdb.TalkHint[]>;
   speech(p: { mode: 'transcribe' | 'retell'; source: string; recording: string; recordingMimeType: string }): Promise<fsdb.SpeechResult>;
   listCapsules(): Promise<TalkCapsule[]>;
@@ -61,6 +65,9 @@ const firestoreStore: TalkStore = {
   setStar: fsdb.setPhraseStar,
   listStarred: fsdb.listStarredPhrases,
   forgetMemory: fsdb.forgetTopicMemory,
+  getLearnState: fsdb.getLearnState,
+  saveLearnState: fsdb.saveLearnState,
+  clearLearnState: fsdb.clearLearnState,
   hint: fsdb.requestTalkHint,
   speech: fsdb.requestTalkSpeech,
   listCapsules: fsdb.listTalkCapsules,
@@ -111,6 +118,7 @@ function memoryStore(): TalkStore {
   const mistakes = new Map<string, TalkMistake>();
   const captures = new Map<string, TalkCapture>();
   const capsules = new Map<string, TalkCapsule>();
+  const learnStates = new Map<string, LearnState>();
   return {
     listTopics: async () => [...topics.values()],
     ensureTopic: async (req) => {
@@ -208,6 +216,9 @@ function memoryStore(): TalkStore {
       { text: 'hit a bottleneck', use: 'when one part slows everything' },
       { text: 'under heavy load', use: 'with many users at once' },
     ],
+    getLearnState: async (topicId, setIndex) => learnStates.get(`${topicId}__${setIndex}`) ?? null,
+    saveLearnState: async (topicId, setIndex, state) => void learnStates.set(`${topicId}__${setIndex}`, structuredClone(state)),
+    clearLearnState: async (topicId, setIndex) => void learnStates.delete(`${topicId}__${setIndex}`),
     forgetMemory: async (topicId) => {
       const t = topics.get(topicId);
       if (t) topics.set(topicId, { ...t, memory: [] });

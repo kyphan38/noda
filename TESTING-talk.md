@@ -29,6 +29,7 @@ then send the file back.
 - [ ] Recall: "Say the phrase that means…": the mic works, or type it.
 - [ ] Answer one wrong on purpose: it comes back a few items later.
 - [ ] The end shows "Set learned" and the hardest phrases. The set now shows "x/10 learned".
+- [ ] Leave in the middle of Recall (go back to the topic). Open **Learn** on that set again: "Picked up where you left off: Recall n/N", no cards and no Match. **Start over** goes back to the cards.
 
 ## 3. Talk (one answer)
 
