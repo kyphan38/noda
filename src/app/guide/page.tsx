@@ -75,7 +75,8 @@ const BLOCKS: Block[] = [
       'Notes at the end (made once per talk): one thing to work on, missed chances to use a set phrase, better words, and a closing drill: say your weakest answers the natural way from a short idea.',
       'Your fixes go into a mistake bank by type (verb tense, a/an/the...). A new talk starts with a short warm-up on your top types. 5 right in a row and a type is done.',
       'A phrase you use in another talk without seeing it on the list counts as yours (Active).',
-      'Got stuck in a real talk? Type what you wanted to say in the box at the top of Talk, in any language. It is saved for later practice.',
+      'Got stuck in a real talk? Type what you wanted to say in the box at the top of Talk, in any language. Practice these makes a topic where you have to say those things.',
+      'Meeting prep: when you make your own topic, Add your notes (an agenda, a ticket, what happened). The talk is built from your facts, and the notes stay on screen while you talk.',
     ],
   },
   {

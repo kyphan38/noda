@@ -24,6 +24,7 @@ export type TalkStore = {
   listCaptures(): Promise<TalkCapture[]>;
   addCapture(text: string): Promise<TalkCapture>;
   deleteCapture(id: string): Promise<void>;
+  markCapturesUsed(ids: string[], topicId: string): Promise<void>;
 };
 
 const firestoreStore: TalkStore = {
@@ -44,6 +45,7 @@ const firestoreStore: TalkStore = {
   listCaptures: fsdb.listTalkCaptures,
   addCapture: fsdb.addTalkCapture,
   deleteCapture: fsdb.deleteTalkCapture,
+  markCapturesUsed: fsdb.markCapturesUsed,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -92,7 +94,7 @@ function memoryStore(): TalkStore {
   return {
     listTopics: async () => [...topics.values()],
     ensureTopic: async (req) => {
-      const t = topics.get(req.topicId) ?? { ...sampleTopic(), id: req.topicId, title: req.title, kind: req.kind, level: req.level };
+      const t = topics.get(req.topicId) ?? { ...sampleTopic(), id: req.topicId, title: req.title, kind: req.kind, level: req.level, notes: req.notes, notesKind: req.notesKind };
       topics.set(t.id, t);
       return t;
     },
@@ -160,6 +162,7 @@ function memoryStore(): TalkStore {
       return row;
     },
     deleteCapture: async (id) => void captures.delete(id),
+    markCapturesUsed: async (ids, topicId) => ids.forEach((id) => captures.has(id) && captures.set(id, { ...captures.get(id)!, usedInTopicId: topicId })),
     findOpenSession: async (topicId, setIndex) =>
       [...sessions.values()].filter((s) => s.topicId === topicId && s.setIndex === setIndex && !s.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
   };

@@ -27,6 +27,9 @@ export type TalkTopic = {
   level: TalkLevel;
   persona: { name: string; role: string; style: string };
   scenarios: TalkScenario[];
+  /** Your own notes the topic was made from: an agenda or ticket (context), or lines you got stuck on. */
+  notes?: string;
+  notesKind?: 'context' | 'stuck';
   phrases: TalkPhrase[];
   version: number;
   createdAt: number;

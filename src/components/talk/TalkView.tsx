@@ -51,15 +51,17 @@ export function TalkView() {
     }
   };
 
-  const openTopic = async (req: TopicRequest) => {
+  const openTopic = async (req: TopicRequest): Promise<TalkTopic | null> => {
     setError(null);
     setMaking(req.topicId);
     try {
       const topic = await getTalkStore().ensureTopic(req);
       setSaved((prev) => [...(prev ?? []).filter((t) => t.id !== topic.id), topic]);
       setOpen(topic);
+      return topic;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not open the topic.');
+      return null;
     } finally {
       setMaking(null);
     }
@@ -107,7 +109,12 @@ export function TalkView() {
         ))}
       </div>
 
-      <TalkCaptureBox />
+      <TalkCaptureBox
+        busy={making !== null}
+        onPractice={async (notes) =>
+          (await openTopic({ topicId: newCustomId(), kind: 'custom', title: 'Things I got stuck on', description: '', level, notes, notesKind: 'stuck' }))?.id ?? null
+        }
+      />
 
       <button
         type="button"
@@ -120,7 +127,7 @@ export function TalkView() {
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <NewTopicForm busy={making !== null} onCreate={(title, description) => openTopic({ topicId: newCustomId(), kind: 'custom', title, description, level })} />
+      <NewTopicForm busy={making !== null} onCreate={(title, description, notes) => void openTopic({ topicId: newCustomId(), kind: 'custom', title, description, level, ...(notes ? { notes, notesKind: 'context' as const } : {}) })} />
 
       {custom.length > 0 && (
         <TopicList title="Your topics">
@@ -172,7 +179,9 @@ function TopicRow(props: { title: string; hint: string; ready: boolean; busy: bo
   );
 }
 
-function NewTopicForm({ busy, onCreate }: { busy: boolean; onCreate: (title: string, description: string) => void }) {
+function NewTopicForm({ busy, onCreate }: { busy: boolean; onCreate: (title: string, description: string, notes: string) => void }) {
+  const [notes, setNotes] = useState('');
+  const [showNotes, setShowNotes] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +192,9 @@ function NewTopicForm({ busy, onCreate }: { busy: boolean; onCreate: (title: str
       setError('Enter a topic first.');
       return;
     }
-    onCreate(title.trim(), description.trim());
+    onCreate(title.trim(), description.trim(), notes.trim());
+    setNotes('');
+    setShowNotes(false);
     setTitle('');
     setDescription('');
   };
@@ -208,6 +219,20 @@ function NewTopicForm({ busy, onCreate }: { busy: boolean; onCreate: (title: str
         placeholder="Details (optional)"
         className="w-full resize-none rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
       />
+      {showNotes ? (
+        <textarea
+          value={notes}
+          maxLength={2000}
+          rows={5}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Paste your notes: an agenda, a ticket, what happened. The talk is built from them."
+          className="w-full resize-y rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
+        />
+      ) : (
+        <button type="button" onClick={() => setShowNotes(true)} className="text-xs text-gray-500 hover:text-gray-100">
+          + Add your notes (meeting prep)
+        </button>
+      )}
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-red-400">{error}</span>
         <button type="submit" disabled={busy} className="rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white px-3 py-1.5 text-sm disabled:opacity-50">

@@ -20,6 +20,10 @@ export const LEARNER_ROLE = "an adult English learner who works as a DevOps engi
 
 const MAX_TITLE = 80;
 const MAX_DESCRIPTION = 400;
+/** The learner's own notes: an agenda, a ticket, or lines they got stuck on. */
+export const MAX_NOTES = 2000;
+export const NOTES_KINDS = ["context", "stuck"] as const;
+export type NotesKind = (typeof NOTES_KINDS)[number];
 
 export interface TopicRequest {
   topicId: string;
@@ -28,6 +32,8 @@ export interface TopicRequest {
   title: string;
   description: string;
   level: TalkLevel;
+  notes?: string;
+  notesKind?: NotesKind;
 }
 
 export interface TalkPhrase {
@@ -71,7 +77,11 @@ export function checkTopicRequest(data: unknown): TopicRequest {
   if (description.length > MAX_DESCRIPTION) throw new Error("Description is too long.");
   const presetId = kind === "preset" ? oneLine(d.presetId, 40) : undefined;
   if (kind === "preset" && !/^[a-z0-9-]{2,40}$/.test(presetId ?? "")) throw new Error("Bad preset id.");
-  return { topicId, kind, presetId, title, description, level };
+  // Notes keep their line breaks: lists and tickets read better that way.
+  const notes = typeof d.notes === "string" ? d.notes.replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim() : "";
+  if (notes.length > MAX_NOTES) throw new Error("Notes are too long.");
+  const notesKind = NOTES_KINDS.find((k) => k === d.notesKind) ?? "context";
+  return { topicId, kind, presetId, title, description, level, ...(notes ? { notes, notesKind } : {}) };
 }
 
 const LEVEL_NOTES: Record<TalkLevel, string> = {
@@ -85,6 +95,11 @@ export function buildTopicPrompt(req: TopicRequest): string {
     `You make speaking lessons for ${LEARNER_ROLE}. Topics can be about work or everyday life (family, friends, shopping, travel, health). Write everything in English only.`,
     `Topic: ${req.title}`,
     req.description ? `Details: ${req.description}` : "",
+    req.notes && req.notesKind === "stuck"
+      ? `Things the learner wanted to say in real life but could not (any language):\n${req.notes}\nBuild the scenarios so the learner needs to say these things, and choose phrases that help say them.`
+      : req.notes
+        ? `The learner's own notes for this talk (real facts):\n${req.notes}\nBuild every scenario from these notes and keep their names, systems and numbers. Choose phrases that help talk about them.`
+        : "",
     `Level: ${LEVEL_NOTES[req.level]}`,
     "",
     `Return ${PHRASE_COUNT} useful phrases for speaking about this topic, ordered from most to least useful.`,

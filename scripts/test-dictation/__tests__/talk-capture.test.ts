@@ -8,6 +8,7 @@ import type { TalkCapture } from '@/lib/talk/capture';
 
 const rows = new Map<string, TalkCapture>([['old', { id: 'old', text: 'an older one', createdAt: 1 }]]);
 const deleteCapture = vi.fn(async (id: string) => void rows.delete(id));
+const markCapturesUsed = vi.fn(async () => {});
 vi.mock('@/lib/talk/store', () => ({
   getTalkStore: () => ({
     listCaptures: async () => [...rows.values()],
@@ -17,6 +18,7 @@ vi.mock('@/lib/talk/store', () => ({
       return row;
     },
     deleteCapture,
+    markCapturesUsed,
   }),
 }));
 
@@ -24,7 +26,8 @@ const { TalkCaptureBox } = await import('@/components/talk/TalkCaptureBox');
 
 describe('TalkCaptureBox', () => {
   it('saves, lists newest first and deletes', async () => {
-    render(createElement(TalkCaptureBox));
+    const onPractice = vi.fn(async () => 'topic-1');
+    render(createElement(TalkCaptureBox, { onPractice }));
     await waitFor(() => screen.getByText('Saved (1)'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -36,6 +39,12 @@ describe('TalkCaptureBox', () => {
 
     fireEvent.click(screen.getByText('Saved (2)'));
     expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['bị block bởi team khác', 'an older one']);
+
+    // Practice turns the unused lines (oldest first) into topic notes.
+    fireEvent.click(screen.getByRole('button', { name: 'Practice these (2)' }));
+    await waitFor(() => expect(markCapturesUsed).toHaveBeenCalledWith(['new', 'old'], 'topic-1'));
+    expect(onPractice).toHaveBeenCalledWith('1. an older one\n2. bị block bởi team khác');
+    expect(screen.queryByRole('button', { name: /Practice these/ })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete an older one' }));
     expect(deleteCapture).toHaveBeenCalledWith('old');

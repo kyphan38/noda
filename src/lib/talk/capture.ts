@@ -4,7 +4,16 @@
 export const MAX_CAPTURE_CHARS = 300;
 export const CAPTURE_LIST_SIZE = 20;
 
-export type TalkCapture = { id: string; text: string; createdAt: number; usedInSessionId?: string };
+export type TalkCapture = { id: string; text: string; createdAt: number; usedInTopicId?: string };
+
+/** Lines not practiced yet, oldest first, as numbered notes for a topic. */
+export function capturesToNotes(rows: TalkCapture[]): string {
+  return [...rows]
+    .filter((r) => !r.usedInTopicId)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((r, i) => `${i + 1}. ${r.text}`)
+    .join('\n');
+}
 
 /** One line, trimmed and capped; empty when there is nothing to keep. */
 export function cleanCapture(raw: string): string {

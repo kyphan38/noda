@@ -302,6 +302,13 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         </span>
       </div>
 
+      {topic.notes && (
+        <details className="rounded-xl border border-gray-800 bg-gray-900/60 px-4 py-3" open>
+          <summary className="cursor-pointer text-sm text-gray-100">{topic.notesKind === 'stuck' ? 'What you wanted to say' : 'Your notes'}</summary>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-gray-400">{topic.notes}</p>
+        </details>
+      )}
+
       {resumed && <p className="text-xs text-gray-500">Picked up where you left off.</p>}
 
       {!warmDone && !resumed && session.turns.length === 0 && (

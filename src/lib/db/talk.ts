@@ -28,6 +28,8 @@ export type TopicRequest = {
   title: string;
   description: string;
   level: TalkLevel;
+  notes?: string;
+  notesKind?: 'context' | 'stuck';
 };
 
 export async function listTalkTopics(): Promise<TalkTopic[]> {
@@ -195,4 +197,14 @@ export async function addTalkCapture(text: string): Promise<TalkCapture> {
 export async function deleteTalkCapture(id: string): Promise<void> {
   const uid = getCurrentUidOrThrow();
   await deleteDoc(doc(getFirebaseFirestore(), capturesPath(uid), id));
+}
+
+/** Lines turned into a practice topic leave the "not practiced" count. */
+export async function markCapturesUsed(ids: string[], topicId: string): Promise<void> {
+  if (ids.length === 0) return;
+  const uid = getCurrentUidOrThrow();
+  const db = getFirebaseFirestore();
+  const batch = writeBatch(db);
+  for (const id of ids) batch.update(doc(db, capturesPath(uid), id), { usedInTopicId: topicId });
+  await batch.commit();
 }

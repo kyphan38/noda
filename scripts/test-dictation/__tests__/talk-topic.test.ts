@@ -21,6 +21,14 @@ describe('talk topic request', () => {
     expect(() => checkTopicRequest({ ...good, title: '' })).toThrow();
     expect(() => checkTopicRequest({ ...good, description: 'x'.repeat(401) })).toThrow();
     expect(() => checkTopicRequest({ ...good, presetId: '' })).toThrow();
+    expect(() => checkTopicRequest({ ...good, notes: 'x'.repeat(2001) })).toThrow();
+  });
+  it('keeps notes with their line breaks and a kind', () => {
+    const r = checkTopicRequest({ ...good, kind: 'custom', topicId: 'custom-a1', notes: ' - API p99 1.2s\r\n\n\n\n- fix Friday ', notesKind: 'stuck' });
+    expect(r.notes).toBe('- API p99 1.2s\n\n- fix Friday');
+    expect(r.notesKind).toBe('stuck');
+    expect(checkTopicRequest({ ...good, notes: 'a', notesKind: 'odd' }).notesKind).toBe('context');
+    expect(checkTopicRequest(good).notes).toBeUndefined();
   });
 });
 
@@ -32,6 +40,11 @@ describe('talk topic prompt', () => {
     expect(p).toContain(`Return ${PHRASE_COUNT} useful phrases`);
     expect(p).toContain('everyday life');
     expect(p).toContain('Notes only, never a sentence');
+    expect(p).not.toContain('own notes');
+    const withNotes = buildTopicPrompt(checkTopicRequest({ ...good, notes: '- API p99 1.2s' }));
+    expect(withNotes).toContain("The learner's own notes for this talk (real facts):\n- API p99 1.2s");
+    const stuck = buildTopicPrompt(checkTopicRequest({ ...good, notes: '1. bị block bởi team khác', notesKind: 'stuck' }));
+    expect(stuck).toContain('wanted to say in real life but could not');
     expect(p).not.toMatch(/\n\n\n/);
   });
 });

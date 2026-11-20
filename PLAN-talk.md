@@ -293,8 +293,10 @@ Model khác (không dùng cho Talk):
 ## V2 (sau 2-3 tuần dùng thật V1)
 
 Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
-1. **Meeting prep + Live Context**: dán ghi chú / ticket, tạo topic, ghim lên màn hình khi nói.
-2. **Dựng buổi luyện từ hộp Capture**: gom 5-7 câu bị bí trong tuần.
+1. **Meeting prep + Live Context** - XONG (2026-11-20): "+ Add your notes" khi tạo topic (≤ 2000 ký tự),
+   `talkTopic` dựng scenario từ notes, notes hiện trong lúc nói.
+2. **Dựng buổi luyện từ hộp Capture** - XONG (2026-11-20): nút "Practice these (n)" tạo topic
+   "Things I got stuck on" (notesKind `stuck`), đánh dấu câu đã luyện.
 3. **Làm lại bài sau 2-3 ngày**, đặt lần cũ và lần mới cạnh nhau.
 4. **Time Capsule**: mỗi tháng 1 đề cố định 60 giây, lưu audio, nghe so sánh.
 5. **Read-to-Speak**: dán Slack thread / PR, ẩn đi, nói tóm tắt 60 giây, AI kiểm tra thiếu ý.
