@@ -45,7 +45,7 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit, onRedo }: P
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-xl space-y-6">
       <button type="button" onClick={onExit} className="text-sm text-gray-400 hover:text-gray-100">
         ← Back to the topic
       </button>

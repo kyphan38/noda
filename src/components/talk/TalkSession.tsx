@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Square, Volume2, Zap } from 'lucide-react';
 
-import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
+import { TalkAnswerBar, TalkReviewBar } from '@/components/talk/TalkBars';
+import { TalkLine } from '@/components/talk/TalkLine';
+import { TalkReviewCard, VERSIONS, type VersionKey } from '@/components/talk/TalkReviewCard';
 import { TalkSessionEnd } from '@/components/talk/TalkSessionEnd';
-import { TalkStuckPanel } from '@/components/talk/TalkStuckPanel';
+import { TalkThread } from '@/components/talk/TalkThread';
 import { TalkToggle as Toggle } from '@/components/talk/TalkToggle';
+import { useFinePointer } from '@/hooks/useFinePointer';
 import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
@@ -41,7 +43,9 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const [line, setLine] = useState<Line | null>(null);
   const [phase, setPhase] = useState<Phase>('answer');
   const [error, setError] = useState<string | null>(null);
-  const [showStuck, setShowStuck] = useState(false);
+  /** Which version the review shows; keys 1-3 change it on a computer. */
+  const [level, setLevel] = useState<VersionKey>('natural');
+  const fine = useFinePointer();
   const recorder = useVoiceRecorder();
   /** Bumped by Cancel, so a check that comes back late is ignored. */
   const attemptRef = useRef(0);
@@ -119,7 +123,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const save = (s: Session) => void getTalkStore().saveSession(s).catch((e) => console.warn('[talk] session save failed', e));
 
   const nextLine = (s: Session, l: Line) => {
-    setShowStuck(false);
+    setLevel('natural');
     if (s.turns.length >= (s.length ?? TURN_COUNT)) {
       const done = { ...s, endedAt: Date.now() };
       setSession(done);
@@ -234,15 +238,26 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         cancelAnswer();
         return;
       }
-      if (e.code !== 'Space' || e.repeat) return;
       const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'BUTTON')) return;
+      if (e.repeat || (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'))) return;
+      if (phase === 'review') {
+        // Computer keys for the review: Enter next, R try again, 1-3 versions.
+        if (e.code === 'Enter' && el?.tagName !== 'BUTTON') {
+          e.preventDefault();
+          if (session && line) nextLine(session, line);
+        } else if (e.key === 'r' || e.key === 'R') retryTurn();
+        else if (['1', '2', '3'].includes(e.key)) setLevel(VERSIONS[Number(e.key) - 1].key);
+        return;
+      }
+      if (e.code !== 'Space' || el?.tagName === 'BUTTON') return;
       e.preventDefault();
       toggleRecord();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [toggleRecord, cancelAnswer, recorder.status, phase]);
+    // nextLine and retryTurn only read state passed in or current state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toggleRecord, cancelAnswer, recorder.status, phase, session, line]);
 
   if (loading) return <p className="breathe text-sm text-gray-500">Loading…</p>;
   if (!scenario) return <p className="text-sm text-gray-400">This topic has no situations. Make it again.</p>;
@@ -263,48 +278,64 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
 
   const turnNo = Math.min(session.turns.length + (phase === 'review' ? 0 : 1), total);
   const lastTurn = session.turns[session.turns.length - 1];
+  const reviewing = phase === 'review' && !!lastTurn;
   const hints = hintPhrases(line.text, phrases, used);
+  const warming = !warmDone && !resumed && session.turns.length === 0;
+  const pairs = (reviewing ? session.turns.slice(0, -1) : session.turns).map((t) => ({ ai: t.ai.text, you: t.transcript }));
+  const patchLast = (patch: Partial<TalkTurn>) => {
+    const s = { ...session, turns: session.turns.map((t, i) => (i === session.turns.length - 1 ? { ...t, ...patch } : t)) };
+    setSession(s);
+    save(s);
+  };
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <button type="button" onClick={onExit} className="text-sm text-gray-400 hover:text-gray-100">
+    // At least a screen tall, so the bar sits at the bottom (thumb reach) even when the talk is short.
+    <div className="flex min-h-[calc(100dvh-11rem)] flex-col gap-5 sm:min-h-[calc(100dvh-13rem)]">
+      <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
+        <button type="button" onClick={onExit} className="truncate text-sm text-gray-400 hover:text-gray-100">
           ← {topic.title}
         </button>
-        <span className="flex items-center gap-3 text-xs text-gray-500">
+        <span className="flex shrink-0 items-center gap-3">
           <span className="tabular-nums">
-            Turn {turnNo}/{total}
+            {turnNo}/{total}
           </span>
           {session.turns.length > 0 && phase !== 'checking' && (
             <button
               type="button"
               onClick={() => {
-                const done = { ...session, endedAt: Date.now() };
-                save(done);
+                save({ ...session, endedAt: Date.now() });
                 setWarmDone(true);
                 startNew();
               }}
               className="hover:text-gray-100"
             >
-              New talk
+              New
             </button>
           )}
           <button type="button" onClick={endTalk} className="hover:text-gray-100">
-            End talk
+            End
           </button>
         </span>
       </div>
 
-      {topic.notes && (
-        <details className="rounded-xl border border-gray-800 bg-gray-900/60 px-4 py-3" open>
-          <summary className="cursor-pointer text-sm text-gray-100">{topic.notesKind === 'stuck' ? 'What you wanted to say' : 'Your notes'}</summary>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-gray-400">{topic.notes}</p>
-        </details>
-      )}
-
       {resumed && <p className="text-xs text-gray-500">Picked up where you left off.</p>}
 
-      {!warmDone && !resumed && session.turns.length === 0 && (
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+        <Fold label={scenario.title} open={session.turns.length === 0}>
+          <ul className="list-disc space-y-0.5 pl-5">
+            {scenario.facts.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ul>
+        </Fold>
+        {topic.notes && (
+          <Fold label={topic.notesKind === 'stuck' ? 'What you wanted to say' : 'Your notes'} open={session.turns.length === 0}>
+            <p className="whitespace-pre-wrap">{topic.notes}</p>
+          </Fold>
+        )}
+      </div>
+
+      {warming && (
         <TalkWarmup
           onDone={() => {
             setWarmDone(true);
@@ -312,15 +343,6 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
           }}
         />
       )}
-
-      <details className="rounded-xl border border-gray-800 bg-gray-900/60 px-4 py-3" open={session.turns.length === 0}>
-        <summary className="cursor-pointer text-sm text-gray-100">{scenario.title}</summary>
-        <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-gray-400">
-          {scenario.facts.map((f) => (
-            <li key={f}>{f}</li>
-          ))}
-        </ul>
-      </details>
 
       {session.turns.length === 0 && phase === 'answer' && (
         <div className="flex flex-wrap gap-2 text-xs">
@@ -343,97 +365,79 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         </div>
       )}
 
-      {!warmDone && !resumed && session.turns.length === 0 ? null : phase === 'review' && lastTurn ? (
-        <>
-          <TalkReviewCard
-            key={session.turns.length}
-            turn={lastTurn}
-            selfRepair={prefs.selfRepair}
-            onChange={(patch) => {
-              const turns = session.turns.map((t, i) => (i === session.turns.length - 1 ? { ...t, ...patch } : t));
-              const s = { ...session, turns };
-              setSession(s);
-              save(s);
-            }}
-          />
-          <div className="flex gap-2">
-            <button type="button" onClick={retryTurn} className="rounded-lg border border-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-100/[0.06]">
-              Try again
-            </button>
-            <button type="button" onClick={() => nextLine(session, line)} className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white">
-              {session.turns.length >= total ? 'See the summary' : 'Next turn'}
-            </button>
+      {!warming && (
+        <div className="space-y-6 md:grid md:grid-cols-2 md:gap-10 md:space-y-0">
+          <div className="space-y-4">
+            <TalkThread name={topic.persona.name} pairs={pairs} />
+            <TalkLine
+              topicId={topic.id}
+              name={topic.persona.name}
+              text={reviewing ? lastTurn.ai.text : line.text}
+              curveball={reviewing ? lastTurn.ai.curveball : line.curveball}
+              kind={reviewing ? undefined : line.kind}
+              ideas={line.ideas}
+              hints={hints}
+              showText={prefs.showText}
+              onToggleText={() => changePrefs({ showText: !prefs.showText })}
+              quiet={reviewing}
+            />
           </div>
-        </>
-      ) : (
-        <>
-          <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-xs text-gray-300">
-                {topic.persona.name.slice(0, 2)}
-              </span>
-              <div className="min-w-0 flex-1 space-y-2">
-                <p className="text-xs text-gray-500">
-                  {topic.persona.name}, {topic.persona.role}
-                  {line.curveball && (
-                    <span className="ml-2 inline-flex items-center gap-0.5 text-gray-300">
-                      <Zap className="h-3 w-3" /> curveball
-                    </span>
-                  )}
-                </p>
-                {prefs.showText ? <p className="text-base text-gray-100">{line.text}</p> : <p className="text-sm italic text-gray-500">Listen, then answer.</p>}
-                {line.kind && line.kind !== 'question' && !line.curveball && (
-                  <p className="text-xs text-gray-500">{line.kind === 'share' ? 'Your turn: react or add your view' : 'Your turn: ask them something'}</p>
-                )}
-                <div className="flex flex-wrap gap-3 text-xs">
-                  <button type="button" onClick={() => speak(line.text)} className="flex items-center gap-1 text-gray-400 hover:text-gray-100">
-                    <Volume2 className="h-3.5 w-3.5" /> Play
-                  </button>
-                  <button type="button" onClick={() => changePrefs({ showText: !prefs.showText })} className="text-gray-400 hover:text-gray-100">
-                    {prefs.showText ? 'Hide text' : 'Show text'}
-                  </button>
-                  <button type="button" onClick={() => setShowStuck((v) => !v)} className={showStuck ? 'text-gray-100' : 'text-gray-400 hover:text-gray-100'}>
-                    Stuck?
-                  </button>
-                </div>
-                {showStuck && <TalkStuckPanel key={line.text} topicId={topic.id} line={line.text} ideas={line.ideas} phrases={hints} />}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-2 py-2">
-            <button
-              type="button"
-              aria-label={recorder.status === 'recording' ? 'Stop and send' : 'Answer'}
-              disabled={phase === 'checking' || recorder.status === 'starting'}
-              onClick={toggleRecord}
-              className={`flex h-16 w-16 items-center justify-center rounded-full transition-colors disabled:opacity-50 ${
-                recorder.status === 'recording' ? 'bg-red-500 text-white hover:bg-red-400' : 'bg-gray-100 text-gray-900 hover:bg-white'
-              }`}
-            >
-              {recorder.status === 'recording' ? <Square className="h-6 w-6" /> : <Mic className="h-7 w-7" />}
-            </button>
-            <p className="text-xs text-gray-500">
-              {phase === 'checking' ? <span className="breathe">Checking your answer…</span> : recorder.status === 'recording' ? `${Math.round(recorder.elapsedMs / 1000)}s · Space to send` : 'Space to answer'}
-            </p>
-            {(recorder.status === 'recording' || phase === 'checking') && (
-              <button type="button" onClick={cancelAnswer} className="text-xs text-gray-400 underline-offset-2 hover:text-gray-100 hover:underline">
-                Cancel (Esc)
-              </button>
+          <div className="md:border-l md:border-gray-800 md:pl-10">
+            {reviewing ? (
+              <TalkReviewCard key={session.turns.length} turn={lastTurn} selfRepair={prefs.selfRepair} onChange={patchLast} level={level} onLevel={setLevel} showKeys={fine} />
+            ) : (
+              <p className="hidden text-xs text-gray-600 md:block">Your review shows here after you answer.</p>
             )}
-            {(error || recorder.error) && <p className="text-xs text-red-400">{error ?? recorder.error}</p>}
           </div>
-        </>
+        </div>
       )}
 
-      <div className="flex flex-wrap gap-1.5">
-        {phrases.map((p) => (
-          <span key={p.id} className={`rounded-md border px-2 py-0.5 text-xs ${used.has(p.id) ? 'border-gray-500 text-gray-100' : 'border-gray-800 text-gray-500'}`}>
-            {used.has(p.id) ? '✓ ' : ''}
-            {p.text}
-          </span>
+      <Fold label={`Phrases ${used.size}/${phrases.length}`}>
+        <div className="flex flex-wrap gap-1.5">
+          {phrases.map((p) => (
+            <span key={p.id} className={`rounded-md border px-2 py-0.5 ${used.has(p.id) ? 'border-gray-500 text-gray-100' : 'border-gray-800 text-gray-500'}`}>
+              {used.has(p.id) ? '✓ ' : ''}
+              {p.text}
+            </span>
+          ))}
+        </div>
+      </Fold>
+
+      {!warming &&
+        (reviewing ? (
+          <TalkReviewBar
+            key={session.turns.length}
+            target={lastTurn.review.natural}
+            nextLabel={session.turns.length >= total ? 'See the summary' : 'Next'}
+            fine={fine}
+            onTry={retryTurn}
+            onNext={() => nextLine(session, line)}
+            onScore={(retryPercent) => patchLast({ retryPercent })}
+          />
+        ) : (
+          <TalkAnswerBar
+            recording={recorder.status === 'recording'}
+            busy={phase === 'checking' || recorder.status === 'starting'}
+            checking={phase === 'checking'}
+            seconds={Math.round(recorder.elapsedMs / 1000)}
+            error={error ?? recorder.error}
+            fine={fine}
+            onToggle={toggleRecord}
+            onCancel={cancelAnswer}
+          />
         ))}
-      </div>
     </div>
+  );
+}
+
+/** A small "label ▸" line that opens to its content; no box. */
+function Fold({ label, open = false, children }: { label: string; open?: boolean; children: React.ReactNode }) {
+  return (
+    <details className="group w-full text-xs text-gray-500 [&_summary::-webkit-details-marker]:hidden" open={open}>
+      <summary className="cursor-pointer list-none hover:text-gray-300">
+        {label} <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+      </summary>
+      <div className="mt-1.5 text-sm text-gray-400">{children}</div>
+    </details>
   );
 }

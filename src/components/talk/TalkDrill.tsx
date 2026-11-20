@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mic, Volume2 } from 'lucide-react';
 
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useListen } from '@/hooks/useListen';
 import { answerItem, buildQueue, currentItem, isQueueDone, type DrillItem, type LearnQueue } from '@/lib/talk/learn-queue';
 import { isPhraseSpoken, isPhraseTyped, makeCloze, phraseHint } from '@/lib/talk/phrase-check';
 import { speak } from '@/lib/talk/speak';
@@ -64,7 +64,7 @@ function Item(props: { item: DrillItem; phrase: TalkPhrase; result: Result; onRe
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
-  const rec = useSpeechRecognition();
+  const rec = useListen();
   const cloze = item.kind === 'cloze' ? makeCloze(phrase.example, phrase.text) : null;
 
   useEffect(() => {
@@ -87,12 +87,13 @@ function Item(props: { item: DrillItem; phrase: TalkPhrase; result: Result; onRe
   };
 
   const say = async () => {
-    const heard = await rec.listen();
-    if (heard.length === 0) {
-      setError('Nothing heard. Try again or type it.');
+    setError(null);
+    const r = await rec.listen();
+    if (r.heard.length === 0) {
+      setError(r.reason ?? 'No speech heard. Try again or type it.');
       return;
     }
-    finish(heard.some((h) => isPhraseSpoken(h, phrase.text)), heard[0]);
+    finish(r.heard.some((h) => isPhraseSpoken(h, phrase.text)), r.heard[0]);
   };
 
   return (
@@ -122,19 +123,23 @@ function Item(props: { item: DrillItem; phrase: TalkPhrase; result: Result; onRe
             spellCheck={false}
             className="min-w-0 flex-1 rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
           />
-          {item.kind === 'recall' && rec.supported && (
+          {item.kind === 'recall' && (
             <button
               type="button"
-              aria-label="Say it"
+              aria-label={rec.status === 'listening' ? 'Stop' : 'Say it'}
+              disabled={rec.status === 'checking'}
               onClick={() => (rec.status === 'listening' ? rec.stop() : void say())}
-              className={`rounded-lg border px-3 ${rec.status === 'listening' ? 'border-red-400 text-red-400' : 'border-gray-700 text-gray-300 hover:text-gray-100'}`}
+              className={`rounded-lg border px-3 disabled:opacity-50 ${rec.status === 'listening' ? 'border-red-400 text-red-400' : 'border-gray-700 text-gray-300 hover:text-gray-100'}`}
             >
               <Mic className="h-4 w-4" />
             </button>
           )}
         </div>
       )}
-      {!result && (error || rec.error) && <p className="text-xs text-red-400">{error ?? rec.error}</p>}
+      {!result && rec.status !== 'idle' && (
+        <p className="text-xs text-gray-500">{rec.status === 'listening' ? 'Listening… tap the mic again when you are done.' : <span className="breathe">Checking…</span>}</p>
+      )}
+      {!result && error && <p className="text-xs text-red-400">{error}</p>}
 
       {result && (
         <div className="space-y-1">

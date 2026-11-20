@@ -129,7 +129,17 @@ then send the file back.
 - [ ] Share something personal in a talk (a trip, a plan). After the talk, the topic page shows "[name] remembers: ...". Start a new talk on that topic: they bring it up. **Forget** clears it.
 - [ ] The replies sound spoken (short, "Oh", "Hmm") and fit the time of day.
 
-## 16. Theme and phone
+## 16. Phone and Mac layout (new)
+
+- [ ] iPhone: Recall's mic works; after you speak you see "Heard: ..." or a reason (blocked, nothing heard). Same for the mic next to Next in a review.
+- [ ] iPhone: in a talk the mic, and in a review Try again / mic / Next, stay at the bottom without scrolling.
+- [ ] The review fits one screen: your words, Correct · Natural · Level up (Natural first), "n fixes ▸".
+- [ ] A turn with no mistakes shows "No mistakes ✓" and no Correct tab.
+- [ ] Mac: the talk is two columns; keys Space, Enter, R, 1-3 and Esc work; iPhone shows no key hints.
+- [ ] The speaker icon plays right away every time, with the same voice. On iPhone it plays at all.
+- [ ] iPhone home-screen app: nothing hides under the status bar at the top.
+
+## 17. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

@@ -71,7 +71,7 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-xl space-y-6">
       <button type="button" onClick={onBack} className="text-sm text-gray-400 hover:text-gray-100">
         ← Topics
       </button>

@@ -205,6 +205,19 @@ export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
 
 export class TurnShapeError extends Error {}
 
+const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
+
+/**
+ * A fix must agree with the version it belongs to: grammar and word fixes with
+ * Correct, natural and tone fixes with Natural (or Correct). One that does not
+ * would show the learner two different answers, so it is dropped.
+ */
+export function fixAgrees(f: Pick<TalkFix, "kind" | "right">, correct: string, natural: string): boolean {
+  const right = words(f.right);
+  if (f.kind === "grammar" || f.kind === "word") return words(correct).includes(right);
+  return words(natural).includes(right) || words(correct).includes(right);
+}
+
 /** Model JSON -> a clean result, or throws TurnShapeError when it is not usable. */
 export function parseTurnResult(raw: string | undefined, targetIds: string[]): TurnResult {
   let d: Record<string, unknown>;
@@ -233,6 +246,7 @@ export function parseTurnResult(raw: string | undefined, targetIds: string[]): T
 
   const correct = line(review.correct, 2000) || transcript;
   const natural = line(review.natural, 2000) || correct;
+  const agreed = fixes.filter((f) => fixAgrees(f, correct, natural));
   const allowed = new Set(targetIds);
   const used = (Array.isArray(d.usedPhraseIds) ? d.usedPhraseIds : []).filter(
     (id, i, all): id is string => typeof id === "string" && allowed.has(id) && all.indexOf(id) === i
@@ -244,7 +258,7 @@ export function parseTurnResult(raw: string | undefined, targetIds: string[]): T
       curveball: reply.curveball === true,
       ideas: (Array.isArray(reply.ideas) ? reply.ideas : []).map((x) => line(x, 60)).filter(Boolean).slice(0, 3),
     },
-    review: { correct, natural, levelUp: line(review.levelUp, 2000) || natural, fixes, ...(line(review.structure, 200) ? { structure: line(review.structure, 200) } : {}) },
+    review: { correct, natural, levelUp: line(review.levelUp, 2000) || natural, fixes: agreed, ...(line(review.structure, 200) ? { structure: line(review.structure, 200) } : {}) },
     usedPhraseIds: used,
   };
 }

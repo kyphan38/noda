@@ -2,8 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { answerItem, buildQueue, currentItem, isQueueDone, matchingRounds, shuffle } from './learn-queue';
 import { isPhraseSpoken, isPhraseTyped, makeCloze, phraseHint } from './phrase-check';
 import { progressId, raiseStage, stageAtLeast, stageLabel, summarizeSets } from './phrase-stage';
-import { pickVoice } from './speak';
+import { pickVoice, shouldTryChirp } from './speak';
 import type { TalkPhrase, TalkPhraseProgress } from './types';
+
+describe('shouldTryChirp', () => {
+  it('tries when unknown or working, and a failure again after a day', () => {
+    const now = 10 * 86_400_000;
+    expect(shouldTryChirp(null, now)).toBe(true);
+    expect(shouldTryChirp({ ok: true, at: now }, now)).toBe(true);
+    expect(shouldTryChirp({ ok: false, at: now - 1000 }, now)).toBe(false);
+    expect(shouldTryChirp({ ok: false, at: now - 2 * 86_400_000 }, now)).toBe(true);
+  });
+});
 
 describe('pickVoice', () => {
   const v = (name: string, lang: string) => ({ name, lang });

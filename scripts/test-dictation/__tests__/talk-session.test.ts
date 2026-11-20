@@ -100,7 +100,7 @@ async function answer() {
   click('Answer');
   await waitFor(() => screen.getByRole('button', { name: 'Stop and send' }));
   click('Stop and send');
-  await waitFor(() => screen.getByRole('button', { name: /Next turn|See the summary/ }));
+  await waitFor(() => screen.getByRole('button', { name: /^(Next|See the summary)/ }));
 }
 
 afterEach(cleanup);
@@ -126,20 +126,27 @@ describe('TalkSession', () => {
     await answer();
     // Fix it yourself first: the mistake is marked, the answer is hidden.
     expect(screen.getByText('I am working', { selector: 'mark' })).toBeTruthy();
-    expect(screen.queryByText('I was working on the pipeline.')).toBeNull();
+    expect(screen.queryByText('I worked on the pipeline.')).toBeNull();
     click('Show answer');
+    // Natural first; Correct and Level up are one tap away.
+    expect(screen.getByText('I worked on the pipeline.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Correct' }));
     expect(screen.getByText('I was working on the pipeline.')).toBeTruthy();
+    click('1 fix ▸');
     click('I said it right');
     expect(screen.queryByText('I am working', { selector: 'mark' })).toBeNull();
     expect(saveStages).toHaveBeenCalledWith('pipeline-b2', [expect.objectContaining({ id: 'p0' })], 'prompted', expect.any(Map));
 
-    click('Next turn');
+    // Computer keys: 3 shows Level up; Enter goes on.
+    fireEvent.keyDown(window, { key: '3', code: 'Digit3' });
+    expect(screen.getByText('I spent the day on the pipeline.')).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'Enter', code: 'Enter' });
     expect(screen.getByText('Reply 1')).toBeTruthy();
     expect(screen.getByText('✓ roll back', { exact: false })).toBeTruthy();
 
     for (let i = 2; i <= 7; i++) {
       await answer();
-      click('Next turn');
+      click('Next');
     }
     await answer();
     click('See the summary');
@@ -183,8 +190,8 @@ describe('TalkSession', () => {
 
     // Cancel while recording: nothing is sent.
     click('Answer');
-    await waitFor(() => screen.getByRole('button', { name: 'Cancel (Esc)' }));
-    click('Cancel (Esc)');
+    await waitFor(() => screen.getByRole('button', { name: 'Cancel' }));
+    click('Cancel');
     await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
     expect(payloads).toHaveLength(0);
 
@@ -192,11 +199,11 @@ describe('TalkSession', () => {
     await answer();
     click('Try again');
     expect(screen.getByText('What happened with the builds?')).toBeTruthy();
-    expect(screen.getByText('Turn 1/8')).toBeTruthy();
+    expect(screen.getByText('1/8')).toBeTruthy();
 
     await answer();
-    click('Next turn');
-    click('End talk');
+    click('Next');
+    click('End');
     expect(screen.getByText('Phrases used')).toBeTruthy();
     expect(screen.getAllByText('I am working on the pipeline.')).toHaveLength(1);
   });
@@ -208,17 +215,17 @@ describe('TalkSession', () => {
     const view = render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
     await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
     await answer();
-    click('Next turn');
+    click('Next');
     view.unmount();
 
     render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
     await waitFor(() => screen.getByText('Picked up where you left off.'));
     expect(screen.getByText('Reply 1')).toBeTruthy();
-    expect(screen.getByText('Turn 2/8')).toBeTruthy();
+    expect(screen.getByText('2/8')).toBeTruthy();
     expect(payloads).toHaveLength(1);
 
     // New talk closes the old one and starts again from the opening.
-    click('New talk');
+    click('New');
     await waitFor(() => screen.getByText('What happened with the builds?'));
     expect([...saved.values()].filter((x) => !x.endedAt)).toHaveLength(1);
   });
@@ -252,10 +259,10 @@ describe('TalkSession', () => {
     render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
     await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
     click('Quick: 3 answers');
-    expect(screen.getByText('Turn 1/3')).toBeTruthy();
+    expect(screen.getByText('1/3')).toBeTruthy();
     for (let i = 1; i <= 2; i++) {
       await answer();
-      click('Next turn');
+      click('Next');
     }
     await answer();
     expect(payloads.map((p) => p.isLast)).toEqual([false, false, true]);
@@ -263,11 +270,11 @@ describe('TalkSession', () => {
     await waitFor(() => screen.getByText('Use the past tense for finished work.'));
 
     click('Talk this again');
-    await waitFor(() => screen.getByText('Turn 1/3'));
+    await waitFor(() => screen.getByText('1/3'));
     expect(screen.getByText('What happened with the builds?')).toBeTruthy();
     for (let i = 1; i <= 2; i++) {
       await answer();
-      click('Next turn');
+      click('Next');
     }
     await answer();
     click('See the summary');

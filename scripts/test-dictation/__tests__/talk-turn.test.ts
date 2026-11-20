@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { buildTurnPrompt, checkTurnRequest, frameFor, MAX_FIXES, parseTurnResult, TurnShapeError } from '../../../functions/src/lib/talkTurn';
+import { buildTurnPrompt, checkTurnRequest, fixAgrees, frameFor, MAX_FIXES, parseTurnResult, TurnShapeError } from '../../../functions/src/lib/talkTurn';
+
+describe('fixAgrees', () => {
+  it('checks grammar fixes against Correct and natural ones against Natural', () => {
+    const correct = "We moved to a hybrid remote model and need 500 megabits per second.";
+    const natural = "We switched to a hybrid remote setup, so I'd like a 500 Mbps plan.";
+    expect(fixAgrees({ kind: 'grammar', right: '500 Megabits per second' }, correct, natural)).toBe(true);
+    expect(fixAgrees({ kind: 'grammar', right: 'hybrid remote setup' }, correct, natural)).toBe(false);
+    expect(fixAgrees({ kind: 'natural', right: 'a hybrid remote setup' }, correct, natural)).toBe(true);
+    expect(fixAgrees({ kind: 'natural', right: 'a hybrid working mode' }, correct, natural)).toBe(false);
+  });
+});
 
 const ctx = {
   level: 'B2' as const,

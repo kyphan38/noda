@@ -3,7 +3,7 @@ import { TalkView } from '@/components/talk/TalkView';
 
 export default function TalkPage() {
   return (
-    <AuthPage title="Talk">
+    <AuthPage title="Talk" wide>
       <TalkView />
     </AuthPage>
   );
