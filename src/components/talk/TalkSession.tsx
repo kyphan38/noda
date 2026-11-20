@@ -299,6 +299,10 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const turnNo = Math.min(session.turns.length + (phase === 'review' ? 0 : 1), total);
   const lastTurn = session.turns[session.turns.length - 1];
   const reviewing = phase === 'review' && !!lastTurn;
+  /** Your next answer ends the talk: say so before, not after the partner says goodbye. */
+  const lastAnswer = !reviewing && session.turns.length === total - 1;
+  /** Reached before the last turn: you may stop here. */
+  const goalReached = used.size >= goal && session.turns.length < total;
   const hints = hintPhrases(line.text, phrases, used);
   const warming = !warmDone && !resumed && session.turns.length === 0;
   const pairs = (reviewing ? session.turns.slice(0, -1) : session.turns).map((t) => ({ ai: t.ai.text, you: t.transcript }));
@@ -319,6 +323,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
           <span className="tabular-nums">
             {turnNo}/{total}
           </span>
+          {lastAnswer && <span className="text-gray-300">Last answer</span>}
           {session.turns.length > 0 && phase !== 'checking' && (
             <button
               type="button"
@@ -401,6 +406,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
               onToggleText={() => changePrefs({ showText: !prefs.showText })}
               quiet={reviewing}
             />
+            {lastAnswer && <p className="text-xs text-gray-400">Last answer: close the talk, for example thank them, agree on the next step, say goodbye.</p>}
           </div>
           <div className="md:border-l md:border-gray-800 md:pl-10">
             {reviewing ? (
@@ -410,6 +416,16 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
             )}
           </div>
         </div>
+      )}
+
+      {goalReached && phase !== 'checking' && (
+        <p className="text-xs text-gray-400">
+          Goal reached. Keep going or{' '}
+          <button type="button" onClick={endTalk} className="text-gray-100 underline underline-offset-2">
+            End now
+          </button>
+          .
+        </p>
       )}
 
       <Fold label={`Goal: use ${goal} phrases · ${Math.min(used.size, goal)}/${goal}${used.size >= goal ? ' ✓' : ''}`}>

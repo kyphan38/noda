@@ -67,6 +67,7 @@ const BLOCKS: Block[] = [
       'Speaking uses your browser (Chrome or Edge). If the mic does not work, type the answer.',
       'Talk: each talk is one situation with a few facts to use, so you never have to make up a story. 8 answers. Tap the mic (or Space) to answer, tap again to send.',
       'On a phone the talk is one column and the buttons stay at the bottom; on a computer it is two columns (the talk left, your review right) with keys: Space answer, Enter next, R try again, 1-3 versions, Esc cancel.',
+      'You know when it ends: the last turn says "Last answer" so you can close the talk (thanks, next step, goodbye). Reach the goal early and you can keep going or End now.',
       'Each talk has a goal: use 2 (B1), 3 (B2) or 4 (C1) set phrases. At the end: Accuracy, Fluency and Phrases, each Strong, Good or Keep practicing, with the real numbers. No 0-100 score: it would come from AI judgment that changes from run to run.',
       'If the connection drops, the answer is sent again once by itself; if it still fails, Send again uses the same recording.',
       'The review opens on Natural; Correct and Level up are one tap away, and the fixes fold under "n fixes".',

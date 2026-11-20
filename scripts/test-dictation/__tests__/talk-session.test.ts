@@ -35,6 +35,8 @@ vi.mock('@/lib/speakingCheck', () => ({ blobToBase64: async () => 'eA==' }));
 const payloads: TurnPayload[] = [];
 /** How many next runTurn calls fail as a dropped connection. */
 let dropNext = 0;
+/** When true, every answer uses both set phrases (reaches the goal at once). */
+let useAll = false;
 const saved = new Map<string, Session>();
 const saveSession = vi.fn(async (s: Session) => void saved.set(s.id, s));
 const mistakes = new Map<string, TalkMistake>();
@@ -76,7 +78,7 @@ vi.mock('@/lib/talk/store', () => ({
           levelUp: 'I spent the day on the pipeline.',
           fixes: [{ kind: 'grammar', wrong: 'I am working', right: 'I was working', why: 'It is in the past.', pattern: 'verb_tense' }],
         },
-        usedPhraseIds: payloads.length === 1 ? ['p0'] : [],
+        usedPhraseIds: useAll ? ['p0', 'p1'] : payloads.length === 1 ? ['p0'] : [],
       };
     },
   }),
@@ -151,9 +153,12 @@ describe('TalkSession', () => {
     expect(screen.getByText('✓ roll back', { exact: false })).toBeTruthy();
 
     for (let i = 2; i <= 7; i++) {
+      expect(screen.queryByText('Last answer')).toBeNull();
       await answer();
       click('Next');
     }
+    // Told before the final answer, not after the goodbye.
+    expect(screen.getByText('Last answer')).toBeTruthy();
     await answer();
     click('See the summary');
     expect(screen.getByText('Accuracy')).toBeTruthy();
@@ -329,5 +334,21 @@ describe('TalkSession', () => {
     click('Send again');
     await waitFor(() => screen.getByRole('button', { name: /^(Next|See the summary)/ }));
     expect(payloads).toHaveLength(1);
+  });
+
+  it('says when the goal is reached and lets you end there', async () => {
+    saved.clear();
+    mistakes.clear();
+    payloads.length = 0;
+    useAll = true;
+    render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
+    expect(screen.queryByText(/Goal reached/)).toBeNull();
+    await answer();
+    click('Next');
+    expect(screen.getByText(/Goal reached/)).toBeTruthy();
+    click('End now');
+    expect(screen.getByText('Accuracy')).toBeTruthy();
+    useAll = false;
   });
 });

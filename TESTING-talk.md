@@ -142,6 +142,7 @@ then send the file back.
 ## 17. Goal, ratings, connection
 
 - [ ] During a talk, the bottom line shows "Goal: use 3 phrases · n/3" and a ✓ when reached.
+- [ ] Before the final answer you see "Last answer" (top right and under the line). Reaching the goal early shows "Goal reached. Keep going or End now."
 - [ ] The summary starts with Accuracy, Fluency and Phrases (●●● Strong / ●●○ Good / ●○○ Keep practicing) and the numbers.
 - [ ] Turn off Wi-Fi, answer, turn it back on: you see "Connection problem" and Send again works without saying it again.
 - [ ] No long dashes in what the partner says; earlier lines are easy to read; the talk page does not scroll when it fits.
