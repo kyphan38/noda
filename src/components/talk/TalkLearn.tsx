@@ -87,7 +87,7 @@ export function TalkLearn({ topic, setIndex, progress, onProgress, onExit }: Pro
   };
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto w-full max-w-xl pb-10 sm:pb-16 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <button type="button" onClick={onExit} className="text-sm text-gray-400 hover:text-gray-100">
           ← {topic.title}

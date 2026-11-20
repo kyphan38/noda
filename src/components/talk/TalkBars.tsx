@@ -19,10 +19,12 @@ type AnswerProps = {
   fine: boolean;
   onToggle: () => void;
   onCancel: () => void;
+  /** Shown after a connection problem: sends the same take again. */
+  onResend?: () => void;
 };
 
 /** The big mic while it is your turn to answer. */
-export function TalkAnswerBar({ recording, busy, checking, seconds, error, fine, onToggle, onCancel }: AnswerProps) {
+export function TalkAnswerBar({ recording, busy, checking, seconds, error, fine, onToggle, onCancel, onResend }: AnswerProps) {
   const status = checking ? 'Checking your answer…' : recording ? `${seconds}s · tap to send` : 'Tap to answer';
   return (
     <div className={`${PINNED} flex flex-col items-center gap-1.5`}>
@@ -47,6 +49,11 @@ export function TalkAnswerBar({ recording, busy, checking, seconds, error, fine,
         </button>
       )}
       {error && <p className="text-center text-xs text-red-400">{error}</p>}
+      {onResend && !recording && !checking && (
+        <button type="button" onClick={onResend} className="text-xs text-gray-100 underline underline-offset-2">
+          Send again
+        </button>
+      )}
     </div>
   );
 }

@@ -139,7 +139,14 @@ then send the file back.
 - [ ] The speaker icon plays right away every time, with the same voice. On iPhone it plays at all.
 - [ ] iPhone home-screen app: nothing hides under the status bar at the top.
 
-## 17. Theme and phone
+## 17. Goal, ratings, connection
+
+- [ ] During a talk, the bottom line shows "Goal: use 3 phrases · n/3" and a ✓ when reached.
+- [ ] The summary starts with Accuracy, Fluency and Phrases (●●● Strong / ●●○ Good / ●○○ Keep practicing) and the numbers.
+- [ ] Turn off Wi-Fi, answer, turn it back on: you see "Connection problem" and Send again works without saying it again.
+- [ ] No long dashes in what the partner says; earlier lines are easy to read; the talk page does not scroll when it fits.
+
+## 18. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

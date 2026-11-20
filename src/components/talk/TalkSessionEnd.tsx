@@ -6,7 +6,7 @@ import { TalkCompare } from '@/components/talk/TalkCompare';
 import { TalkNotes } from '@/components/talk/TalkNotes';
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
 import { addSessionFixes } from '@/lib/talk/mistake-bank';
-import { talkNumbers } from '@/lib/talk/stats';
+import { GRADE_LABEL, rateTalk } from '@/lib/talk/rating';
 import { topSessionFixes, wordsPerMinute } from '@/lib/talk/session';
 import { getTalkStore } from '@/lib/talk/store';
 import type { TalkPhrase, TalkSession } from '@/lib/talk/types';
@@ -32,31 +32,36 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit, onRedo }: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id]);
 
-  const used = new Set(turns.flatMap((t) => t.usedPhraseIds));
-  const words = turns.reduce((n, t) => n + t.transcript.split(/\s+/).filter(Boolean).length, 0);
-  const seconds = turns.reduce((n, t) => n + t.seconds, 0);
   const top = topSessionFixes(turns);
-
-  const stats = [
-    { label: 'Phrases used', value: `${used.size}/${phrases.length}` },
-    { label: 'Words per answer', value: turns.length ? Math.round(words / turns.length) : 0 },
-    { label: 'Words per minute', value: wordsPerMinute(turns.map((t) => t.transcript).join(' '), seconds) },
-    { label: 'uh/um per answer', value: talkNumbers(session).fillersPerAnswer },
-  ];
+  const ratings = rateTalk(session, phrases.length);
+  const seconds = turns.reduce((n, t) => n + t.seconds, 0);
+  const wpm = wordsPerMinute(turns.map((t) => t.transcript).join(' '), seconds);
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto w-full max-w-xl pb-10 sm:pb-16 space-y-6">
       <button type="button" onClick={onExit} className="text-sm text-gray-400 hover:text-gray-100">
         ← Back to the topic
       </button>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-xl bg-gray-900/60 p-3">
-            <p className="text-xs text-gray-500">{s.label}</p>
-            <p className="text-xl text-gray-100 tabular-nums">{s.value}</p>
-          </div>
-        ))}
-      </div>
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-gray-400">
+          This talk <span className="ml-1 text-xs font-normal text-gray-500">{turns.length} answers · {wpm} words/min</span>
+        </h2>
+        <ul className="space-y-2.5">
+          {ratings.map((r) => (
+            <li key={r.name} className="flex items-baseline gap-3 text-sm">
+              <span className="w-20 shrink-0 text-gray-400">{r.name}</span>
+              <span className="shrink-0 tracking-widest text-gray-100" aria-hidden="true">
+                {'●'.repeat(r.grade)}
+                <span className="text-gray-700">{'●'.repeat(3 - r.grade)}</span>
+              </span>
+              <span className="min-w-0">
+                <span className="text-gray-100">{GRADE_LABEL[r.grade]}</span>
+                <span className="block text-xs text-gray-500">{r.detail}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {top.length > 0 && (
         <section className="space-y-2">

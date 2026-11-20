@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import { noLongDash } from '../../../functions/src/lib/text';
 import { buildTurnPrompt, checkTurnRequest, fixAgrees, frameFor, MAX_FIXES, parseTurnResult, TurnShapeError } from '../../../functions/src/lib/talkTurn';
+
+describe('server noLongDash', () => {
+  it('cleans long dashes inside JSON text', () => {
+    const D = String.fromCharCode(0x2014);
+    expect(JSON.parse(noLongDash(JSON.stringify({ t: `Andy${D}pulling up` }))).t).toBe('Andy, pulling up');
+  });
+});
 
 describe('fixAgrees', () => {
   it('checks grammar fixes against Correct and natural ones against Natural', () => {

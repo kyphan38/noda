@@ -33,6 +33,8 @@ vi.mock('@/hooks/useVoiceRecorder', async () => {
 vi.mock('@/lib/speakingCheck', () => ({ blobToBase64: async () => 'eA==' }));
 
 const payloads: TurnPayload[] = [];
+/** How many next runTurn calls fail as a dropped connection. */
+let dropNext = 0;
 const saved = new Map<string, Session>();
 const saveSession = vi.fn(async (s: Session) => void saved.set(s.id, s));
 const mistakes = new Map<string, TalkMistake>();
@@ -59,6 +61,10 @@ vi.mock('@/lib/talk/store', () => ({
     findOpenSession: async (topicId: string, setIndex: number) =>
       [...saved.values()].filter((x) => x.topicId === topicId && x.setIndex === setIndex && !x.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
     runTurn: async (p: TurnPayload): Promise<TalkTurnResult> => {
+      if (dropNext > 0) {
+        dropNext--;
+        throw Object.assign(new Error('internal'), { code: 'functions/internal' });
+      }
       payloads.push(p);
       return {
         transcript: 'I am working on the pipeline.',
@@ -150,8 +156,8 @@ describe('TalkSession', () => {
     }
     await answer();
     click('See the summary');
-    expect(screen.getByText('Phrases used')).toBeTruthy();
-    expect(screen.getByText('1/2')).toBeTruthy();
+    expect(screen.getByText('Accuracy')).toBeTruthy();
+    expect(screen.getByText('1 of 2 set phrases')).toBeTruthy();
     expect(screen.getByText('Top fixes')).toBeTruthy();
 
     // Notes: made once, with a closing drill on the weakest answers.
@@ -204,7 +210,7 @@ describe('TalkSession', () => {
     await answer();
     click('Next');
     click('End');
-    expect(screen.getByText('Phrases used')).toBeTruthy();
+    expect(screen.getByText('Accuracy')).toBeTruthy();
     expect(screen.getAllByText('I am working on the pipeline.')).toHaveLength(1);
   });
 
@@ -306,5 +312,22 @@ describe('TalkSession', () => {
     await waitFor(() => screen.getByRole('button', { name: /^(Next|See the summary)/ }));
     // In review: no scroll.
     expect(space(document.body)).toBe(true);
+  });
+
+  it('retries a dropped connection once, then offers Send again with the same take', async () => {
+    saved.clear();
+    mistakes.clear();
+    payloads.length = 0;
+    render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
+    dropNext = 2;
+    click('Answer');
+    await waitFor(() => screen.getByRole('button', { name: 'Stop and send' }));
+    click('Stop and send');
+    await waitFor(() => screen.getByText('Connection problem: your answer did not reach the server.'));
+    expect(screen.queryByText(/internal/)).toBeNull();
+    click('Send again');
+    await waitFor(() => screen.getByRole('button', { name: /^(Next|See the summary)/ }));
+    expect(payloads).toHaveLength(1);
   });
 });

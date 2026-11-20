@@ -5,6 +5,7 @@ import { Volume2 } from 'lucide-react';
 
 import { fixSegments } from '@/lib/talk/session';
 import { speak } from '@/lib/talk/speak';
+import { noLongDash } from '@/lib/talk/text';
 import type { TalkTurn } from '@/lib/talk/types';
 
 export type VersionKey = 'correct' | 'natural' | 'levelUp';
@@ -87,7 +88,7 @@ export function TalkReviewCard({ turn, selfRepair, onChange, level, onLevel, sho
               <Volume2 className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-base leading-relaxed text-gray-100">{turn.review[showing]}</p>
+          <p className="text-base leading-relaxed text-gray-100">{noLongDash(turn.review[showing])}</p>
           {turn.review.structure && <p className="text-xs text-gray-400">Order: {turn.review.structure}</p>}
 
           {fixes.length > 0 && (

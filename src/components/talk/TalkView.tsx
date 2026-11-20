@@ -121,7 +121,7 @@ export function TalkView() {
     `shrink-0 rounded-lg border px-2.5 py-1 text-xs transition-colors ${on ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`;
 
   return (
-    <div className="mx-auto max-w-xl space-y-5">
+    <div className="mx-auto w-full max-w-xl pb-10 sm:pb-16 space-y-5">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1" role="radiogroup" aria-label="Level">
           {TALK_LEVELS.map((l) => (

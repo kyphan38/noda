@@ -14,6 +14,8 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
 import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, replyKindFor, TURN_COUNT, whenLabel, type ReplyKind } from '@/lib/talk/session';
 import { speak, stopSpeaking } from '@/lib/talk/speak';
+import { friendlyError, isConnectionError } from '@/lib/talk/errors';
+import { phraseGoal } from '@/lib/talk/rating';
 import { getTalkStore } from '@/lib/talk/store';
 import { DEFAULT_PREFS, readLastScenario, readPrefs, writeLastScenario, writePrefs, type TalkPrefs as Prefs } from '@/lib/talk/prefs';
 import type { TalkPhraseProgress, TalkScenario, TalkSession as Session, TalkTopic, TalkTurn } from '@/lib/talk/types';
@@ -49,6 +51,9 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const recorder = useVoiceRecorder();
   /** Bumped by Cancel, so a check that comes back late is ignored. */
   const attemptRef = useRef(0);
+  /** The last take, kept until it is checked, so a dropped connection does not mean saying it again. */
+  const lastBlob = useRef<Blob | null>(null);
+  const [canResend, setCanResend] = useState(false);
   const progressRef = useRef(progress);
   useEffect(() => {
     progressRef.current = progress;
@@ -118,6 +123,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   };
 
   const total = session?.length ?? TURN_COUNT;
+  const goal = phraseGoal(topic.level, phrases.length);
   const used = useMemo(() => new Set(session?.turns.flatMap((t) => t.usedPhraseIds) ?? []), [session]);
 
   const save = (s: Session) => void getTalkStore().saveSession(s).catch((e) => console.warn('[talk] session save failed', e));
@@ -136,16 +142,16 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     speak(l.text);
   };
 
-  const submit = useCallback(async () => {
+  /** Sends a recording; a dropped connection is retried once, then the take is kept for Send again. */
+  const send = useCallback(async (blob: Blob) => {
     if (!session || !line) return;
-    const blob = await recorder.stop();
-    if (!blob) return;
+    lastBlob.current = blob;
+    setCanResend(false);
     setPhase('checking');
     setError(null);
     const idx = session.turns.length;
     const attempt = ++attemptRef.current;
-    try {
-      const result = await getTalkStore().runTurn({
+    const run = async () => getTalkStore().runTurn({
         topicId: topic.id,
         scenarioId: session.scenarioId,
         aiLine: line.text,
@@ -158,7 +164,10 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         recording: await blobToBase64(blob),
         recordingMimeType: blob.type || 'audio/webm',
       });
+    try {
+      const result = await run().catch((e) => (isConnectionError(e) ? run() : Promise.reject(e)));
       if (attempt !== attemptRef.current) return;
+      lastBlob.current = null;
       const turn: TalkTurn = {
         ai: { text: line.text, curveball: line.curveball, ...(line.kind ? { kind: line.kind } : {}) },
         ideas: line.ideas,
@@ -183,12 +192,18 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
       else nextLine(s, reply);
     } catch (e) {
       if (attempt !== attemptRef.current) return;
-      setError(e instanceof Error ? e.message : 'Could not check this answer, try again.');
+      setError(friendlyError(e, 'Could not check this answer, try again.'));
+      setCanResend(isConnectionError(e));
       setPhase('answer');
     }
     // nextLine and save only read their arguments.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, line, recorder, topic.id, phrases, used, curveAt, prefs, onProgress]);
+  }, [session, line, topic.id, phrases, used, curveAt, prefs, onProgress]);
+
+  const submit = useCallback(async () => {
+    const blob = await recorder.stop();
+    if (blob) await send(blob);
+  }, [recorder, send]);
 
   const toggleRecord = useCallback(() => {
     if (phase !== 'answer') return;
@@ -294,8 +309,8 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   };
 
   return (
-    // At least a screen tall, so the bar sits at the bottom (thumb reach) even when the talk is short.
-    <div className="flex min-h-[calc(100dvh-11rem)] flex-col gap-5 sm:min-h-[calc(100dvh-13rem)]">
+    // Fills the rest of the screen (AuthPage wide), so the bar sits at the bottom, in thumb reach, with no extra scroll.
+    <div className="flex flex-1 flex-col gap-5">
       <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
         <button type="button" onClick={onExit} className="truncate text-sm text-gray-400 hover:text-gray-100">
           ← {topic.title}
@@ -397,7 +412,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         </div>
       )}
 
-      <Fold label={`Phrases ${used.size}/${phrases.length}`}>
+      <Fold label={`Goal: use ${goal} phrases · ${Math.min(used.size, goal)}/${goal}${used.size >= goal ? ' ✓' : ''}`}>
         <div className="flex flex-wrap gap-1.5">
           {phrases.map((p) => (
             <span key={p.id} className={`rounded-md border px-2 py-0.5 ${used.has(p.id) ? 'border-gray-500 text-gray-100' : 'border-gray-800 text-gray-500'}`}>
@@ -429,6 +444,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
             fine={fine}
             onToggle={toggleRecord}
             onCancel={cancelAnswer}
+            onResend={canResend && lastBlob.current ? () => void send(lastBlob.current!) : undefined}
           />
         ))}
     </div>

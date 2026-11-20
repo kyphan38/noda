@@ -5,6 +5,7 @@ import { Volume2, Zap } from 'lucide-react';
 
 import { TalkStuckPanel } from '@/components/talk/TalkStuckPanel';
 import { speak } from '@/lib/talk/speak';
+import { noLongDash } from '@/lib/talk/text';
 import type { TalkPhrase } from '@/lib/talk/types';
 
 type Props = {
@@ -22,8 +23,9 @@ type Props = {
 };
 
 /** What the partner just said: plain text, no box, with Play, Hide text and Stuck? under it. */
-export function TalkLine({ topicId, name, text, curveball, kind, ideas, hints, showText, onToggleText, quiet }: Props) {
+export function TalkLine({ topicId, name, text: raw, curveball, kind, ideas, hints, showText, onToggleText, quiet }: Props) {
   const [stuck, setStuck] = useState(false);
+  const text = noLongDash(raw);
   return (
     <div className="space-y-2">
       <p className="text-xs text-gray-500">

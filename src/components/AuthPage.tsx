@@ -17,14 +17,15 @@ export function AuthPage({ title, wide = false, children }: { title: string; wid
   return (
     <main className="h-dvh overflow-y-auto">
       {/* The top padding clears the iPhone status bar when noda runs from the home screen. */}
-      <div className={`mx-auto w-full ${wide ? 'max-w-xl md:max-w-5xl' : 'max-w-xl'} space-y-8 px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-10 sm:pt-16 sm:pb-16`}>
+      {/* Wide pages fill exactly the screen height, so a talk can keep its bar at the bottom without any extra scroll. */}
+      <div className={`mx-auto w-full ${wide ? 'flex min-h-full max-w-xl flex-col gap-8 md:max-w-5xl' : 'max-w-xl space-y-8'} px-4 pt-[max(2.5rem,env(safe-area-inset-top))] ${wide ? 'pb-0' : 'pb-10 sm:pb-16'} sm:pt-16`}>
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="text-2xl font-semibold text-gray-100">{title}</h1>
           <Link href="/" className="text-sm text-gray-400 hover:text-gray-100">
             Back to noda
           </Link>
         </div>
-        {children}
+        {wide ? <div className="flex flex-1 flex-col">{children}</div> : children}
       </div>
     </main>
   );

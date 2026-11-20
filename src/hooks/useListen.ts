@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
+import { friendlyError } from '@/lib/talk/errors';
 import { BROWSER_DEAD, isAppleTouch, pickEngine, speechErrorReason, type ListenEngine } from '@/lib/talk/listen';
 import { stopSpeaking } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
@@ -106,7 +107,7 @@ export function useListen() {
       const r = await getTalkStore().speech({ mode: 'transcribe', source: '', recording: await blobToBase64(blob), recordingMimeType: blob.type || 'audio/webm' });
       done(r.transcript ? { heard: [r.transcript] } : { heard: [], reason: 'No speech heard. Try again.' });
     } catch (e) {
-      done({ heard: [], reason: e instanceof Error ? e.message : 'Could not check the recording.' });
+      done({ heard: [], reason: friendlyError(e, 'Could not check the recording.') });
     } finally {
       setStatus('idle');
     }

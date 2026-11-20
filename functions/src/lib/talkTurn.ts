@@ -186,7 +186,7 @@ export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
     "3. reply: what you say next, as " + p.name + ".",
     answerFirst,
     replyRule,
-    "- Sound like a real person talking, not writing: contractions, short sentences, small spoken reactions (Oh, Hmm, Right, Oh no) and real feelings (surprise, worry, relief, a light joke) when they fit. No lists, no formal phrases.",
+    "- Sound like a real person talking, not writing: contractions, short sentences, small spoken reactions (Oh, Hmm, Right, Oh no) and real feelings (surprise, worry, relief, a light joke) when they fit. No lists, no formal phrases, no long dashes (use a comma or a period).",
     "- If the learner made a clear mistake in an important word or verb, echo their idea back correctly inside your reply, the way people do in conversation (they say \"I go to the office yesterday\", you say \"Oh, you went in yesterday?\"). Never say they made a mistake.",
     "- Listen to how they spoke: if the answer was very short (a few words), kindly ask for a bit more. If they hesitated a lot (long pauses, or 3 or more uh/um in your transcript), your reply MUST start with a short encouraging phrase (No rush, Take your time, No worries) before anything else.",
     "   Set curveball to true only when this reply is a curveball.",
