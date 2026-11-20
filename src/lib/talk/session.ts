@@ -111,3 +111,25 @@ export function pickScenario<T extends { id: string }>(scenarios: T[], lastId?: 
   const pool = scenarios.length > 1 ? scenarios.filter((s) => s.id !== lastId) : scenarios;
   return pool[Math.floor(random() * pool.length)] ?? null;
 }
+
+const FILLER = /^(uh+|um+|uhm+|erm*|ah+|hmm+|mm+)$/i;
+
+/** "uh", "um" and friends in a transcript. */
+export function countFillers(transcript: string): number {
+  return transcript
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-z]/gi, ''))
+    .filter((w) => FILLER.test(w)).length;
+}
+
+/** Natural ways to buy a few seconds instead of "uh". Fixed list: no model call. */
+export const STALL_PHRASES = [
+  'Let me think for a second.',
+  "That's a good question.",
+  'How can I put this?',
+  'Off the top of my head,',
+  "I'd say",
+  'Well, it depends.',
+  'Give me a moment.',
+  'If I remember right,',
+];

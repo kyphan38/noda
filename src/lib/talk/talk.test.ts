@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { answerItem, buildQueue, currentItem, isQueueDone, matchingRounds, shuffle } from './learn-queue';
 import { isPhraseSpoken, isPhraseTyped, makeCloze, phraseHint } from './phrase-check';
-import { progressId, raiseStage, stageAtLeast, summarizeSets } from './phrase-stage';
+import { progressId, raiseStage, stageAtLeast, stageLabel, summarizeSets } from './phrase-stage';
 import { pickVoice } from './speak';
 import type { TalkPhrase, TalkPhraseProgress } from './types';
 
@@ -94,6 +94,8 @@ describe('phrase stage', () => {
     expect(stageAtLeast('prompted', 'recalled')).toBe(true);
     expect(stageAtLeast(undefined, 'recognized')).toBe(false);
     expect(progressId('t1', 'p3')).toBe('t1__p3');
+    expect(stageLabel(undefined)).toBe('Learning');
+    expect(stageLabel('active')).toBe('Yours');
   });
   it('summarizes sets and skips removed phrases', () => {
     const p = (id: string, setIndex: number, removed = false): TalkPhrase => ({ id, text: id, ipa: '', meaning: '', example: '', setIndex, removed });

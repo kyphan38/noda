@@ -9,7 +9,7 @@ import { TalkToggle as Toggle } from '@/components/talk/TalkToggle';
 import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
-import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, TURN_COUNT } from '@/lib/talk/session';
+import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, STALL_PHRASES, TURN_COUNT } from '@/lib/talk/session';
 import { speak } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
 import { DEFAULT_PREFS, readLastScenario, readPrefs, writeLastScenario, writePrefs, type TalkPrefs as Prefs } from '@/lib/talk/prefs';
@@ -42,6 +42,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const [error, setError] = useState<string | null>(null);
   const [showIdeas, setShowIdeas] = useState(false);
   const [showHints, setShowHints] = useState(false);
+  const [showStall, setShowStall] = useState(false);
   const recorder = useVoiceRecorder();
   /** Bumped by Cancel, so a check that comes back late is ignored. */
   const attemptRef = useRef(0);
@@ -121,6 +122,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const nextLine = (s: Session, l: Line) => {
     setShowIdeas(false);
     setShowHints(false);
+    setShowStall(false);
     if (s.turns.length >= (s.length ?? TURN_COUNT)) {
       const done = { ...s, endedAt: Date.now() };
       setSession(done);
@@ -398,6 +400,9 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
                       Phrases
                     </button>
                   )}
+                  <button type="button" onClick={() => setShowStall((v) => !v)} className="text-gray-400 hover:text-gray-100">
+                    Buy time
+                  </button>
                 </div>
                 {showIdeas && (
                   <ul className="list-disc pl-5 text-sm text-gray-300">
@@ -405,6 +410,15 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
                       <li key={i}>{i}</li>
                     ))}
                   </ul>
+                )}
+                {showStall && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {STALL_PHRASES.map((p) => (
+                      <span key={p} className="rounded-md border border-gray-800 px-2 py-0.5 text-xs text-gray-300">
+                        {p}
+                      </span>
+                    ))}
+                  </div>
                 )}
                 {showHints && (
                   <div className="flex flex-wrap gap-1.5">

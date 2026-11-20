@@ -1,7 +1,7 @@
 // noda - Talk: numbers across talks (streak, this week, old vs new). Pure.
 
 import { PATTERN_LABELS } from './mistake-bank';
-import { wordsPerMinute } from './session';
+import { countFillers, wordsPerMinute } from './session';
 import type { TalkSession } from './types';
 
 /** Missed days that do not break a streak, per 7 days. */
@@ -70,7 +70,7 @@ export function weekSummary(sessions: TalkSession[], now: number): WeekSummary {
   };
 }
 
-export type TalkNumbers = { wordsPerAnswer: number; wpm: number; fixesPerAnswer: number; phrasesUsed: number };
+export type TalkNumbers = { wordsPerAnswer: number; wpm: number; fixesPerAnswer: number; fillersPerAnswer: number; phrasesUsed: number };
 
 /** The numbers compared when a talk is done again. */
 export function talkNumbers(s: TalkSession): TalkNumbers {
@@ -82,6 +82,7 @@ export function talkNumbers(s: TalkSession): TalkNumbers {
     wordsPerAnswer: Math.round(words / n),
     wpm: wordsPerMinute(s.turns.map((t) => t.transcript).join(' '), seconds),
     fixesPerAnswer: Math.round((fixes / n) * 10) / 10,
+    fillersPerAnswer: Math.round((s.turns.reduce((a, t) => a + countFillers(t.transcript), 0) / n) * 10) / 10,
     phrasesUsed: new Set(s.turns.flatMap((t) => t.usedPhraseIds)).size,
   };
 }

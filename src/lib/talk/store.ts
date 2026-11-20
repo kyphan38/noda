@@ -27,6 +27,8 @@ export type TalkStore = {
   markCapturesUsed(ids: string[], topicId: string): Promise<void>;
   listSessions(since: number): Promise<TalkSession[]>;
   getSession(id: string): Promise<TalkSession | null>;
+  setStar(topicId: string, p: TalkPhrase, starred: boolean, prev?: TalkPhraseProgress): Promise<TalkPhraseProgress>;
+  listStarred(): Promise<TalkPhraseProgress[]>;
 };
 
 const firestoreStore: TalkStore = {
@@ -50,6 +52,8 @@ const firestoreStore: TalkStore = {
   markCapturesUsed: fsdb.markCapturesUsed,
   listSessions: fsdb.listTalkSessions,
   getSession: fsdb.getTalkSession,
+  setStar: fsdb.setPhraseStar,
+  listStarred: fsdb.listStarredPhrases,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -168,6 +172,14 @@ function memoryStore(): TalkStore {
     deleteCapture: async (id) => void captures.delete(id),
     listSessions: async (since) => [...sessions.values()].filter((s) => s.startedAt >= since),
     getSession: async (id) => sessions.get(id) ?? null,
+    setStar: async (topicId, p, starred, prev) => {
+      const row = { topicId, phraseId: p.id, text: p.text, stage: prev?.stage ?? ('new' as const), usedCount: prev?.usedCount ?? 0, starred, updatedAt: Date.now() };
+      const m = progress.get(topicId) ?? new Map();
+      m.set(p.id, row);
+      progress.set(topicId, m);
+      return row;
+    },
+    listStarred: async () => [...progress.values()].flatMap((m) => [...m.values()]).filter((p) => p.starred),
     markCapturesUsed: async (ids, topicId) => ids.forEach((id) => captures.has(id) && captures.set(id, { ...captures.get(id)!, usedInTopicId: topicId })),
     findOpenSession: async (topicId, setIndex) =>
       [...sessions.values()].filter((s) => s.topicId === topicId && s.setIndex === setIndex && !s.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,

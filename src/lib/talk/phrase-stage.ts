@@ -4,6 +4,16 @@ import type { PhraseStage, TalkPhrase, TalkPhraseProgress } from './types';
 
 const ORDER: PhraseStage[] = ['new', 'recognized', 'recalled', 'prompted', 'active'];
 
+const STAGE_LABELS: Record<PhraseStage, string> = {
+  new: 'Learning',
+  recognized: 'Learning',
+  recalled: 'Known',
+  prompted: 'Used with help',
+  active: 'Yours',
+};
+
+export const stageLabel = (s: PhraseStage | undefined) => STAGE_LABELS[s ?? 'new'];
+
 export function raiseStage(current: PhraseStage | undefined, reached: PhraseStage): PhraseStage {
   const cur = current ?? 'new';
   return ORDER.indexOf(reached) > ORDER.indexOf(cur) ? reached : cur;

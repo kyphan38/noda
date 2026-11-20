@@ -89,7 +89,14 @@ then send the file back.
 - [ ] The top of Talk shows **This week**: streak, talks, minutes, words per minute, and your most common mistakes.
 - [ ] Practice on two days in a row: the streak shows 2 days.
 
-## 10. Theme and phone
+## 10. Buy time and starred phrases
+
+- [ ] In a talk, **Buy time** shows phrases like "Let me think for a second."
+- [ ] Say "uh" or "um" in an answer: the summary shows **uh/um per answer** above 0.
+- [ ] On a topic, open a set and tap the **star** on a phrase. It fills in.
+- [ ] Back on Talk, **Starred phrases** lists it with its level (Learning, Known, Used with help, Yours).
+
+## 11. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

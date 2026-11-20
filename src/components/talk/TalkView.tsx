@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { TalkCaptureBox } from '@/components/talk/TalkCaptureBox';
 import { TalkTopicView } from '@/components/talk/TalkTopicView';
+import { TalkStarredList } from '@/components/talk/TalkStarredList';
 import { TalkWeekCard } from '@/components/talk/TalkWeekCard';
 import { TALK_CATEGORIES, TALK_PRESETS, presetTopicId, randomPreset, type TalkPreset } from '@/lib/talk/presets';
 import { warmUpVoices } from '@/lib/talk/speak';
@@ -111,6 +112,8 @@ export function TalkView() {
       </div>
 
       <TalkWeekCard />
+
+      <TalkStarredList />
 
       <TalkCaptureBox
         busy={making !== null}

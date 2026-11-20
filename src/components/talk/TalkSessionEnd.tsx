@@ -6,6 +6,7 @@ import { TalkCompare } from '@/components/talk/TalkCompare';
 import { TalkNotes } from '@/components/talk/TalkNotes';
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
 import { addSessionFixes } from '@/lib/talk/mistake-bank';
+import { talkNumbers } from '@/lib/talk/stats';
 import { topSessionFixes, wordsPerMinute } from '@/lib/talk/session';
 import { getTalkStore } from '@/lib/talk/store';
 import type { TalkPhrase, TalkSession } from '@/lib/talk/types';
@@ -40,11 +41,12 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit, onRedo }: P
     { label: 'Phrases used', value: `${used.size}/${phrases.length}` },
     { label: 'Words per answer', value: turns.length ? Math.round(words / turns.length) : 0 },
     { label: 'Words per minute', value: wordsPerMinute(turns.map((t) => t.transcript).join(' '), seconds) },
+    { label: 'uh/um per answer', value: talkNumbers(session).fillersPerAnswer },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="rounded-xl bg-gray-900/60 p-3">
             <p className="text-xs text-gray-500">{s.label}</p>

@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Volume2 } from 'lucide-react';
+import { Star, Volume2 } from 'lucide-react';
 
 import { TalkLearn } from '@/components/talk/TalkLearn';
 import { TalkSession } from '@/components/talk/TalkSession';
 import { stageAtLeast, summarizeSets } from '@/lib/talk/phrase-stage';
 import { speak } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
-import type { TalkPhraseProgress, TalkTopic } from '@/lib/talk/types';
+import type { TalkPhrase, TalkPhraseProgress, TalkTopic } from '@/lib/talk/types';
 
 type Props = { topic: TalkTopic; onBack: () => void; onChange: (t: TalkTopic) => void; onDelete: () => void };
 
@@ -46,6 +46,12 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
       />
     );
   }
+
+  const toggleStar = async (p: TalkPhrase) => {
+    const prev = progress?.get(p.id);
+    const row = await getTalkStore().setStar(topic.id, p, !prev?.starred, prev);
+    setProgress((m) => new Map(m ?? []).set(p.id, row));
+  };
 
   const toggleRemoved = async (phraseId: string, removed: boolean) => {
     const phrases = await getTalkStore().setPhraseRemoved(topic, phraseId, removed);
@@ -100,6 +106,14 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
                           {stageAtLeast(progress.get(p.id)?.stage, 'recalled') && <span className="ml-2 text-xs text-gray-400">✓</span>}
                           <span className="block text-xs text-gray-500">{p.meaning}</span>
                         </span>
+                        <button
+                          type="button"
+                          aria-label={progress.get(p.id)?.starred ? `Unstar ${p.text}` : `Star ${p.text}`}
+                          onClick={() => void toggleStar(p)}
+                          className={progress.get(p.id)?.starred ? 'text-gray-100' : 'text-gray-600 hover:text-gray-300'}
+                        >
+                          <Star className="h-4 w-4" fill={progress.get(p.id)?.starred ? 'currentColor' : 'none'} />
+                        </button>
                         <button type="button" onClick={() => void toggleRemoved(p.id, !p.removed)} className="text-xs text-gray-500 hover:text-gray-100">
                           {p.removed ? 'Bring back' : 'Hide'}
                         </button>

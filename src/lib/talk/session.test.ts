@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { curveballTurn, fixSegments, hintPhrases, pickScenario, topSessionFixes, wordsPerMinute } from './session';
+import { countFillers, curveballTurn, fixSegments, hintPhrases, pickScenario, topSessionFixes, wordsPerMinute } from './session';
 import type { TalkFix, TalkPhrase, TalkTurn } from './types';
 
 const fix = (wrong: string, kind: TalkFix['kind'] = 'grammar', pattern = 'other'): TalkFix => ({ kind, wrong, right: `${wrong}!`, why: '', pattern });
@@ -75,5 +75,12 @@ describe('pickScenario', () => {
     expect(pickScenario(s, 's0', () => 0)?.id).toBe('s1');
     expect(pickScenario([{ id: 's0' }], 's0')?.id).toBe('s0');
     expect(pickScenario([])).toBeNull();
+  });
+});
+
+describe('countFillers', () => {
+  it('counts uh, um and friends, not real words', () => {
+    expect(countFillers('Uh, I think, um... the umbrella, uhh, hmm, ah okay')).toBe(5);
+    expect(countFillers('')).toBe(0);
   });
 });

@@ -76,6 +76,8 @@ const BLOCKS: Block[] = [
       'Your fixes go into a mistake bank by type (verb tense, a/an/the...). A new talk starts with a short warm-up on your top types. 5 right in a row and a type is done.',
       'A phrase you use in another talk without seeing it on the list counts as yours (Active).',
       'Got stuck in a real talk? Type what you wanted to say in the box at the top of Talk, in any language. Practice these makes a topic where you have to say those things.',
+      'Stuck for a second? Buy time shows natural ways to pause instead of uh or um. The summary counts your uh/um per answer.',
+      'Star (on a set) the phrases that fit you. Starred phrases at the top of Talk shows how far each one is: Learning, Known, Used with help, Yours.',
       'Busy day? Turn on Quick before the first answer: 3 answers instead of 8.',
       'Talk this again (at the end) does the same situation again, then shows last time and now side by side.',
       'This week (top of Talk): your streak, talks, minutes and words per minute. Up to 2 missed days in 7 do not break the streak.',

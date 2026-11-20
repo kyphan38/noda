@@ -304,10 +304,12 @@ Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
 6. **Khung BLUF / STAR**: tự gắn theo loại topic, chỉ nhận xét câu trả lời dài.
 7. **Chế độ 5 phút** + streak có ngày nghỉ - XONG (2026-11-20): Quick = 3 lượt; streak cho phép
    2 ngày nghỉ trong 7 ngày.
-8. **Stalling phrases**: bộ cụm câu giờ ghim sẵn, kèm đếm "uh/um" (cần transcript Gemini).
+8. **Stalling phrases** - XONG (2026-11-20): nút "Buy time" (8 cụm cố định), đếm uh/um mỗi lượt
+   ở màn kết thúc và bảng so sánh (transcript Gemini đã giữ filler).
 9. **Hint tầng 2**: gõ ý bằng tiếng Anh đơn giản (nói vòng), nhận lại 2-3 cụm mồi.
 10. **4/3/2 (60s → 45s → 30s)**, kiểm tra cả "còn đủ ý chính".
-11. **Signature Phrasebook**: gắn sao cụm "hợp miệng", theo dõi riêng.
+11. **Signature Phrasebook** - XONG (2026-11-20): sao trên cụm trong set; "Starred phrases" trên
+    `/talk` với mức Learning / Known / Used with help / Yours.
 12. **Đẩy cụm sang Anki** (dùng skill `anki-import`). Cụm Active thì không đẩy.
 13. **Báo cáo tuần** - XONG (2026-11-20): thẻ "This week" trên `/talk` (streak, số buổi, phút,
     từ/phút, 3 lỗi hay gặp nhất).

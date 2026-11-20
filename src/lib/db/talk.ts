@@ -93,7 +93,7 @@ export async function savePhraseStages(
     const prev = current.get(p.id);
     const stage = raiseStage(prev?.stage, reached);
     if (prev && stage === prev.stage) continue;
-    const row: TalkPhraseProgress = { topicId, phraseId: p.id, text: p.text, stage, usedCount: prev?.usedCount ?? 0, updatedAt: now };
+    const row: TalkPhraseProgress = { ...prev, topicId, phraseId: p.id, text: p.text, stage, usedCount: prev?.usedCount ?? 0, updatedAt: now };
     batch.set(doc(db, progressPath(uid), progressId(topicId, p.id)), row);
     next.set(p.id, row);
   }
@@ -220,4 +220,18 @@ export async function getTalkSession(id: string): Promise<TalkSession | null> {
   const uid = getCurrentUidOrThrow();
   const snap = await getDoc(doc(getFirebaseFirestore(), sessionsPath(uid), id));
   return snap.exists() ? { ...(snap.data() as Omit<TalkSession, 'id'>), id: snap.id } : null;
+}
+
+/** Stars (or unstars) a phrase that fits you; keeps its stage. */
+export async function setPhraseStar(topicId: string, p: TalkPhrase, starred: boolean, prev?: TalkPhraseProgress): Promise<TalkPhraseProgress> {
+  const uid = getCurrentUidOrThrow();
+  const row: TalkPhraseProgress = { topicId, phraseId: p.id, text: p.text, stage: prev?.stage ?? 'new', usedCount: prev?.usedCount ?? 0, starred, updatedAt: Date.now() };
+  await setDoc(doc(getFirebaseFirestore(), progressPath(uid), progressId(topicId, p.id)), row);
+  return row;
+}
+
+export async function listStarredPhrases(): Promise<TalkPhraseProgress[]> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(query(collection(getFirebaseFirestore(), progressPath(uid)), where('starred', '==', true)));
+  return snap.docs.map((d) => d.data() as TalkPhraseProgress);
 }

@@ -42,6 +42,8 @@ export type TalkPhraseProgress = {
   phraseId: string;
   text: string;
   stage: PhraseStage;
+  /** A phrase you picked as one that fits you. */
+  starred?: boolean;
   usedCount: number;
   updatedAt: number;
 };

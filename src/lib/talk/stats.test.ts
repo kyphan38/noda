@@ -69,7 +69,7 @@ describe('weekSummary', () => {
 
 describe('talkNumbers', () => {
   it('gives per-answer numbers', () => {
-    const n = talkNumbers(session(0, [turn('a b c d', 2, [fix('x'), fix('y')], ['p0'], [1]), turn('e f', 2, [], ['p0', 'p1'])]));
-    expect(n).toEqual({ wordsPerAnswer: 3, wpm: 90, fixesPerAnswer: 0.5, phrasesUsed: 2 });
+    const n = talkNumbers(session(0, [turn('a b c um', 2, [fix('x'), fix('y')], ['p0'], [1]), turn('e f', 2, [], ['p0', 'p1'])]));
+    expect(n).toEqual({ wordsPerAnswer: 3, wpm: 90, fixesPerAnswer: 0.5, fillersPerAnswer: 0.5, phrasesUsed: 2 });
   });
 });

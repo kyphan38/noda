@@ -10,6 +10,7 @@ const ROWS: { key: keyof TalkNumbers; label: string; better: 'up' | 'down' }[] =
   { key: 'wordsPerAnswer', label: 'Words per answer', better: 'up' },
   { key: 'wpm', label: 'Words per minute', better: 'up' },
   { key: 'fixesPerAnswer', label: 'Fixes per answer', better: 'down' },
+  { key: 'fillersPerAnswer', label: 'uh/um per answer', better: 'down' },
   { key: 'phrasesUsed', label: 'Phrases used', better: 'up' },
 ];
 
