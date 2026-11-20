@@ -46,6 +46,9 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit, onRedo }: P
 
   return (
     <div className="space-y-6">
+      <button type="button" onClick={onExit} className="text-sm text-gray-400 hover:text-gray-100">
+        ← Back to the topic
+      </button>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="rounded-xl bg-gray-900/60 p-3">

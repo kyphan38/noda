@@ -29,7 +29,7 @@ export function TalkWeekCard() {
   const parts = [
     `${data.streak}-day streak`,
     `${week.talks} ${week.talks === 1 ? 'talk' : 'talks'}`,
-    `${week.minutes} min`,
+    week.minutes < 1 ? 'under 1 min' : `${week.minutes} min`,
     `${week.wpm} words/min`,
   ];
   return (

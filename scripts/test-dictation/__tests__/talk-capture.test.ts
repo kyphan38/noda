@@ -33,7 +33,7 @@ describe('TalkCaptureBox', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(screen.getByText('Type what you wanted to say.')).toBeTruthy();
 
-    fireEvent.change(screen.getByPlaceholderText('Got stuck? What did you want to say?'), { target: { value: '  bị block bởi team khác  ' } });
+    fireEvent.change(screen.getByPlaceholderText('Got stuck? Note it here'), { target: { value: '  bị block bởi team khác  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => screen.getByText('Saved (2)'));
 

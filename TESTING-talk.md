@@ -72,7 +72,7 @@ then send the file back.
 
 ## 7. Stuck box
 
-- [ ] At the top of Talk: type a sentence you could not say (any language), **Save**.
+- [ ] At the top of Talk ("Got stuck? Note it here"): type a sentence you could not say (any language), **Save**.
 - [ ] **Saved (n)** opens the list. The X deletes one.
 
 ## 8. Meeting prep and stuck lines

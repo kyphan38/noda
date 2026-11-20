@@ -161,7 +161,7 @@ export function TalkView() {
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       <div className="space-y-2">
-        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist">
+        <div className="flex flex-wrap gap-1" role="tablist">
           {tabs.map((t) => (
             <button key={t.id} type="button" role="tab" aria-selected={current === t.id} onClick={() => pickTab(t.id)} className={chip(current === t.id)}>
               {t.label}

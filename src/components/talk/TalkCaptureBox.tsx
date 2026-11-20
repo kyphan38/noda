@@ -69,7 +69,7 @@ export function TalkCaptureBox({ busy = false, onPractice }: Props) {
             setText(e.target.value);
             setError(null);
           }}
-          placeholder="Got stuck? What did you want to say?"
+          placeholder="Got stuck? Note it here"
           className="min-w-0 flex-1 rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
         />
         <button type="submit" className="rounded-lg bg-gray-100 px-3 text-sm font-medium text-gray-900 hover:bg-white">
