@@ -22,7 +22,7 @@ const BLOCKS: Block[] = [
       'Make folders and drag lessons into them.',
       'Swipe left to close it on a phone.',
       'At the top: theme, export all data (.json) and log out.',
-      'At the bottom: Mistakes, Speaking and this Guide.',
+      'At the bottom: Mistakes, Speaking, Talk and this Guide.',
     ],
   },
   {
@@ -53,6 +53,17 @@ const BLOCKS: Block[] = [
       'Control plays the line again.',
       'After 2 misses on a line (wrong letters or hints), it plays again at 0.8x. The next line is back to your speed.',
       'paragraph: play a part of about 5 sentences, write it all in one box, then Check to see the missed words and your %. Control plays the part again. Practice only, not saved.',
+    ],
+  },
+  {
+    title: 'Talk',
+    lines: [
+      'Learn useful phrases for a work topic, then (soon) speak them with an AI colleague.',
+      'Pick your level (B1, B2, C1) and a topic, or make your own topic. A new topic takes up to a minute to make, then it is saved.',
+      'Each topic has 4 sets of 10 phrases. Open a set to see its phrases. Hide one that sounds odd.',
+      'Learn a set: read the cards (tap to hear), match phrases to meanings, then fill the blanks and say each phrase from its Vietnamese meaning.',
+      'A wrong answer comes back a few items later. The set is done when nothing is wrong.',
+      'Speaking uses your browser (Chrome or Edge). If the mic does not work, type the answer.',
     ],
   },
   {

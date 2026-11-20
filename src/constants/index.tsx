@@ -74,6 +74,8 @@ export const SHADOWING_PREFETCH_COUNT = 2;
 
 // Speaking check (Cloud Function name; must match functions/src/index.ts export)
 export const SPEAKING_CHECK_FUNCTION_NAME = 'assessSpeaking';
+// Talk topic maker (Cloud Function name; must match functions/src/index.ts export)
+export const TALK_TOPIC_FUNCTION_NAME = 'talkTopic';
 /** Segment size for the speaking check: long enough to judge, short enough to remember. */
 export const SPEAKING_SEGMENT_MIN_WORDS = 30;
 export const SPEAKING_SEGMENT_MAX_WORDS = 50;

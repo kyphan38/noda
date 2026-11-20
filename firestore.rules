@@ -24,6 +24,14 @@ service cloud.firestore {
     match /users/{userId}/lessons/{lessonId}/content/{docId} {
       allow read, write: if isOwner(userId);
     }
+    // Talk: the talkTopic function creates a topic; the app hides phrases and deletes topics.
+    match /users/{userId}/talkTopics/{topicId} {
+      allow read, update, delete: if isOwner(userId);
+      allow create: if false;
+    }
+    match /users/{userId}/talkPhraseProgress/{progressId} {
+      allow read, write: if isOwner(userId);
+    }
     match /users/{userId}/lessons/{lessonId}/shadowingAnalysis/{sentenceId} {
       allow read: if isOwner(userId);
       allow write: if false; // only Cloud Function (Admin SDK) writes here

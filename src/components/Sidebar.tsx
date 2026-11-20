@@ -419,6 +419,9 @@ function SidebarImpl({
               <Link href="/speaking" className="text-sm text-gray-400 hover:text-white transition-colors">
                 Speaking
               </Link>
+              <Link href="/talk" className="text-sm text-gray-400 hover:text-white transition-colors">
+                Talk
+              </Link>
               <Link href="/guide" className="text-sm text-gray-400 hover:text-white transition-colors">
                 Guide
               </Link>
