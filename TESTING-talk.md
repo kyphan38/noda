@@ -82,7 +82,14 @@ then send the file back.
 - [ ] Save 2-3 stuck lines, tap **Practice these (n)**. A topic "Things I got stuck on" opens; its situations make you say those things.
 - [ ] Back on Talk, those lines are gray in the list and the button is gone until you save new ones.
 
-## 9. Theme and phone
+## 9. Quick mode, redo, this week
+
+- [ ] Before the first answer, turn on **Quick: 3 answers**. The talk shows "Turn 1/3" and ends after 3 answers.
+- [ ] At the end, **Talk this again** starts the same situation. After it, **Last time → now** compares the two (✓ where you did better).
+- [ ] The top of Talk shows **This week**: streak, talks, minutes, words per minute, and your most common mistakes.
+- [ ] Practice on two days in a row: the streak shows 2 days.
+
+## 10. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

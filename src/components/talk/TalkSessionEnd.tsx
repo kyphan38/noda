@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { TalkCompare } from '@/components/talk/TalkCompare';
 import { TalkNotes } from '@/components/talk/TalkNotes';
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
 import { addSessionFixes } from '@/lib/talk/mistake-bank';
@@ -9,10 +10,10 @@ import { topSessionFixes, wordsPerMinute } from '@/lib/talk/session';
 import { getTalkStore } from '@/lib/talk/store';
 import type { TalkPhrase, TalkSession } from '@/lib/talk/types';
 
-type Props = { session: TalkSession; phrases: TalkPhrase[]; onChange: (s: TalkSession) => void; onExit: () => void };
+type Props = { session: TalkSession; phrases: TalkPhrase[]; onChange: (s: TalkSession) => void; onExit: () => void; onRedo?: () => void };
 
 /** End of a talk: a few numbers, the fixes that matter most, and every answer to look at again. */
-export function TalkSessionEnd({ session, phrases, onChange, onExit }: Props) {
+export function TalkSessionEnd({ session, phrases, onChange, onExit, onRedo }: Props) {
   const [open, setOpen] = useState<number | null>(null);
   const turns = session.turns;
 
@@ -68,6 +69,8 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit }: Props) {
         </section>
       )}
 
+      <TalkCompare session={session} />
+
       <TalkNotes session={session} phrases={phrases} onWrap={(wrap) => onChange({ ...session, banked: true, wrap })} />
 
       <section className="space-y-2">
@@ -97,9 +100,16 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit }: Props) {
         </ul>
       </section>
 
-      <button type="button" onClick={onExit} className="w-full rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white py-2 text-sm">
-        Done
-      </button>
+      <div className="flex gap-2">
+        {onRedo && turns.length > 0 && (
+          <button type="button" onClick={onRedo} className="rounded-lg border border-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-100/[0.06]">
+            Talk this again
+          </button>
+        )}
+        <button type="button" onClick={onExit} className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white">
+          Done
+        </button>
+      </div>
     </div>
   );
 }

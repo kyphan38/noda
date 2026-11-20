@@ -4,6 +4,8 @@
 import type { FixKind, TalkFix, TalkLevel, TalkPhrase, TalkTurn } from './types';
 
 export const TURN_COUNT = 8;
+/** Quick talk for a busy day: about 5 minutes. */
+export const QUICK_TURN_COUNT = 3;
 export const HINT_COUNT = 3;
 export const TOP_FIXES = 5;
 

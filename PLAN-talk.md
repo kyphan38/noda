@@ -297,17 +297,20 @@ Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
    `talkTopic` dựng scenario từ notes, notes hiện trong lúc nói.
 2. **Dựng buổi luyện từ hộp Capture** - XONG (2026-11-20): nút "Practice these (n)" tạo topic
    "Things I got stuck on" (notesKind `stuck`), đánh dấu câu đã luyện.
-3. **Làm lại bài sau 2-3 ngày**, đặt lần cũ và lần mới cạnh nhau.
+3. **Làm lại bài** - XONG (2026-11-20): nút "Talk this again" ở cuối buổi, cùng tình huống và cùng
+   số lượt; bảng "Last time → now" (từ/lượt, từ/phút, lỗi/lượt, cụm đã dùng).
 4. **Time Capsule**: mỗi tháng 1 đề cố định 60 giây, lưu audio, nghe so sánh.
 5. **Read-to-Speak**: dán Slack thread / PR, ẩn đi, nói tóm tắt 60 giây, AI kiểm tra thiếu ý.
 6. **Khung BLUF / STAR**: tự gắn theo loại topic, chỉ nhận xét câu trả lời dài.
-7. **Chế độ 5 phút** + streak có ngày nghỉ.
+7. **Chế độ 5 phút** + streak có ngày nghỉ - XONG (2026-11-20): Quick = 3 lượt; streak cho phép
+   2 ngày nghỉ trong 7 ngày.
 8. **Stalling phrases**: bộ cụm câu giờ ghim sẵn, kèm đếm "uh/um" (cần transcript Gemini).
 9. **Hint tầng 2**: gõ ý bằng tiếng Anh đơn giản (nói vòng), nhận lại 2-3 cụm mồi.
 10. **4/3/2 (60s → 45s → 30s)**, kiểm tra cả "còn đủ ý chính".
 11. **Signature Phrasebook**: gắn sao cụm "hợp miệng", theo dõi riêng.
 12. **Đẩy cụm sang Anki** (dùng skill `anki-import`). Cụm Active thì không đẩy.
-13. **Báo cáo tuần**.
+13. **Báo cáo tuần** - XONG (2026-11-20): thẻ "This week" trên `/talk` (streak, số buổi, phút,
+    từ/phút, 3 lỗi hay gặp nhất).
 
 ## Backlog (có thể không bao giờ làm)
 

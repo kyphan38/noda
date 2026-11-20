@@ -208,3 +208,16 @@ export async function markCapturesUsed(ids: string[], topicId: string): Promise<
   for (const id of ids) batch.update(doc(db, capturesPath(uid), id), { usedInTopicId: topicId });
   await batch.commit();
 }
+
+/** Talks started since `since` (ms), for the streak and the week card. */
+export async function listTalkSessions(since: number): Promise<TalkSession[]> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(query(collection(getFirebaseFirestore(), sessionsPath(uid)), where('startedAt', '>=', since)));
+  return snap.docs.map((d) => ({ ...(d.data() as Omit<TalkSession, 'id'>), id: d.id }));
+}
+
+export async function getTalkSession(id: string): Promise<TalkSession | null> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDoc(doc(getFirebaseFirestore(), sessionsPath(uid), id));
+  return snap.exists() ? { ...(snap.data() as Omit<TalkSession, 'id'>), id: snap.id } : null;
+}

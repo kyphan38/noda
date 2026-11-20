@@ -53,6 +53,8 @@ vi.mock('@/lib/talk/store', () => ({
     markActive: async () => {},
     listMistakes: async () => [...mistakes.values()],
     saveMistakes: async (rows: TalkMistake[]) => rows.forEach((m) => mistakes.set(m.pattern, m)),
+    getSession: async (id: string) => saved.get(id) ?? null,
+    listSessions: async () => [...saved.values()],
     findOpenSession: async (topicId: string, setIndex: number) =>
       [...saved.values()].filter((x) => x.topicId === topicId && x.setIndex === setIndex && !x.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
     runTurn: async (p: TurnPayload): Promise<TalkTurnResult> => {
@@ -233,5 +235,37 @@ describe('TalkSession', () => {
     expect(mistakes.get('article')?.cleanStreak).toBe(1);
     click('Start the talk');
     expect(screen.getByRole('button', { name: 'Answer' })).toBeTruthy();
+  });
+
+  it('runs a quick talk of 3 answers, then does it again and compares', async () => {
+    saved.clear();
+    mistakes.clear();
+    payloads.length = 0;
+    render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
+    click('Quick: 3 answers');
+    expect(screen.getByText('Turn 1/3')).toBeTruthy();
+    for (let i = 1; i <= 2; i++) {
+      await answer();
+      click('Next turn');
+    }
+    await answer();
+    expect(payloads.map((p) => p.isLast)).toEqual([false, false, true]);
+    click('See the summary');
+    await waitFor(() => screen.getByText('Use the past tense for finished work.'));
+
+    click('Talk this again');
+    await waitFor(() => screen.getByText('Turn 1/3'));
+    expect(screen.getByText('What happened with the builds?')).toBeTruthy();
+    for (let i = 1; i <= 2; i++) {
+      await answer();
+      click('Next turn');
+    }
+    await answer();
+    click('See the summary');
+    await waitFor(() => screen.getByText('Last time → now'));
+    const redo = [...saved.values()].find((x) => x.redoOf);
+    expect(redo?.length).toBe(3);
+    expect(redo?.scenarioId).toBe('s0');
   });
 });

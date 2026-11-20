@@ -92,6 +92,10 @@ export type TalkSession = {
   mode: TalkMode;
   selfRepair: boolean;
   turns: TalkTurn[];
+  /** Answers in this talk; TURN_COUNT when missing (talks made before quick mode). */
+  length?: number;
+  /** The talk this one does again, to compare. */
+  redoOf?: string;
   /** The line waiting for an answer, so a talk left halfway goes on without a model call. */
   next?: { text: string; curveball: boolean; ideas: string[] };
   startedAt: number;

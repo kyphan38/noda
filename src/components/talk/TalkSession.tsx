@@ -5,33 +5,15 @@ import { Mic, Square, Volume2, Zap } from 'lucide-react';
 
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
 import { TalkSessionEnd } from '@/components/talk/TalkSessionEnd';
+import { TalkToggle as Toggle } from '@/components/talk/TalkToggle';
 import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
-import { curveballTurn, hintPhrases, pickScenario, TURN_COUNT } from '@/lib/talk/session';
+import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, TURN_COUNT } from '@/lib/talk/session';
 import { speak } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
-import type { TalkMode, TalkPhraseProgress, TalkScenario, TalkSession as Session, TalkTopic, TalkTurn } from '@/lib/talk/types';
-
-const PREFS_KEY = 'noda.talk.prefs';
-type Prefs = { mode: TalkMode; selfRepair: boolean; showText: boolean };
-const DEFAULT_PREFS: Prefs = { mode: 'instant', selfRepair: true, showText: true };
-
-function readPrefs(): Prefs {
-  try {
-    return { ...DEFAULT_PREFS, ...(JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Partial<Prefs>) };
-  } catch {
-    return DEFAULT_PREFS;
-  }
-}
-const lastScenarioKey = (topicId: string) => `noda.talk.lastScenario.${topicId}`;
-function readLastScenario(topicId: string): string | undefined {
-  try {
-    return localStorage.getItem(lastScenarioKey(topicId)) ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
+import { DEFAULT_PREFS, readLastScenario, readPrefs, writeLastScenario, writePrefs, type TalkPrefs as Prefs } from '@/lib/talk/prefs';
+import type { TalkPhraseProgress, TalkScenario, TalkSession as Session, TalkTopic, TalkTurn } from '@/lib/talk/types';
 
 type Line = { text: string; curveball: boolean; ideas: string[] };
 type Phase = 'answer' | 'checking' | 'review' | 'end';
@@ -44,7 +26,7 @@ type Props = {
   onExit: () => void;
 };
 
-/** One talk of TURN_COUNT answers about one situation, with a review after each answer or at the end. */
+/** One talk of 8 answers (3 in quick mode) about one situation, with a review after each answer or at the end. */
 export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: Props) {
   const phrases = useMemo(() => topic.phrases.filter((p) => p.setIndex === setIndex && !p.removed), [topic.phrases, setIndex]);
   const [scenario, setScenario] = useState<TalkScenario | null>(null);
@@ -69,16 +51,14 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   }, [progress]);
 
   /** A fresh talk on a situation not used last time. Saved at once, so leaving keeps it. */
-  const startNew = useCallback((speakNow = true) => {
-    const sc = pickScenario(topic.scenarios ?? [], readLastScenario(topic.id));
+  const startNew = useCallback((speakNow = true, again?: { scenarioId: string; of: string; length?: number }) => {
+    const sc = again
+      ? (topic.scenarios ?? []).find((x) => x.id === again.scenarioId) ?? null
+      : pickScenario(topic.scenarios ?? [], readLastScenario(topic.id));
     setScenario(sc);
     setResumed(false);
     if (!sc) return;
-    try {
-      localStorage.setItem(lastScenarioKey(topic.id), sc.id);
-    } catch {
-      // Private mode: the next talk may repeat this situation.
-    }
+    writeLastScenario(topic.id, sc.id);
     const first = { text: sc.opening, curveball: false, ideas: sc.ideas };
     const s: Session = {
       id: `${topic.id}-${Date.now().toString(36)}`,
@@ -89,6 +69,9 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
       mode: 'instant',
       selfRepair: true,
       turns: [],
+      // A redo keeps the old talk's length, so the numbers compare.
+      length: again?.length ?? (readPrefs().quick ? QUICK_TURN_COUNT : TURN_COUNT),
+      ...(again ? { redoOf: again.of } : {}),
       next: first,
       startedAt: Date.now(),
     };
@@ -115,7 +98,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         setSession(open);
         setResumed(open.turns.length > 0);
         setLine(open.next ?? { text: sc.opening, curveball: false, ideas: sc.ideas });
-        setPhase(open.turns.length >= TURN_COUNT ? 'end' : 'answer');
+        setPhase(open.turns.length >= (open.length ?? TURN_COUNT) ? 'end' : 'answer');
       });
     return () => {
       alive = false;
@@ -127,13 +110,10 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const changePrefs = (patch: Partial<Prefs>) => {
     const next = { ...prefs, ...patch };
     setPrefs(next);
-    try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify(next));
-    } catch {
-      // Kept for this visit only.
-    }
+    writePrefs(next);
   };
 
+  const total = session?.length ?? TURN_COUNT;
   const used = useMemo(() => new Set(session?.turns.flatMap((t) => t.usedPhraseIds) ?? []), [session]);
 
   const save = (s: Session) => void getTalkStore().saveSession(s).catch((e) => console.warn('[talk] session save failed', e));
@@ -141,7 +121,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const nextLine = (s: Session, l: Line) => {
     setShowIdeas(false);
     setShowHints(false);
-    if (s.turns.length >= TURN_COUNT) {
+    if (s.turns.length >= (s.length ?? TURN_COUNT)) {
       const done = { ...s, endedAt: Date.now() };
       setSession(done);
       save(done);
@@ -169,7 +149,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         history: session.turns.slice(-3).map((t) => ({ ai: t.ai.text, you: t.transcript })),
         targetIds: phrases.filter((p) => !used.has(p.id)).map((p) => p.id),
         curveball: curveAt !== null && idx + 1 === curveAt,
-        isLast: idx === TURN_COUNT - 1,
+        isLast: idx === total - 1,
         recording: await blobToBase64(blob),
         recordingMimeType: blob.type || 'audio/webm',
       });
@@ -266,9 +246,21 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   if (loading) return <p className="breathe text-sm text-gray-500">Loading…</p>;
   if (!scenario) return <p className="text-sm text-gray-400">This topic has no situations. Make it again.</p>;
   if (!session || !line) return null;
-  if (phase === 'end') return <TalkSessionEnd session={session} phrases={phrases} onChange={setSession} onExit={onExit} />;
+  if (phase === 'end')
+    return (
+      <TalkSessionEnd
+        session={session}
+        phrases={phrases}
+        onChange={setSession}
+        onExit={onExit}
+        onRedo={() => {
+          setWarmDone(true);
+          startNew(true, { scenarioId: session.scenarioId, of: session.id, length: session.length });
+        }}
+      />
+    );
 
-  const turnNo = Math.min(session.turns.length + (phase === 'review' ? 0 : 1), TURN_COUNT);
+  const turnNo = Math.min(session.turns.length + (phase === 'review' ? 0 : 1), total);
   const lastTurn = session.turns[session.turns.length - 1];
   const hints = hintPhrases(line.text, phrases, used);
 
@@ -280,7 +272,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         </button>
         <span className="flex items-center gap-3 text-xs text-gray-500">
           <span className="tabular-nums">
-            Turn {turnNo}/{TURN_COUNT}
+            Turn {turnNo}/{total}
           </span>
           {session.turns.length > 0 && phase !== 'checking' && (
             <button
@@ -337,6 +329,16 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
           <Toggle on={prefs.selfRepair} onClick={() => changePrefs({ selfRepair: !prefs.selfRepair })}>
             Fix it yourself first
           </Toggle>
+          <Toggle
+            on={prefs.quick}
+            onClick={() => {
+              const quick = !prefs.quick;
+              changePrefs({ quick });
+              setSession({ ...session, length: quick ? QUICK_TURN_COUNT : TURN_COUNT });
+            }}
+          >
+            Quick: {QUICK_TURN_COUNT} answers
+          </Toggle>
         </div>
       )}
 
@@ -358,7 +360,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
               Try again
             </button>
             <button type="button" onClick={() => nextLine(session, line)} className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white">
-              {session.turns.length >= TURN_COUNT ? 'See the summary' : 'Next turn'}
+              {session.turns.length >= total ? 'See the summary' : 'Next turn'}
             </button>
           </div>
         </>
@@ -451,17 +453,5 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         ))}
       </div>
     </div>
-  );
-}
-
-function Toggle({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg border px-2.5 py-1 ${on ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`}
-    >
-      {children}
-    </button>
   );
 }
