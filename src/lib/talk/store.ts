@@ -2,7 +2,8 @@
 // (no sign-in) one sample topic in memory, so the screens can be tested.
 import * as fsdb from '@/lib/db';
 import { raiseStage } from './phrase-stage';
-import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult } from './types';
+import type { TalkMistake } from './mistake-bank';
+import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from './types';
 
 export type TalkStore = {
   listTopics(): Promise<TalkTopic[]>;
@@ -14,6 +15,11 @@ export type TalkStore = {
   runTurn(payload: fsdb.TurnPayload): Promise<TalkTurnResult>;
   saveSession(session: TalkSession): Promise<void>;
   findOpenSession(topicId: string, setIndex: number): Promise<TalkSession | null>;
+  wrapSession(sessionId: string, known: { key: string; text: string }[]): Promise<TalkWrap>;
+  listMistakes(): Promise<TalkMistake[]>;
+  saveMistakes(rows: TalkMistake[]): Promise<void>;
+  listPrompted(): Promise<TalkPhraseProgress[]>;
+  markActive(keys: string[]): Promise<void>;
 };
 
 const firestoreStore: TalkStore = {
@@ -26,6 +32,11 @@ const firestoreStore: TalkStore = {
   runTurn: fsdb.requestTalkTurn,
   saveSession: fsdb.saveTalkSession,
   findOpenSession: fsdb.findOpenTalkSession,
+  wrapSession: fsdb.requestTalkWrap,
+  listMistakes: fsdb.listTalkMistakes,
+  saveMistakes: fsdb.saveTalkMistakes,
+  listPrompted: fsdb.listPromptedPhrases,
+  markActive: fsdb.markPhrasesActive,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -69,6 +80,7 @@ function memoryStore(): TalkStore {
   const topics = new Map<string, TalkTopic>();
   const progress = new Map<string, Map<string, TalkPhraseProgress>>();
   const sessions = new Map<string, TalkSession>();
+  const mistakes = new Map<string, TalkMistake>();
   return {
     listTopics: async () => [...topics.values()],
     ensureTopic: async (req) => {
@@ -115,7 +127,24 @@ function memoryStore(): TalkStore {
         usedPhraseIds: payload.targetIds.slice(0, 1),
       };
     },
-    saveSession: async (s) => void sessions.set(s.id, s),
+    saveSession: async (s) => void sessions.set(s.id, { ...sessions.get(s.id), ...s }),
+    wrapSession: async (sessionId) => {
+      const s = sessions.get(sessionId);
+      if (s?.wrap) return s.wrap;
+      const wrap: TalkWrap = {
+        missedChances: [{ turn: 0, phraseId: 'p3', said: 'it is done', better: "If the tests pass, we can ship it." }],
+        swaps: [{ from: 'very big', to: 'huge', why: 'One strong word sounds more natural.' }],
+        closingPicks: (s?.turns ?? []).slice(0, 3).map((t, turn) => ({ turn, idea: 'say what you finished yesterday', target: t.review.natural })),
+        activeKeys: [],
+        focus: 'Use the past tense for work you already finished.',
+      };
+      if (s) sessions.set(sessionId, { ...s, wrap });
+      return wrap;
+    },
+    listMistakes: async () => [...mistakes.values()],
+    saveMistakes: async (rows) => rows.forEach((m) => mistakes.set(m.pattern, m)),
+    listPrompted: async () => [...progress.values()].flatMap((m) => [...m.values()]).filter((p) => p.stage === 'prompted'),
+    markActive: async () => {},
     findOpenSession: async (topicId, setIndex) =>
       [...sessions.values()].filter((s) => s.topicId === topicId && s.setIndex === setIndex && !s.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
   };

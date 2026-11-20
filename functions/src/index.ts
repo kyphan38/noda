@@ -17,3 +17,4 @@ export { assessSpeaking } from "./assessSpeaking";
 export { defineWord } from "./defineWord";
 export { talkTopic } from "./talkTopic";
 export { talkTurn } from "./talkTurn";
+export { talkWrap } from "./talkWrap";

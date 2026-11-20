@@ -77,6 +77,7 @@ export const SPEAKING_CHECK_FUNCTION_NAME = 'assessSpeaking';
 // Talk topic maker (Cloud Function name; must match functions/src/index.ts export)
 export const TALK_TOPIC_FUNCTION_NAME = 'talkTopic';
 export const TALK_TURN_FUNCTION_NAME = 'talkTurn';
+export const TALK_WRAP_FUNCTION_NAME = 'talkWrap';
 /** Segment size for the speaking check: long enough to judge, short enough to remember. */
 export const SPEAKING_SEGMENT_MIN_WORDS = 30;
 export const SPEAKING_SEGMENT_MAX_WORDS = 50;

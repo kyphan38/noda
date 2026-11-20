@@ -22,7 +22,7 @@ const BLOCKS: Block[] = [
       'Make folders and drag lessons into them.',
       'Swipe left to close it on a phone.',
       'At the top: theme, export all data (.json) and log out.',
-      'At the bottom: Mistakes, Speaking, Talk and this Guide.',
+      'At the bottom: Mistakes (Talk and Dictation), Speaking, Talk and this Guide.',
     ],
   },
   {
@@ -72,6 +72,9 @@ const BLOCKS: Block[] = [
       'At the end: phrases used, words per answer, words per minute, top fixes and all your answers.',
       'Cancel (or Esc) drops the answer you are recording or that is being checked. Try again throws away the last answer and asks the same line. End talk jumps to the summary.',
       'Leave a talk halfway and it goes on where you stopped next time, with no new AI call. New talk starts a fresh situation.',
+      'Notes at the end (made once per talk): one thing to work on, missed chances to use a set phrase, better words, and a closing drill: say your weakest answers the natural way from a short idea.',
+      'Your fixes go into a mistake bank by type (verb tense, a/an/the...). A new talk starts with a short warm-up on your top types. 5 right in a row and a type is done.',
+      'A phrase you use in another talk without seeing it on the list counts as yours (Active).',
     ],
   },
   {

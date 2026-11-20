@@ -71,6 +71,15 @@ export type TalkTurn = {
 
 export type TalkMode = 'instant' | 'flow';
 
+// Keep in sync with functions/src/lib/talkWrap.ts.
+export type TalkWrap = {
+  missedChances: { turn: number; phraseId: string; said: string; better: string }[];
+  swaps: { from: string; to: string; why: string }[];
+  closingPicks: { turn: number; idea: string; target: string }[];
+  activeKeys: string[];
+  focus: string;
+};
+
 export type TalkSession = {
   id: string;
   topicId: string;
@@ -84,4 +93,8 @@ export type TalkSession = {
   next?: { text: string; curveball: boolean; ideas: string[] };
   startedAt: number;
   endedAt?: number;
+  /** Notes from talkWrap, saved so they are made once. */
+  wrap?: TalkWrap;
+  /** True once this talk's fixes went into the mistake bank. */
+  banked?: boolean;
 };

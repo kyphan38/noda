@@ -5,6 +5,7 @@ import { Mic, Square, Volume2, Zap } from 'lucide-react';
 
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
 import { TalkSessionEnd } from '@/components/talk/TalkSessionEnd';
+import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
 import { curveballTurn, hintPhrases, pickScenario, TURN_COUNT } from '@/lib/talk/session';
@@ -49,6 +50,8 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const [scenario, setScenario] = useState<TalkScenario | null>(null);
   const [loading, setLoading] = useState(true);
   const [resumed, setResumed] = useState(false);
+  /** The warm-up runs once, before the first talk on this screen. */
+  const [warmDone, setWarmDone] = useState(false);
   const [curveAt] = useState(() => curveballTurn(topic.level));
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [session, setSession] = useState<Session | null>(null);
@@ -66,7 +69,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   }, [progress]);
 
   /** A fresh talk on a situation not used last time. Saved at once, so leaving keeps it. */
-  const startNew = useCallback(() => {
+  const startNew = useCallback((speakNow = true) => {
     const sc = pickScenario(topic.scenarios ?? [], readLastScenario(topic.id));
     setScenario(sc);
     setResumed(false);
@@ -93,7 +96,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     setSession(s);
     setPhase('answer');
     void getTalkStore().saveSession(s).catch(() => {});
-    speak(first.text);
+    if (speakNow) speak(first.text);
   }, [topic.id, topic.level, topic.scenarios, setIndex]);
 
   // Go on with a talk left halfway on this set; otherwise start one.
@@ -107,7 +110,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         if (!alive) return;
         setLoading(false);
         const sc = open && (topic.scenarios ?? []).find((x) => x.id === open.scenarioId);
-        if (!open || !sc) return startNew();
+        if (!open || !sc) return startNew(false);
         setScenario(sc);
         setSession(open);
         setResumed(open.turns.length > 0);
@@ -285,6 +288,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
               onClick={() => {
                 const done = { ...session, endedAt: Date.now() };
                 save(done);
+                setWarmDone(true);
                 startNew();
               }}
               className="hover:text-gray-100"
@@ -299,6 +303,15 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
       </div>
 
       {resumed && <p className="text-xs text-gray-500">Picked up where you left off.</p>}
+
+      {!warmDone && !resumed && session.turns.length === 0 && (
+        <TalkWarmup
+          onDone={() => {
+            setWarmDone(true);
+            speak(line.text);
+          }}
+        />
+      )}
 
       <details className="rounded-xl border border-gray-800 bg-gray-900/60 px-4 py-3" open={session.turns.length === 0}>
         <summary className="cursor-pointer text-sm text-gray-100">{scenario.title}</summary>
@@ -320,7 +333,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         </div>
       )}
 
-      {phase === 'review' && lastTurn ? (
+      {!warmDone && !resumed && session.turns.length === 0 ? null : phase === 'review' && lastTurn ? (
         <>
           <TalkReviewCard
             key={session.turns.length}

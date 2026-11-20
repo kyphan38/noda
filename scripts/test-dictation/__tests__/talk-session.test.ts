@@ -3,6 +3,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { TalkSession as Session, TalkTopic, TalkTurnResult } from '@/lib/talk/types';
+import type { TalkMistake } from '@/lib/talk/mistake-bank';
 import type { TurnPayload } from '@/lib/db';
 
 /** Plays one whole talk: 8 answers, a review after each, then the summary. */
@@ -34,11 +35,24 @@ vi.mock('@/lib/speakingCheck', () => ({ blobToBase64: async () => 'eA==' }));
 const payloads: TurnPayload[] = [];
 const saved = new Map<string, Session>();
 const saveSession = vi.fn(async (s: Session) => void saved.set(s.id, s));
+const mistakes = new Map<string, TalkMistake>();
+const wrapSession = vi.fn(async () => ({
+  missedChances: [{ turn: 1, phraseId: 'p1', said: 'the reason', better: 'The root cause was the runner image.' }],
+  swaps: [{ from: 'fix', to: 'patch', why: 'More exact.' }],
+  closingPicks: [{ turn: 0, idea: 'say what you did on the pipeline', target: 'I worked on the pipeline.' }],
+  activeKeys: [],
+  focus: 'Use the past tense for finished work.',
+}));
 const saveStages = vi.fn(async (_t: string, _p: unknown, _s: string, m: Map<string, unknown>) => m);
 vi.mock('@/lib/talk/store', () => ({
   getTalkStore: () => ({
     saveSession,
     saveStages,
+    wrapSession,
+    listPrompted: async () => [],
+    markActive: async () => {},
+    listMistakes: async () => [...mistakes.values()],
+    saveMistakes: async (rows: TalkMistake[]) => rows.forEach((m) => mistakes.set(m.pattern, m)),
     findOpenSession: async (topicId: string, setIndex: number) =>
       [...saved.values()].filter((x) => x.topicId === topicId && x.setIndex === setIndex && !x.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
     runTurn: async (p: TurnPayload): Promise<TalkTurnResult> => {
@@ -124,6 +138,18 @@ describe('TalkSession', () => {
     expect(screen.getByText('1/2')).toBeTruthy();
     expect(screen.getByText('Top fixes')).toBeTruthy();
 
+    // Notes: made once, with a closing drill on the weakest answers.
+    await waitFor(() => screen.getByText('Use the past tense for finished work.'));
+    expect(screen.getByText('The root cause was the runner image.')).toBeTruthy();
+    expect(screen.getByText('say what you did on the pipeline')).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText('Say it the natural way'), { target: { value: 'I worked on the pipeline' } });
+    click('Check');
+    expect(screen.getByText('100%')).toBeTruthy();
+    expect(wrapSession).toHaveBeenCalledTimes(1);
+
+    // Mistake bank: 8 tense fixes, minus the one marked "I said it right".
+    await waitFor(() => expect(mistakes.get('verb_tense')?.hits).toBe(7));
+
     expect(payloads).toHaveLength(8);
     expect(payloads.every((p) => p.scenarioId === 's0' && p.recording === 'eA==')).toBe(true);
     expect(payloads.filter((p) => p.curveball)).toHaveLength(1);
@@ -141,6 +167,7 @@ describe('TalkSession', () => {
 
   it('cancels a take, retries a turn and ends early', async () => {
     payloads.length = 0;
+    mistakes.clear();
     render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
     await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
 
@@ -166,6 +193,7 @@ describe('TalkSession', () => {
 
   it('goes on with a talk left halfway, with no new model call', async () => {
     saved.clear();
+    mistakes.clear();
     payloads.length = 0;
     const view = render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
     await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
@@ -183,5 +211,27 @@ describe('TalkSession', () => {
     click('New talk');
     await waitFor(() => screen.getByText('What happened with the builds?'));
     expect([...saved.values()].filter((x) => !x.endedAt)).toHaveLength(1);
+  });
+
+  it('warms up on past mistakes before a new talk', async () => {
+    saved.clear();
+    mistakes.clear();
+    mistakes.set('article', {
+      pattern: 'article',
+      hits: 3,
+      cleanStreak: 0,
+      graduated: false,
+      examples: [{ wrong: 'I fixed bug', right: 'I fixed the bug', why: 'Bug is one known thing.', sessionId: 'x', at: 1 }],
+      updatedAt: 1,
+    });
+    render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByText('I fixed bug'));
+    expect(screen.queryByRole('button', { name: 'Answer' })).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText('Say or type the right words'), { target: { value: 'I fixed the bug' } });
+    click('Check');
+    expect(screen.getByText('Right')).toBeTruthy();
+    expect(mistakes.get('article')?.cleanStreak).toBe(1);
+    click('Start the talk');
+    expect(screen.getByRole('button', { name: 'Answer' })).toBeTruthy();
   });
 });

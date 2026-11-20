@@ -3,14 +3,16 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore, getFirebaseFunctions } from '@/lib/auth/firebase-client';
-import { TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME } from '@/constants';
+import { TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME, TALK_WRAP_FUNCTION_NAME } from '@/constants';
+import type { TalkMistake } from '@/lib/talk/mistake-bank';
 import { progressId, raiseStage } from '@/lib/talk/phrase-stage';
-import type { PhraseStage, TalkLevel, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult } from '@/lib/talk/types';
+import type { PhraseStage, TalkLevel, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from '@/lib/talk/types';
 import { getCurrentUidOrThrow } from './shared';
 
 const topicsPath = (uid: string) => `users/${uid}/talkTopics`;
 const progressPath = (uid: string) => `users/${uid}/talkPhraseProgress`;
 const sessionsPath = (uid: string) => `users/${uid}/talkSessions`;
+const mistakesPath = (uid: string) => `users/${uid}/talkMistakes`;
 
 /** Making a topic takes a model call of up to about a minute and a half. */
 const TOPIC_CLIENT_TIMEOUT_MS = 150_000;
@@ -130,5 +132,46 @@ export async function findOpenTalkSession(topicId: string, setIndex: number): Pr
 export async function saveTalkSession(session: TalkSession): Promise<void> {
   const uid = getCurrentUidOrThrow();
   const { id, ...data } = session;
-  await setDoc(doc(getFirebaseFirestore(), sessionsPath(uid), id), JSON.parse(JSON.stringify(data)));
+  // Merge: talkWrap writes `wrap` on the same doc and must not be lost.
+  await setDoc(doc(getFirebaseFirestore(), sessionsPath(uid), id), JSON.parse(JSON.stringify(data)), { merge: true });
+}
+
+/** Notes for a finished talk; the function saves them, so a second call is free. */
+export async function requestTalkWrap(sessionId: string, known: { key: string; text: string }[]): Promise<TalkWrap> {
+  const call = httpsCallable<{ sessionId: string; known: { key: string; text: string }[] }, TalkWrap>(getFirebaseFunctions(), TALK_WRAP_FUNCTION_NAME, {
+    timeout: TURN_CLIENT_TIMEOUT_MS,
+  });
+  return (await call({ sessionId, known })).data;
+}
+
+export async function listTalkMistakes(): Promise<TalkMistake[]> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(collection(getFirebaseFirestore(), mistakesPath(uid)));
+  return snap.docs.map((d) => d.data() as TalkMistake);
+}
+
+export async function saveTalkMistakes(rows: TalkMistake[]): Promise<void> {
+  if (rows.length === 0) return;
+  const uid = getCurrentUidOrThrow();
+  const db = getFirebaseFirestore();
+  const batch = writeBatch(db);
+  for (const m of rows) batch.set(doc(db, mistakesPath(uid), m.pattern), m);
+  await batch.commit();
+}
+
+/** Phrases used with the checklist but not yet on your own (any topic). */
+export async function listPromptedPhrases(): Promise<TalkPhraseProgress[]> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(query(collection(getFirebaseFirestore(), progressPath(uid)), where('stage', '==', 'prompted')));
+  return snap.docs.map((d) => d.data() as TalkPhraseProgress).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** Marks phrases (by progress id) as used without help. */
+export async function markPhrasesActive(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  const uid = getCurrentUidOrThrow();
+  const db = getFirebaseFirestore();
+  const batch = writeBatch(db);
+  for (const k of keys) batch.update(doc(db, progressPath(uid), k), { stage: 'active', updatedAt: Date.now() });
+  await batch.commit();
 }

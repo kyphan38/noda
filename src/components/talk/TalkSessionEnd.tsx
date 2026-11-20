@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { TalkNotes } from '@/components/talk/TalkNotes';
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
+import { addSessionFixes } from '@/lib/talk/mistake-bank';
 import { topSessionFixes, wordsPerMinute } from '@/lib/talk/session';
 import { getTalkStore } from '@/lib/talk/store';
 import type { TalkPhrase, TalkSession } from '@/lib/talk/types';
@@ -13,6 +15,21 @@ type Props = { session: TalkSession; phrases: TalkPhrase[]; onChange: (s: TalkSe
 export function TalkSessionEnd({ session, phrases, onChange, onExit }: Props) {
   const [open, setOpen] = useState<number | null>(null);
   const turns = session.turns;
+
+  // Once per talk: its fixes go into the mistake bank for the next warm-up.
+  useEffect(() => {
+    if (session.banked || turns.length === 0) return;
+    const store = getTalkStore();
+    const banked = { ...session, banked: true };
+    onChange(banked);
+    void store
+      .listMistakes()
+      .then((rows) => store.saveMistakes(addSessionFixes(new Map(rows.map((m) => [m.pattern, m])), turns, session.id, Date.now())))
+      .then(() => store.saveSession(banked))
+      .catch((e) => console.warn('[talk] mistake bank save failed', e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.id]);
+
   const used = new Set(turns.flatMap((t) => t.usedPhraseIds));
   const words = turns.reduce((n, t) => n + t.transcript.split(/\s+/).filter(Boolean).length, 0);
   const seconds = turns.reduce((n, t) => n + t.seconds, 0);
@@ -50,6 +67,8 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit }: Props) {
           </ul>
         </section>
       )}
+
+      <TalkNotes session={session} phrases={phrases} onWrap={(wrap) => onChange({ ...session, banked: true, wrap })} />
 
       <section className="space-y-2">
         <h2 className="text-sm font-medium text-gray-400">Your answers</h2>

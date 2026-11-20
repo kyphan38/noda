@@ -166,7 +166,15 @@ Rủi ro cần test trước khi làm UI:
 - Thời gian chờ: mục tiêu ≤ 5 giây/lượt. Nếu chậm quá, V2 tách `reply` và
   `review` thành 2 lần gọi song song.
 
-### Phase 3 - Notes + ngân hàng lỗi + Chốt hạ
+### Phase 3 - Notes + ngân hàng lỗi + Chốt hạ - CODE XONG (2026-11-20), CHƯA DEPLOY
+
+Đã làm: `talkWrap` (1 lần/buổi, chỉ text, lưu `wrap` vào session nên không gọi
+lại), Notes ở màn kết thúc (Next time / Missed chances / Better words / Closing
+drill), ngân hàng lỗi `talkMistakes/{pattern}` (bỏ pattern `other`), warm-up 4
+câu trước buổi mới, tốt nghiệp sau 5 lần đúng liền, `active` khi dùng cụm cũ
+không có checklist, nhóm "Talk" trên trang Mistakes. Số liệu (từ/lượt, từ/phút)
+đã có từ Phase 2.
+
 
 Việc cần làm:
 - Cloud Function `talkWrap` (1 lần/buổi, chỉ gửi text các lượt): `missedChances`
