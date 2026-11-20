@@ -85,7 +85,7 @@ export const talkSpeech = onCall(
       const parts = [{ text: buildSpeechPrompt(req) }, { inlineData: { mimeType: "audio/wav", data: wav.toString("base64") } }];
       for (let attempt = 1; ; attempt++) {
         try {
-          const raw = await generateStructuredJson([{ role: "user", parts }], SPEECH_SCHEMA, { timeoutMs: GEMINI_TIMEOUT_MS, temperature: 0.2 });
+          const raw = await generateStructuredJson([{ role: "user", parts }], SPEECH_SCHEMA, { timeoutMs: GEMINI_TIMEOUT_MS, temperature: 0.2, label: "talkSpeech" });
           const result = parseSpeech(raw, req.mode);
           if (!result.transcript) throw new HttpsError("failed-precondition", "We could not hear you, try again.");
           return { ...result, seconds: Math.round(stats.speechSeconds * 10) / 10 };

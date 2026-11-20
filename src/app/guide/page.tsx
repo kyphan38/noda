@@ -78,7 +78,7 @@ const BLOCKS: Block[] = [
       'A phrase you use in another talk without seeing it on the list counts as yours (Active).',
       'Got stuck in a real talk? Type what you wanted to say in the box at the top of Talk, in any language. Practice these makes a topic where you have to say those things.',
       'Voices: Google Chirp 3 HD when it is on in the project, otherwise your browser voice. Each line is made once and kept.',
-      'Drills (on the Talk page): 60 · 45 · 30 asks one question 3 times with less time each round; compare words, speed and uh/um.',
+      'Drills: 60 · 45 · 30 asks one question 3 times with less time each round; compare words, speed, uh/um, and how many points of your first answer you kept.',
       'Read and retell: paste a Slack thread, a PR or an article, read it, hide it, then tell it. You see which key points you covered and a natural retell.',
       'Time Capsule: the same one-minute talk once a month, kept as audio. Play old months to hear your progress.',
       'Help: type your idea in simple words and get 2-3 word groups to build the answer with. Never a full answer.',

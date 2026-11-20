@@ -139,7 +139,7 @@ async function callGeminiOnce(
     timeoutMs: GEMINI_TIMEOUT_MS,
     lowMediaResolution: !!reference?.fileData,
     // Closed labels with a rubric: no creativity wanted, so runs stay as close as possible.
-    temperature: 0,
+    temperature: 0, label: "assessSpeaking"
   });
   if (!text) throw new HttpsError("internal", "Empty response from Gemini.");
   let parsed: unknown;

@@ -25,7 +25,7 @@ vi.mock('@/hooks/useVoiceRecorder', async () => {
 vi.mock('@/lib/speakingCheck', () => ({ blobToBase64: async () => 'eA==' }));
 
 const capsules = new Map<string, TalkCapsule>();
-const speech = vi.fn(async (p: { mode: string }) => ({
+const speech = vi.fn(async (p: { mode: string; source: string }) => ({
   transcript: p.mode === 'retell' ? 'the deploy is fail' : 'uh so we shipped it',
   seconds: 2,
   points: p.mode === 'retell' ? [{ point: 'The deploy failed', covered: true }, { point: 'It was rolled back', covered: false }] : [],
@@ -66,7 +66,9 @@ describe('talk drills', () => {
     }
     expect(screen.getByRole('button', { name: 'Start again' })).toBeTruthy();
     expect(screen.getAllByRole('row')).toHaveLength(4);
-    expect(speech).toHaveBeenCalledWith(expect.objectContaining({ mode: 'transcribe' }));
+    expect(speech.mock.calls.map((c) => c[0].mode)).toEqual(['transcribe', 'retell', 'retell']);
+    expect(speech.mock.calls[1][0].source).toBe('uh so we shipped it');
+    expect(screen.getAllByText('1/2')).toHaveLength(2);
   });
 
   it('retells a pasted text and checks the key points', async () => {

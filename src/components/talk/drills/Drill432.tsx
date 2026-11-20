@@ -7,9 +7,10 @@ import { blobToBase64 } from '@/lib/speakingCheck';
 import { DRILL_QUESTIONS, ROUND_SECONDS, roundNumbers, type RoundNumbers } from '@/lib/talk/drills';
 import { getTalkStore } from '@/lib/talk/store';
 
-type Round = RoundNumbers & { transcript: string };
+/** kept: main points of round 1 still said (rounds 2 and 3 only). */
+type Round = RoundNumbers & { transcript: string; kept?: { covered: number; total: number } };
 
-/** One question, answered 3 times in 60, 45 and 30 seconds: faster, with fewer pauses. */
+/** One question, answered 3 times in 60, 45 and 30 seconds: faster, with fewer pauses, same main points. */
 export function Drill432() {
   const [qi, setQi] = useState(() => Math.floor(Math.random() * DRILL_QUESTIONS.length));
   const [own, setOwn] = useState('');
@@ -23,8 +24,16 @@ export function Drill432() {
     setBusy(true);
     setError(null);
     try {
-      const r = await getTalkStore().speech({ mode: 'transcribe', source: '', recording: await blobToBase64(blob), recordingMimeType: blob.type || 'audio/webm' });
-      setRounds((x) => [...x, { ...roundNumbers(r.transcript, r.seconds), transcript: r.transcript }]);
+      // Later rounds are checked against round 1's own points, in the same call.
+      const first = rounds[0]?.transcript;
+      const r = await getTalkStore().speech({
+        mode: first ? 'retell' : 'transcribe',
+        source: first ?? '',
+        recording: await blobToBase64(blob),
+        recordingMimeType: blob.type || 'audio/webm',
+      });
+      const kept = first ? { covered: r.points.filter((p) => p.covered).length, total: r.points.length } : undefined;
+      setRounds((x) => [...x, { ...roundNumbers(r.transcript, r.seconds), transcript: r.transcript, kept }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not check this round.');
     } finally {
@@ -73,6 +82,7 @@ export function Drill432() {
               <th className="font-normal">Words</th>
               <th className="font-normal">Words/min</th>
               <th className="font-normal">uh/um</th>
+              <th className="font-normal">Points kept</th>
             </tr>
           </thead>
           <tbody className="tabular-nums text-gray-100">
@@ -82,6 +92,7 @@ export function Drill432() {
                 <td>{r.words}</td>
                 <td>{r.wpm}</td>
                 <td>{r.fillers}</td>
+                <td>{r.kept ? `${r.kept.covered}/${r.kept.total}` : '-'}</td>
               </tr>
             ))}
           </tbody>

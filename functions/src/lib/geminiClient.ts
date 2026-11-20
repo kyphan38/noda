@@ -11,6 +11,7 @@
 
 import { GoogleGenAI, MediaResolution, type Content, type Schema } from "@google/genai";
 import { SHADOWING_ANALYSIS_RESPONSE_SCHEMA } from "../prompts/shadowingAnalysisPrompt";
+import { summarizeUsage } from "./geminiUsage";
 
 let genAI: GoogleGenAI | null = null;
 
@@ -50,6 +51,7 @@ export function generateShadowingJson(
     timeoutMs,
     lowMediaResolution,
     temperature: 0.2,
+    label: "shadowing",
   });
 }
 
@@ -57,7 +59,7 @@ export function generateShadowingJson(
 export async function generateStructuredJson(
   contents: Content[],
   responseSchema: Schema,
-  opts: { timeoutMs: number; lowMediaResolution?: boolean; temperature: number }
+  opts: { timeoutMs: number; lowMediaResolution?: boolean; temperature: number; label?: string }
 ): Promise<string | undefined> {
   const response = await getGenAI().models.generateContent({
     model: getShadowingModelId(),
@@ -70,5 +72,7 @@ export async function generateStructuredJson(
       httpOptions: { timeout: opts.timeoutMs },
     },
   });
+  // Cost log: numbers only. Read with `firebase functions:log | grep gemini-usage`.
+  console.info("[gemini-usage]", JSON.stringify(summarizeUsage(opts.label ?? "other", response.usageMetadata, Date.now())));
   return response.text;
 }

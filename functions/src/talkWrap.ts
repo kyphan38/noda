@@ -90,7 +90,7 @@ export const talkWrap = onCall(
         try {
           const raw = await generateStructuredJson([{ role: "user", parts: [{ text: prompt }] }], WRAP_SCHEMA, {
             timeoutMs: GEMINI_TIMEOUT_MS,
-            temperature: 0.2,
+            temperature: 0.2, label: "talkWrap"
           });
           const wrap = parseWrap(
             raw,

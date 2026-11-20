@@ -42,7 +42,7 @@ export const talkHint = onCall(
     try {
       const raw = await generateStructuredJson([{ role: "user", parts: [{ text: buildHintPrompt(req, topic.title ?? "") }] }], HINT_SCHEMA, {
         timeoutMs: GEMINI_TIMEOUT_MS,
-        temperature: 0.3,
+        temperature: 0.3, label: "talkHint"
       });
       return { hints: parseHints(raw) };
     } catch (e) {

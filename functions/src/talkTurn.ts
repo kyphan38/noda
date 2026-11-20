@@ -155,7 +155,7 @@ export const talkTurn = onCall(
           const raw = await generateStructuredJson([{ role: "user", parts: [{ text: prompt }, audio] }], TURN_SCHEMA, {
             timeoutMs: GEMINI_TIMEOUT_MS,
             // Low: the transcript must not be "improved"; a little room for the reply.
-            temperature: 0.3,
+            temperature: 0.3, label: "talkTurn"
           });
           const result = parseTurnResult(raw, targets.map((t) => t.id));
           if (!result.transcript) throw new HttpsError("failed-precondition", "We could not hear you, try again.");

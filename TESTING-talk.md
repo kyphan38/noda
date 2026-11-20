@@ -111,7 +111,7 @@ then send the file back.
 ## 13. Voice
 
 - [ ] Before turning on the Text-to-Speech API: lines are read by the browser voice, no errors.
-- [ ] After turning it on (MANUAL-talk.md step 4): reload, the partner sounds like a real person. Starting to record stops the voice.
+- [ ] After turning it on (MANUAL-talk.md step 5): reload, the partner sounds like a real person. Starting to record stops the voice.
 
 ## 14. Conversation and layout
 

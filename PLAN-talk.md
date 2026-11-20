@@ -281,7 +281,9 @@ Từ 2027, dùng 30 phút mỗi ngày sẽ vượt ngân sách 200k. Cách giữ
 - Chỉ gửi 3 lượt gần nhất, không gửi cả buổi.
 - Giữ review ngắn: tối đa 3 lỗi, mỗi dòng giải thích ngắn.
 - Thử Flash-Lite cho `talkTurn` nếu nó giữ được transcript đúng từng chữ.
-- Thêm số token (vào, ra, thinking) vào log của function để biết chi phí thật.
+- Thêm số token (vào, ra, thinking) vào log của function để biết chi phí thật. - XONG (2026-11-20):
+  mỗi lần gọi Gemini in `[gemini-usage]` (label, token, USD ước tính). Xem tổng:
+  `firebase functions:log --lines 2000 | npx tsx scripts/gemini-cost.ts`.
 
 `talkTopic`, `talkWrap`, TTS (trong free tier): rất nhỏ.
 
@@ -314,7 +316,8 @@ Chọn theo những gì thấy thiếu khi dùng. Gợi ý thứ tự:
    ở màn kết thúc và bảng so sánh (transcript Gemini đã giữ filler).
 9. **Hint tầng 2** - XONG (2026-11-20): nút "Help", function `talkHint` trả 2-3 cụm (≤ 8 từ).
 10. **4/3/2 (60s → 45s → 30s)** - XONG (2026-11-20): `talkSpeech` (mode transcribe), bảng từ /
-    từ mỗi phút / uh-um mỗi vòng. Chưa kiểm tra "đủ ý chính" (thêm khi cần).
+    từ mỗi phút / uh-um mỗi vòng. Vòng 2 và 3 kiểm tra còn giữ ý chính của
+    vòng 1 không (mode retell, cùng 1 lần gọi), cột "Points kept".
 11. **Signature Phrasebook** - XONG (2026-11-20): sao trên cụm trong set; "Starred phrases" trên
     `/talk` với mức Learning / Known / Used with help / Yours.
 12. **Đẩy cụm sang Anki** - XONG (2026-11-20): "Export to Anki" trong set, file .txt đúng định dạng

@@ -61,7 +61,7 @@ export const defineWord = onCall(
     try {
       const raw = await generateStructuredJson([{ role: "user", parts: [{ text: buildWordPrompt(req) }] }], WORD_CARD_SCHEMA, {
         timeoutMs: GEMINI_TIMEOUT_MS,
-        temperature: 0,
+        temperature: 0, label: "defineWord"
       });
       card = parseWordCard(raw, req.word);
     } catch (e) {

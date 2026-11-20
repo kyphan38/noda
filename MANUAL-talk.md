@@ -18,11 +18,17 @@ Needs Anki open on your Mac, with the AnkiConnect add-on.
 - [ ] In Claude Code, run `/anki-import` with that file (for example `/anki-import ~/Downloads/noda-talk-daily-standup-set1.txt`).
 - [ ] Phrases that are already "Yours" are not in the file, so you only review what you still need.
 
-## 3. Time Capsule each month
+## 3. Check what the AI costs
+
+- [ ] Once in a while, in a terminal in the noda folder, run
+      `firebase functions:log --lines 2000 | npx tsx scripts/gemini-cost.ts`.
+      It shows calls, tokens and the estimated cost per function (USD and VND) for the logs it can read.
+
+## 4. Time Capsule each month
 
 - [ ] Once a month, open Talk → Drills → **Time Capsule** and record one minute. After a few months, play the old ones.
 
-## 4. Natural voice (Chirp 3 HD)
+## 5. Natural voice (Chirp 3 HD)
 
 The code is live. Until this API is on, the AI partner falls back to your
 browser's voice. The Google voice (Chirp 3 HD) needs one API turned on in your Google Cloud project. It is
