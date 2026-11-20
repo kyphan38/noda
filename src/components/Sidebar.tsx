@@ -20,6 +20,7 @@ import {
 import { LessonSummary, ExpandedSections, LessonItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
 import type { UseFoldersResult } from '@/hooks/useFolders';
+import AiCostRow from '@/components/AiCostRow';
 import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
 import { themeStore, type Theme } from '@/lib/theme';
 import { readAllForExport } from '@/lib/db';
@@ -426,6 +427,7 @@ function SidebarImpl({
                 Guide
               </Link>
             </div>
+            <AiCostRow />
           </div>
         </div>
       </div>

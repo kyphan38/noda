@@ -13,3 +13,4 @@ export * from './folders';
 export * from './local';
 export * from './misses';
 export * from './talk';
+export * from './aiUsage';

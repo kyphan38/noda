@@ -12,6 +12,7 @@
 import { GoogleGenAI, MediaResolution, type Content, type Schema } from "@google/genai";
 import { SHADOWING_ANALYSIS_RESPONSE_SCHEMA } from "../prompts/shadowingAnalysisPrompt";
 import { summarizeUsage } from "./geminiUsage";
+import { logAiCost } from "./aiCostLog";
 
 let genAI: GoogleGenAI | null = null;
 
@@ -74,5 +75,6 @@ export async function generateStructuredJson(
   });
   // Cost log: numbers only. Read with `firebase functions:log | grep gemini-usage`.
   console.info("[gemini-usage]", JSON.stringify(summarizeUsage(opts.label ?? "other", response.usageMetadata, Date.now())));
+  await logAiCost(getShadowingModelId(), response.usageMetadata);
   return response.text;
 }
