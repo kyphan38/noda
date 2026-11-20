@@ -9,7 +9,7 @@ import { getTalkStore } from '@/lib/talk/store';
 import type { TalkPhraseProgress } from '@/lib/talk/types';
 
 /** Phrases you starred as fitting you, and how far each one is. Nothing until you star one. */
-export function TalkStarredList() {
+export function TalkStarredList({ open = false }: { open?: boolean }) {
   const [rows, setRows] = useState<TalkPhraseProgress[]>([]);
 
   useEffect(() => {
@@ -23,10 +23,10 @@ export function TalkStarredList() {
     };
   }, []);
 
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return open ? <p className="text-sm text-gray-500">Star phrases in a topic set to keep them here.</p> : null;
   const yours = rows.filter((r) => r.stage === 'active').length;
   return (
-    <details className="rounded-xl border border-gray-800 bg-gray-900/60 px-4 py-3">
+    <details className="rounded-xl border border-gray-800 bg-gray-900/60 px-4 py-3" open={open}>
       <summary className="cursor-pointer text-sm text-gray-100">
         Starred phrases <span className="ml-1 text-xs text-gray-500 tabular-nums">{yours}/{rows.length} yours</span>
       </summary>

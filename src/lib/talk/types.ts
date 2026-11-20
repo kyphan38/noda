@@ -61,7 +61,7 @@ export type TalkTurnResult = {
 };
 
 export type TalkTurn = {
-  ai: { text: string; curveball: boolean };
+  ai: { text: string; curveball: boolean; kind?: 'question' | 'share' | 'invite' };
   /** Idea notes shown for this line (the reply's ideas of the turn before). */
   ideas?: string[];
   transcript: string;

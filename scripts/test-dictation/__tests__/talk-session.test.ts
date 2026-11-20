@@ -114,8 +114,10 @@ describe('TalkSession', () => {
     expect(screen.getByText('Builds failed 3 hours')).toBeTruthy();
     // Idea notes stay hidden until asked for.
     expect(screen.queryByText('the runner update')).toBeNull();
-    click('Ideas');
+    click('Stuck?');
     expect(screen.getByText('the runner update')).toBeTruthy();
+    click('Buy time');
+    expect(screen.getByText('Let me think for a second.')).toBeTruthy();
     click('Help');
     fireEvent.change(screen.getByPlaceholderText('Your idea in simple words'), { target: { value: 'builds were slow' } });
     click('Get words');
@@ -161,6 +163,7 @@ describe('TalkSession', () => {
     expect(payloads.every((p) => p.scenarioId === 's0' && p.recording === 'eA==')).toBe(true);
     expect(payloads.filter((p) => p.curveball)).toHaveLength(1);
     expect(payloads.map((p) => p.isLast)).toEqual([false, false, false, false, false, false, false, true]);
+    expect(payloads.map((p) => p.replyKind)).toEqual(['question', 'share', 'question', 'invite', 'share', 'question', 'question', 'question']);
     expect(payloads[5].history).toHaveLength(3);
     // p0 was used in turn 1, so later turns only target p1.
     expect(payloads[1].targetIds).toEqual(['p1']);

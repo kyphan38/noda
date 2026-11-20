@@ -111,6 +111,7 @@ export type TurnPayload = {
   targetIds: string[];
   curveball: boolean;
   isLast: boolean;
+  replyKind: 'question' | 'share' | 'invite';
   recording: string;
   recordingMimeType: string;
 };

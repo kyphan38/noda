@@ -3,20 +3,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Mic, Square, Volume2, Zap } from 'lucide-react';
 
-import { TalkHelp } from '@/components/talk/TalkHelp';
 import { TalkReviewCard } from '@/components/talk/TalkReviewCard';
 import { TalkSessionEnd } from '@/components/talk/TalkSessionEnd';
+import { TalkStuckPanel } from '@/components/talk/TalkStuckPanel';
 import { TalkToggle as Toggle } from '@/components/talk/TalkToggle';
 import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
-import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, STALL_PHRASES, TURN_COUNT } from '@/lib/talk/session';
+import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, replyKindFor, TURN_COUNT, type ReplyKind } from '@/lib/talk/session';
 import { speak, stopSpeaking } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
 import { DEFAULT_PREFS, readLastScenario, readPrefs, writeLastScenario, writePrefs, type TalkPrefs as Prefs } from '@/lib/talk/prefs';
 import type { TalkPhraseProgress, TalkScenario, TalkSession as Session, TalkTopic, TalkTurn } from '@/lib/talk/types';
 
-type Line = { text: string; curveball: boolean; ideas: string[] };
+type Line = { text: string; curveball: boolean; ideas: string[]; kind?: ReplyKind };
 type Phase = 'answer' | 'checking' | 'review' | 'end';
 
 type Props = {
@@ -41,10 +41,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const [line, setLine] = useState<Line | null>(null);
   const [phase, setPhase] = useState<Phase>('answer');
   const [error, setError] = useState<string | null>(null);
-  const [showIdeas, setShowIdeas] = useState(false);
-  const [showHints, setShowHints] = useState(false);
-  const [showStall, setShowStall] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+  const [showStuck, setShowStuck] = useState(false);
   const recorder = useVoiceRecorder();
   /** Bumped by Cancel, so a check that comes back late is ignored. */
   const attemptRef = useRef(0);
@@ -122,10 +119,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const save = (s: Session) => void getTalkStore().saveSession(s).catch((e) => console.warn('[talk] session save failed', e));
 
   const nextLine = (s: Session, l: Line) => {
-    setShowIdeas(false);
-    setShowHints(false);
-    setShowStall(false);
-    setShowHelp(false);
+    setShowStuck(false);
     if (s.turns.length >= (s.length ?? TURN_COUNT)) {
       const done = { ...s, endedAt: Date.now() };
       setSession(done);
@@ -154,20 +148,21 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         history: session.turns.slice(-3).map((t) => ({ ai: t.ai.text, you: t.transcript })),
         targetIds: phrases.filter((p) => !used.has(p.id)).map((p) => p.id),
         curveball: curveAt !== null && idx + 1 === curveAt,
+        replyKind: replyKindFor(idx + 1, total),
         isLast: idx === total - 1,
         recording: await blobToBase64(blob),
         recordingMimeType: blob.type || 'audio/webm',
       });
       if (attempt !== attemptRef.current) return;
       const turn: TalkTurn = {
-        ai: { text: line.text, curveball: line.curveball },
+        ai: { text: line.text, curveball: line.curveball, ...(line.kind ? { kind: line.kind } : {}) },
         ideas: line.ideas,
         transcript: result.transcript,
         seconds: result.seconds,
         review: result.review,
         usedPhraseIds: result.usedPhraseIds,
       };
-      const reply = { text: result.reply.text, curveball: result.reply.curveball, ideas: result.reply.ideas };
+      const reply: Line = { text: result.reply.text, curveball: result.reply.curveball, ideas: result.reply.ideas, kind: replyKindFor(idx + 1, total) };
       const s = { ...session, mode: prefs.mode, selfRepair: prefs.selfRepair, turns: [...session.turns, turn], next: reply };
       setSession(s);
       save(s);
@@ -212,7 +207,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     if (!session) return;
     const last = session.turns[session.turns.length - 1];
     if (!last) return;
-    const l = { text: last.ai.text, curveball: last.ai.curveball, ideas: last.ideas ?? [] };
+    const l: Line = { text: last.ai.text, curveball: last.ai.curveball, ideas: last.ideas ?? [], kind: last.ai.kind };
     const s = { ...session, turns: session.turns.slice(0, -1), next: l };
     setSession(s);
     save(s);
@@ -386,6 +381,9 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
                   )}
                 </p>
                 {prefs.showText ? <p className="text-base text-gray-100">{line.text}</p> : <p className="text-sm italic text-gray-500">Listen, then answer.</p>}
+                {line.kind && line.kind !== 'question' && !line.curveball && (
+                  <p className="text-xs text-gray-500">{line.kind === 'share' ? 'Your turn: react or add your view' : 'Your turn: ask them something'}</p>
+                )}
                 <div className="flex flex-wrap gap-3 text-xs">
                   <button type="button" onClick={() => speak(line.text)} className="flex items-center gap-1 text-gray-400 hover:text-gray-100">
                     <Volume2 className="h-3.5 w-3.5" /> Play
@@ -393,49 +391,11 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
                   <button type="button" onClick={() => changePrefs({ showText: !prefs.showText })} className="text-gray-400 hover:text-gray-100">
                     {prefs.showText ? 'Hide text' : 'Show text'}
                   </button>
-                  {line.ideas.length > 0 && (
-                    <button type="button" onClick={() => setShowIdeas((v) => !v)} className="text-gray-400 hover:text-gray-100">
-                      Ideas
-                    </button>
-                  )}
-                  {hints.length > 0 && (
-                    <button type="button" onClick={() => setShowHints((v) => !v)} className="text-gray-400 hover:text-gray-100">
-                      Phrases
-                    </button>
-                  )}
-                  <button type="button" onClick={() => setShowStall((v) => !v)} className="text-gray-400 hover:text-gray-100">
-                    Buy time
-                  </button>
-                  <button type="button" onClick={() => setShowHelp((v) => !v)} className="text-gray-400 hover:text-gray-100">
-                    Help
+                  <button type="button" onClick={() => setShowStuck((v) => !v)} className={showStuck ? 'text-gray-100' : 'text-gray-400 hover:text-gray-100'}>
+                    Stuck?
                   </button>
                 </div>
-                {showHelp && <TalkHelp key={line.text} topicId={topic.id} aiLine={line.text} />}
-                {showIdeas && (
-                  <ul className="list-disc pl-5 text-sm text-gray-300">
-                    {line.ideas.map((i) => (
-                      <li key={i}>{i}</li>
-                    ))}
-                  </ul>
-                )}
-                {showStall && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {STALL_PHRASES.map((p) => (
-                      <span key={p} className="rounded-md border border-gray-800 px-2 py-0.5 text-xs text-gray-300">
-                        {p}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {showHints && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {hints.map((p) => (
-                      <span key={p.id} className="rounded-md bg-gray-800 px-2 py-0.5 text-xs text-gray-200">
-                        {p.text}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {showStuck && <TalkStuckPanel key={line.text} topicId={topic.id} line={line.text} ideas={line.ideas} phrases={hints} />}
               </div>
             </div>
           </div>

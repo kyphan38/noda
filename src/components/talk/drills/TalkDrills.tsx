@@ -30,8 +30,7 @@ export function TalkDrills() {
     );
   }
   return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-medium text-gray-400">Drills</h2>
+    <section>
       <ul className="divide-y divide-gray-800 rounded-xl border border-gray-800 bg-gray-900/60">
         {DRILLS.map((d) => (
           <li key={d.id}>

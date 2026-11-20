@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countFillers, curveballTurn, fixSegments, hintPhrases, pickScenario, topSessionFixes, wordsPerMinute } from './session';
+import { countFillers, replyKindFor, curveballTurn, fixSegments, hintPhrases, pickScenario, topSessionFixes, wordsPerMinute } from './session';
 import type { TalkFix, TalkPhrase, TalkTurn } from './types';
 
 const fix = (wrong: string, kind: TalkFix['kind'] = 'grammar', pattern = 'other'): TalkFix => ({ kind, wrong, right: `${wrong}!`, why: '', pattern });
@@ -82,5 +82,13 @@ describe('countFillers', () => {
   it('counts uh, um and friends, not real words', () => {
     expect(countFillers('Uh, I think, um... the umbrella, uhh, hmm, ah okay')).toBe(5);
     expect(countFillers('')).toBe(0);
+  });
+});
+
+describe('replyKindFor', () => {
+  it('mixes questions, shares and one invite', () => {
+    expect([1, 2, 3, 4, 5, 6, 7].map((i) => replyKindFor(i, 8))).toEqual(['question', 'share', 'question', 'invite', 'share', 'question', 'question']);
+    expect([1, 2].map((i) => replyKindFor(i, 3))).toEqual(['question', 'share']);
+    expect(replyKindFor(8, 8)).toBe('question');
   });
 });

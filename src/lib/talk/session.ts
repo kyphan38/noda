@@ -133,3 +133,16 @@ export const STALL_PHRASES = [
   'Give me a moment.',
   'If I remember right,',
 ];
+
+export type ReplyKind = 'question' | 'share' | 'invite';
+
+/**
+ * What line `i` (1 = the first reply) should do, so a talk is a conversation,
+ * not an interview: mostly questions, every third line the partner shares
+ * something and waits, and once in a longer talk you are asked to ask.
+ */
+export function replyKindFor(i: number, total: number): ReplyKind {
+  if (i >= total) return 'question'; // the closing line has its own rule
+  if (total >= 5 && i === Math.ceil(total / 2)) return 'invite';
+  return i % 3 === 2 ? 'share' : 'question';
+}

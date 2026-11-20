@@ -14,6 +14,7 @@ import { TALK_LEVELS, type TalkLevel, type TalkTopic } from '@/lib/talk/types';
 import type { TopicRequest } from '@/lib/db';
 
 const LEVEL_KEY = 'noda.talk.level';
+const TAB_KEY = 'noda.talk.tab';
 
 function readLevel(): TalkLevel {
   try {
@@ -35,9 +36,16 @@ export function TalkView() {
   const [open, setOpen] = useState<TalkTopic | null>(null);
   const [making, setMaking] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState('Work');
+  const [showNew, setShowNew] = useState(false);
 
   useEffect(() => {
     setLevel(readLevel());
+    try {
+      setTab(localStorage.getItem(TAB_KEY) ?? 'Work');
+    } catch {
+      // Private mode: start on Work.
+    }
     warmUpVoices();
     getTalkStore()
       .listTopics()
@@ -51,6 +59,15 @@ export function TalkView() {
       localStorage.setItem(LEVEL_KEY, l);
     } catch {
       // Private mode: the level is kept for this visit only.
+    }
+  };
+
+  const pickTab = (id: string) => {
+    setTab(id);
+    try {
+      localStorage.setItem(TAB_KEY, id);
+    } catch {
+      // Kept for this visit only.
     }
   };
 
@@ -93,28 +110,46 @@ export function TalkView() {
   const savedIds = new Set((saved ?? []).map((t) => t.id));
   const custom = (saved ?? []).filter((t) => t.kind === 'custom' && t.level === level);
 
+  const tabs: { id: string; label: string }[] = [
+    ...(custom.length > 0 ? [{ id: 'yours', label: 'Yours' }] : []),
+    ...TALK_CATEGORIES.map((c) => ({ id: c, label: c })),
+    { id: 'drills', label: 'Drills' },
+    { id: 'starred', label: 'Starred' },
+  ];
+  const current = tabs.find((t) => t.id === tab)?.id ?? tabs[0].id;
+  const chip = (on: boolean) =>
+    `shrink-0 rounded-lg border px-2.5 py-1 text-xs transition-colors ${on ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`;
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-2" role="radiogroup" aria-label="Level">
-        {TALK_LEVELS.map((l) => (
-          <button
-            key={l}
-            type="button"
-            role="radio"
-            aria-checked={level === l}
-            onClick={() => pickLevel(l)}
-            className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
-              level === l ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'
-            }`}
-          >
-            {l}
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1" role="radiogroup" aria-label="Level">
+          {TALK_LEVELS.map((l) => (
+            <button key={l} type="button" role="radio" aria-checked={level === l} onClick={() => pickLevel(l)} className={chip(level === l)}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex gap-1">
+          <button type="button" disabled={making !== null} onClick={() => void openPreset(randomPreset())} className={chip(false)}>
+            Surprise me
           </button>
-        ))}
+          <button type="button" onClick={() => setShowNew((v) => !v)} className={chip(showNew)}>
+            + New topic
+          </button>
+        </div>
       </div>
 
       <TalkWeekCard />
 
-      <TalkStarredList />
+      {showNew && (
+        <NewTopicForm
+          busy={making !== null}
+          onCreate={(title, description, notes) =>
+            void openTopic({ topicId: newCustomId(), kind: 'custom', title, description, level, ...(notes ? { notes, notesKind: 'context' as const } : {}) })
+          }
+        />
+      )}
 
       <TalkCaptureBox
         busy={making !== null}
@@ -123,50 +158,43 @@ export function TalkView() {
         }
       />
 
-      <button
-        type="button"
-        disabled={making !== null}
-        onClick={() => void openPreset(randomPreset())}
-        className="w-full rounded-lg border border-gray-700 py-2 text-sm text-gray-200 hover:border-gray-500 disabled:cursor-wait"
-      >
-        Surprise me
-      </button>
-
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <NewTopicForm busy={making !== null} onCreate={(title, description, notes) => void openTopic({ topicId: newCustomId(), kind: 'custom', title, description, level, ...(notes ? { notes, notesKind: 'context' as const } : {}) })} />
-
-      {custom.length > 0 && (
-        <TopicList title="Your topics">
-          {custom.map((t) => (
-            <TopicRow key={t.id} title={t.title} hint={t.description} ready busy={making === t.id} onOpen={() => setOpen(t)} />
+      <div className="space-y-2">
+        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist">
+          {tabs.map((t) => (
+            <button key={t.id} type="button" role="tab" aria-selected={current === t.id} onClick={() => pickTab(t.id)} className={chip(current === t.id)}>
+              {t.label}
+            </button>
           ))}
-        </TopicList>
-      )}
+        </div>
 
-      <TalkDrills />
-
-      {TALK_CATEGORIES.map((c) => (
-        <TopicList key={c} title={c}>
-          {TALK_PRESETS.filter((p) => p.category === c).map((p) => {
-            const id = presetTopicId(p.id, level);
-            return (
-              <TopicRow key={id} title={p.title} hint={p.description} ready={savedIds.has(id)} busy={making === id} disabled={making !== null} onOpen={() => void openPreset(p)} />
-            );
-          })}
-        </TopicList>
-      ))}
+        {current === 'yours' && (
+          <TopicList>
+            {custom.map((t) => (
+              <TopicRow key={t.id} title={t.title} hint={t.description} ready busy={making === t.id} onOpen={() => setOpen(t)} />
+            ))}
+          </TopicList>
+        )}
+        {current === 'drills' && <TalkDrills />}
+        {current === 'starred' && <TalkStarredList open />}
+        {TALK_CATEGORIES.includes(current as (typeof TALK_CATEGORIES)[number]) && (
+          <TopicList>
+            {TALK_PRESETS.filter((p) => p.category === current).map((p) => {
+              const id = presetTopicId(p.id, level);
+              return (
+                <TopicRow key={id} title={p.title} hint={p.description} ready={savedIds.has(id)} busy={making === id} disabled={making !== null} onOpen={() => void openPreset(p)} />
+              );
+            })}
+          </TopicList>
+        )}
+      </div>
     </div>
   );
 }
 
-function TopicList({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-medium text-gray-400">{title}</h2>
-      <ul className="divide-y divide-gray-800 rounded-xl border border-gray-800 bg-gray-900/60">{children}</ul>
-    </section>
-  );
+function TopicList({ children }: { children: React.ReactNode }) {
+  return <ul className="divide-y divide-gray-800 rounded-xl border border-gray-800 bg-gray-900/60">{children}</ul>;
 }
 
 function TopicRow(props: { title: string; hint: string; ready: boolean; busy: boolean; disabled?: boolean; onOpen: () => void }) {

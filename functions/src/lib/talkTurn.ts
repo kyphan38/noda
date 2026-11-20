@@ -33,6 +33,10 @@ const MAX_LINE = 600;
 
 export type Level = "B1" | "B2" | "C1";
 
+/** What the next line does: ask, share something of its own, or invite the learner to ask. */
+export const REPLY_KINDS = ["question", "share", "invite"] as const;
+export type ReplyKind = (typeof REPLY_KINDS)[number];
+
 export interface TurnRequest {
   topicId: string;
   scenarioId: string;
@@ -41,6 +45,7 @@ export interface TurnRequest {
   targetIds: string[];
   curveball: boolean;
   isLast: boolean;
+  replyKind: ReplyKind;
 }
 
 /** Answer frames for topics where structure matters. */
@@ -108,13 +113,23 @@ export function checkTurnRequest(data: unknown): TurnRequest {
   const targetIds = (Array.isArray(d.targetIds) ? d.targetIds : [])
     .filter((id): id is string => typeof id === "string" && /^p\d{1,3}$/.test(id))
     .slice(0, MAX_TARGETS);
-  return { topicId, scenarioId, aiLine, history, targetIds, curveball: d.curveball === true, isLast: d.isLast === true };
+  const replyKind = REPLY_KINDS.find((k) => k === d.replyKind) ?? "question";
+  return { topicId, scenarioId, aiLine, history, targetIds, curveball: d.curveball === true, isLast: d.isLast === true, replyKind };
 }
 
 const LEVEL_NOTES: Record<Level, string> = {
   B1: "B1: keep 'natural' simple and short; 'levelUp' is B2.",
   B2: "B2: 'natural' sounds like a fluent colleague; 'levelUp' is C1.",
   C1: "C1: 'natural' is precise and idiomatic; 'levelUp' is how a sharp native speaker would put it.",
+};
+
+const REPLY_RULES: Record<ReplyKind, string> = {
+  question:
+    "- React briefly to what the learner said, then ask ONE natural follow-up question. One or two sentences. Where it fits, steer toward a situation where one of the target phrases would be useful, but never name or hint the phrases.",
+  share:
+    "- React to what the learner said, then share a short opinion or experience of your own about it, and end WITHOUT a question, so the learner reacts or adds their view. At most two sentences.",
+  invite:
+    "- React briefly, then invite the learner to ask YOU something about this topic, in natural words. Do not ask a content question yourself.",
 };
 
 export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
@@ -125,7 +140,9 @@ export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
     ? "- This is the last turn: react to the answer and close the talk politely in one or two sentences. No new question."
     : req.curveball
       ? "- Curveball: do NOT simply ask the next question. Either misunderstand one point on purpose so the learner must clarify, or push back on it, or ask a pointed follow-up about a risk, a deadline or a number. Stay polite and realistic. One or two sentences."
-      : "- React briefly to what the learner said, then ask ONE natural follow-up question. One or two sentences. Where it fits, steer toward a situation where one of the target phrases would be useful, but never name or hint the phrases.";
+      : REPLY_RULES[req.replyKind];
+  const answerFirst =
+    "- This is a real conversation, not an interview. If the learner asked you something, first answer it briefly and honestly as " + p.name + ".";
 
   return [
     `You run a spoken English practice for ${LEARNER_ROLE}. Everything you write is in English only.`,
@@ -155,11 +172,12 @@ export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {
     "     vietlish (translated word for word from Vietnamese, for example 'according to me', 'explain me').",
     `     pattern: one of ${FIX_PATTERNS.join(", ")}.`,
     "3. reply: what you say next, as " + p.name + ".",
+    answerFirst,
     replyRule,
     "   Set curveball to true only when this reply is a curveball.",
     req.isLast
       ? "   ideas: an empty list."
-      : "   ideas: 2 or 3 notes of what the learner could mention when answering your reply, each at most 6 words, from the situation or common sense. Notes only, never a sentence the learner could read out.",
+      : "   ideas: 2 or 3 notes of what the learner could say or ask next, each at most 6 words, from the situation or common sense. Notes only, never a sentence the learner could read out.",
     "4. usedPhraseIds: ids of the target phrases the learner used with the right meaning (other verb forms are fine).",
     ctx.frame
       ? `5. structure: this topic uses ${FRAME_RULES[ctx.frame]} Only if the answer has at least ${FRAME_MIN_WORDS} words and does not follow it, say in one sentence (at most 20 simple words) how to reorder it. Otherwise an empty string.`

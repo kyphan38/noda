@@ -113,7 +113,14 @@ then send the file back.
 - [ ] Before turning on the Text-to-Speech API: lines are read by the browser voice, no errors.
 - [ ] After turning it on (MANUAL-talk.md step 4): reload, the partner sounds like a real person. Starting to record stops the voice.
 
-## 14. Theme and phone
+## 14. Conversation and layout
+
+- [ ] In an 8-answer talk: line 2 shares something and shows "Your turn: react or add your view"; line 4 shows "Your turn: ask them something".
+- [ ] Ask the partner a question in an answer: the next line answers it first.
+- [ ] **Stuck?** opens one panel with Ideas, Phrases, Buy time and Help.
+- [ ] The Talk page is short: level and buttons on one line, "This week" on one line, topics in tabs. The tab you pick is remembered.
+
+## 15. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

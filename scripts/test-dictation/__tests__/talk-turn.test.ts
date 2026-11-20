@@ -27,6 +27,9 @@ describe('talk turn request', () => {
     expect(req.targetIds).toEqual(['p0', 'p1']);
     expect(req.curveball).toBe(true);
     expect(req.isLast).toBe(false);
+    expect(req.replyKind).toBe('question');
+    expect(checkTurnRequest({ topicId: 'standup-b2', scenarioId: 's0', aiLine: 'Hi', replyKind: 'share' }).replyKind).toBe('share');
+    expect(checkTurnRequest({ topicId: 'standup-b2', scenarioId: 's0', aiLine: 'Hi', replyKind: 'odd' }).replyKind).toBe('question');
   });
   it('rejects a bad topic id or an empty line', () => {
     expect(() => checkTurnRequest({ topicId: 'x/y', scenarioId: 's0', aiLine: 'Hi' })).toThrow();
@@ -58,6 +61,9 @@ describe('talk turn prompt', () => {
   it('switches the reply rule for a curveball and for the last turn', () => {
     expect(buildTurnPrompt({ ...base, curveball: true }, ctx)).toContain('Curveball');
     expect(buildTurnPrompt({ ...base, isLast: true }, ctx)).toContain('close the talk politely');
+    expect(buildTurnPrompt({ ...base, replyKind: 'share' }, ctx)).toContain('end WITHOUT a question');
+    expect(buildTurnPrompt({ ...base, replyKind: 'invite' }, ctx)).toContain('invite the learner to ask YOU');
+    expect(buildTurnPrompt(base, ctx)).toContain('first answer it briefly');
   });
 });
 

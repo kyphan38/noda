@@ -26,28 +26,16 @@ export function TalkWeekCard() {
 
   if (!data || (data.week.talks === 0 && data.streak === 0)) return null;
   const { week } = data;
-  const stats = [
-    { label: 'Streak', value: `${data.streak} ${data.streak === 1 ? 'day' : 'days'}` },
-    { label: 'Talks', value: week.talks },
-    { label: 'Minutes', value: week.minutes },
-    { label: 'Words/min', value: week.wpm },
+  const parts = [
+    `${data.streak}-day streak`,
+    `${week.talks} ${week.talks === 1 ? 'talk' : 'talks'}`,
+    `${week.minutes} min`,
+    `${week.wpm} words/min`,
   ];
   return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-medium text-gray-400">This week</h2>
-      <div className="grid grid-cols-4 gap-2">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-xl bg-gray-900/60 p-3">
-            <p className="text-xs text-gray-500">{s.label}</p>
-            <p className="text-lg text-gray-100 tabular-nums">{s.value}</p>
-          </div>
-        ))}
-      </div>
-      {week.topPatterns.length > 0 && (
-        <p className="text-xs text-gray-500">
-          Most common: {week.topPatterns.map((p) => `${p.label} (${p.n})`).join(', ')}
-        </p>
-      )}
-    </section>
+    <p className="text-xs text-gray-500" title={week.topPatterns.map((p) => `${p.label}: ${p.n}`).join(', ')}>
+      <span className="text-gray-300">This week</span> · {parts.join(' · ')}
+      {week.topPatterns[0] && <> · most: {week.topPatterns[0].label}</>}
+    </p>
   );
 }
