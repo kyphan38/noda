@@ -3,7 +3,7 @@
  * One small text call, counted in the daily cap. Nothing is saved.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Type, type Schema } from "@google/genai";
+import { HINT_SCHEMA } from "./lib/talkSchemas";
 import { getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { generateStructuredJson } from "./lib/geminiClient";
@@ -14,13 +14,6 @@ import { buildHintPrompt, checkHintRequest, parseHints, type TalkHint } from "./
 /** Keep in sync with NODA_DB_ID in analyzeShadowingPattern.ts and lib/firebase-db-id.ts. */
 const NODA_DB_ID = "(default)";
 const GEMINI_TIMEOUT_MS = 20000;
-
-const STR = { type: Type.STRING };
-const HINT_SCHEMA: Schema = {
-  type: Type.OBJECT,
-  properties: { hints: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: STR, use: STR }, required: ["text", "use"] } } },
-  required: ["hints"],
-};
 
 export const talkHint = onCall(
   { region: "asia-southeast1", secrets: ["GEMINI_API_KEY", "ALLOWED_USER_UID"], timeoutSeconds: 60 },

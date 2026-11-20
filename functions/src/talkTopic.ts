@@ -4,7 +4,7 @@
  * paid for once; a second call returns the saved copy.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Type, type Schema } from "@google/genai";
+import { TOPIC_SCHEMA } from "./lib/talkSchemas";
 import { getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { generateStructuredJson, getShadowingModelId } from "./lib/geminiClient";
@@ -15,31 +15,6 @@ import { buildTopicPrompt, checkTopicRequest, parseTopicContent, TOPIC_VERSION, 
 /** Keep in sync with NODA_DB_ID in analyzeShadowingPattern.ts and lib/firebase-db-id.ts. */
 const NODA_DB_ID = "(default)";
 const GEMINI_TIMEOUT_MS = 90000;
-
-const STR = { type: Type.STRING };
-const TOPIC_SCHEMA: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    persona: { type: Type.OBJECT, properties: { name: STR, role: STR, style: STR }, required: ["name", "role", "style"] },
-    scenarios: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: { title: STR, facts: { type: Type.ARRAY, items: STR }, opening: STR, ideas: { type: Type.ARRAY, items: STR } },
-        required: ["title", "facts", "opening", "ideas"],
-      },
-    },
-    phrases: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: { text: STR, ipa: STR, meaning: STR, example: STR },
-        required: ["text", "ipa", "meaning", "example"],
-      },
-    },
-  },
-  required: ["persona", "scenarios", "phrases"],
-};
 
 export const talkTopic = onCall(
   {

@@ -4,7 +4,7 @@
  * nothing is saved here. The recording is not stored by this function.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Type, type Schema } from "@google/genai";
+import { SPEECH_SCHEMA } from "./lib/talkSchemas";
 import { getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync, unlinkSync, writeFileSync } from "fs";
@@ -17,7 +17,6 @@ import { generateStructuredJson } from "./lib/geminiClient";
 import { QUOTA_MESSAGE, isGeminiQuotaError, isGeminiTimeoutError } from "./lib/geminiErrors";
 import { takeAiCall } from "./lib/dailyLimit";
 import { wavStats } from "./lib/wavStats";
-import { FIX_KINDS, FIX_PATTERNS } from "./lib/talkTurn";
 import { buildSpeechPrompt, checkSpeechRequest, parseSpeech, SpeechShapeError, type SpeechResult } from "./lib/talkSpeech";
 
 /** Keep in sync with NODA_DB_ID in analyzeShadowingPattern.ts and lib/firebase-db-id.ts. */
@@ -26,25 +25,6 @@ const GEMINI_TIMEOUT_MS = 60000;
 const MAX_RECORDING_BASE64 = 6_000_000;
 const MIN_SPEECH_SECONDS = 0.5;
 const SILENCE_DBFS = -60;
-
-const STR = { type: Type.STRING };
-const SPEECH_SCHEMA: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    transcript: STR,
-    points: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { point: STR, covered: { type: Type.BOOLEAN } }, required: ["point", "covered"] } },
-    model: STR,
-    fixes: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: { wrong: STR, right: STR, why: STR, kind: { type: Type.STRING, enum: [...FIX_KINDS] }, pattern: { type: Type.STRING, enum: [...FIX_PATTERNS] } },
-        required: ["wrong", "right", "why", "kind", "pattern"],
-      },
-    },
-  },
-  required: ["transcript", "points", "model", "fixes"],
-};
 
 export const talkSpeech = onCall(
   { region: "asia-southeast1", secrets: ["GEMINI_API_KEY", "ALLOWED_USER_UID"], timeoutSeconds: 150, memory: "512MiB" },

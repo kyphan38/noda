@@ -169,6 +169,11 @@ Correct, câu đúng không bị sửa. Lưu ý: giọng máy rõ hơn giọng t
 giọng của mình. Chạy lại sau mỗi lần sửa prompt:
 `cd functions && npx tsx --env-file=.secret.local scripts/talk-eval.ts`.
 
+Eval phần 2 (2026-11-20): `functions/scripts/talk-eval-prompts.ts`, tất cả đạt. Topic: 40/40 câu
+ví dụ chứa đúng cụm (điền chỗ trống dùng được hết), nghĩa không lộ cụm, ideas ≤ 6 từ. Kiểu
+lượt: share không hỏi, question có hỏi, invite có mời hỏi (hơi nhẹ, giống "cần gì cứ hỏi").
+Retell: ý bỏ cố ý bị đánh dấu thiếu. Help: 3 cụm ngắn, không phải câu hoàn chỉnh.
+
 Rủi ro cần test trước khi làm UI:
 - Transcript có giữ lỗi không? Thử 10 câu cố ý nói sai.
 - Gemini có bịa câu không (xem memory về argon)? Kiểm tra shape giống
