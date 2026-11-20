@@ -129,7 +129,7 @@ const REPLY_RULES: Record<ReplyKind, string> = {
   share:
     "- React to what the learner said, then share a short opinion or experience of your own about it, and end WITHOUT a question, so the learner reacts or adds their view. At most two sentences.",
   invite:
-    "- React briefly, then invite the learner to ask YOU something about this topic, in natural words. Do not ask a content question yourself.",
+    "- React briefly, then hand the turn to the learner: end with ONE short, direct question that asks them to ask YOU something now, about you or this topic (for example \"Anything you want to ask me about the release?\" in your own words). Not a polite offer like \"let me know if you need anything\". Do not ask a content question yourself.",
 };
 
 export function buildTurnPrompt(req: TurnRequest, ctx: TurnContext): string {

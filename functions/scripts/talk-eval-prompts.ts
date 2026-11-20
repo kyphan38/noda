@@ -73,7 +73,7 @@ async function evalKinds(dir: string) {
       kind === "share"
         ? ["shares and asks nothing (no '?')", !t.includes("?")]
         : kind === "invite"
-          ? ["invites the learner to ask", /\b(ask|questions?|anything (you|on your mind)|curious)\b/i.test(t)]
+          ? ["ends with a direct question asking the learner to ask", /\?\s*$/.test(t) && /\b(ask|questions?|curious|want to know)\b/i.test(t) && !/let me know|if you need/i.test(t)]
           : ["asks a question", t.includes("?")];
     report(`kind ${kind}: "${t}"`, [check]);
   }

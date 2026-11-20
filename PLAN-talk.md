@@ -171,7 +171,7 @@ giọng của mình. Chạy lại sau mỗi lần sửa prompt:
 
 Eval phần 2 (2026-11-20): `functions/scripts/talk-eval-prompts.ts`, tất cả đạt. Topic: 40/40 câu
 ví dụ chứa đúng cụm (điền chỗ trống dùng được hết), nghĩa không lộ cụm, ideas ≤ 6 từ. Kiểu
-lượt: share không hỏi, question có hỏi, invite có mời hỏi (hơi nhẹ, giống "cần gì cứ hỏi").
+lượt: share không hỏi, question có hỏi, invite kết thúc bằng câu hỏi mời mình hỏi lại (đã siết prompt 2026-11-20).
 Retell: ý bỏ cố ý bị đánh dấu thiếu. Help: 3 cụm ngắn, không phải câu hoàn chỉnh.
 
 Rủi ro cần test trước khi làm UI:

@@ -62,7 +62,7 @@ describe('talk turn prompt', () => {
     expect(buildTurnPrompt({ ...base, curveball: true }, ctx)).toContain('Curveball');
     expect(buildTurnPrompt({ ...base, isLast: true }, ctx)).toContain('close the talk politely');
     expect(buildTurnPrompt({ ...base, replyKind: 'share' }, ctx)).toContain('end WITHOUT a question');
-    expect(buildTurnPrompt({ ...base, replyKind: 'invite' }, ctx)).toContain('invite the learner to ask YOU');
+    expect(buildTurnPrompt({ ...base, replyKind: 'invite' }, ctx)).toContain('asks them to ask YOU something now');
     expect(buildTurnPrompt(base, ctx)).toContain('first answer it briefly');
   });
 });
