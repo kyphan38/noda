@@ -189,7 +189,12 @@ Việc cần làm:
 - Logic thuần + test: `src/lib/talk/phraseStage.ts`, `src/lib/talk/mistakeBank.ts`,
   `src/lib/talk/sessionStats.ts` (số từ/lượt, từ/phút từ transcript + thời lượng).
 
-### Phase 4 - Hộp "Vừa bị bí" (Capture)
+### Phase 4 - Hộp "Vừa bị bí" (Capture) - CODE XONG (2026-11-20), CHƯA DEPLOY RULES
+
+Đã làm: ô "Got stuck?" trên đầu trang `/talk`, lưu `talkCaptures`, danh sách 20
+câu mới nhất, xoá được. Chưa thêm vào sidebar (Sidebar.tsx đã gần 500 dòng; link
+Talk ở sidebar đủ nhanh).
+
 
 Việc cần làm:
 - Nút nhỏ trên trang `/talk` (và trong menu sidebar): gõ câu mình muốn nói

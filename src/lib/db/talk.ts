@@ -4,6 +4,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, 
 import { httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore, getFirebaseFunctions } from '@/lib/auth/firebase-client';
 import { TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME, TALK_WRAP_FUNCTION_NAME } from '@/constants';
+import type { TalkCapture } from '@/lib/talk/capture';
 import type { TalkMistake } from '@/lib/talk/mistake-bank';
 import { progressId, raiseStage } from '@/lib/talk/phrase-stage';
 import type { PhraseStage, TalkLevel, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from '@/lib/talk/types';
@@ -13,6 +14,7 @@ const topicsPath = (uid: string) => `users/${uid}/talkTopics`;
 const progressPath = (uid: string) => `users/${uid}/talkPhraseProgress`;
 const sessionsPath = (uid: string) => `users/${uid}/talkSessions`;
 const mistakesPath = (uid: string) => `users/${uid}/talkMistakes`;
+const capturesPath = (uid: string) => `users/${uid}/talkCaptures`;
 
 /** Making a topic takes a model call of up to about a minute and a half. */
 const TOPIC_CLIENT_TIMEOUT_MS = 150_000;
@@ -174,4 +176,23 @@ export async function markPhrasesActive(keys: string[]): Promise<void> {
   const batch = writeBatch(db);
   for (const k of keys) batch.update(doc(db, progressPath(uid), k), { stage: 'active', updatedAt: Date.now() });
   await batch.commit();
+}
+
+export async function listTalkCaptures(): Promise<TalkCapture[]> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(collection(getFirebaseFirestore(), capturesPath(uid)));
+  return snap.docs.map((d) => ({ ...(d.data() as Omit<TalkCapture, 'id'>), id: d.id }));
+}
+
+export async function addTalkCapture(text: string): Promise<TalkCapture> {
+  const uid = getCurrentUidOrThrow();
+  const row = { text, createdAt: Date.now() };
+  const ref = doc(collection(getFirebaseFirestore(), capturesPath(uid)));
+  await setDoc(ref, row);
+  return { ...row, id: ref.id };
+}
+
+export async function deleteTalkCapture(id: string): Promise<void> {
+  const uid = getCurrentUidOrThrow();
+  await deleteDoc(doc(getFirebaseFirestore(), capturesPath(uid), id));
 }

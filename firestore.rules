@@ -32,6 +32,9 @@ service cloud.firestore {
     match /users/{userId}/talkSessions/{sessionId} {
       allow read, write: if isOwner(userId);
     }
+    match /users/{userId}/talkCaptures/{captureId} {
+      allow read, write: if isOwner(userId);
+    }
     match /users/{userId}/talkMistakes/{pattern} {
       allow read, write: if isOwner(userId);
     }

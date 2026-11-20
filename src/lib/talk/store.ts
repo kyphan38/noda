@@ -2,6 +2,7 @@
 // (no sign-in) one sample topic in memory, so the screens can be tested.
 import * as fsdb from '@/lib/db';
 import { raiseStage } from './phrase-stage';
+import type { TalkCapture } from './capture';
 import type { TalkMistake } from './mistake-bank';
 import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult, TalkWrap } from './types';
 
@@ -20,6 +21,9 @@ export type TalkStore = {
   saveMistakes(rows: TalkMistake[]): Promise<void>;
   listPrompted(): Promise<TalkPhraseProgress[]>;
   markActive(keys: string[]): Promise<void>;
+  listCaptures(): Promise<TalkCapture[]>;
+  addCapture(text: string): Promise<TalkCapture>;
+  deleteCapture(id: string): Promise<void>;
 };
 
 const firestoreStore: TalkStore = {
@@ -37,6 +41,9 @@ const firestoreStore: TalkStore = {
   saveMistakes: fsdb.saveTalkMistakes,
   listPrompted: fsdb.listPromptedPhrases,
   markActive: fsdb.markPhrasesActive,
+  listCaptures: fsdb.listTalkCaptures,
+  addCapture: fsdb.addTalkCapture,
+  deleteCapture: fsdb.deleteTalkCapture,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -81,6 +88,7 @@ function memoryStore(): TalkStore {
   const progress = new Map<string, Map<string, TalkPhraseProgress>>();
   const sessions = new Map<string, TalkSession>();
   const mistakes = new Map<string, TalkMistake>();
+  const captures = new Map<string, TalkCapture>();
   return {
     listTopics: async () => [...topics.values()],
     ensureTopic: async (req) => {
@@ -145,6 +153,13 @@ function memoryStore(): TalkStore {
     saveMistakes: async (rows) => rows.forEach((m) => mistakes.set(m.pattern, m)),
     listPrompted: async () => [...progress.values()].flatMap((m) => [...m.values()]).filter((p) => p.stage === 'prompted'),
     markActive: async () => {},
+    listCaptures: async () => [...captures.values()],
+    addCapture: async (text) => {
+      const row = { id: `c${captures.size}-${Date.now()}`, text, createdAt: Date.now() };
+      captures.set(row.id, row);
+      return row;
+    },
+    deleteCapture: async (id) => void captures.delete(id),
     findOpenSession: async (topicId, setIndex) =>
       [...sessions.values()].filter((s) => s.topicId === topicId && s.setIndex === setIndex && !s.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
   };
