@@ -7,7 +7,6 @@
  * Nothing is saved here: the app keeps the session. The recording is not stored.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Type, type Schema } from "@google/genai";
 import { getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync, unlinkSync, writeFileSync } from "fs";
@@ -20,11 +19,10 @@ import { generateStructuredJson } from "./lib/geminiClient";
 import { QUOTA_MESSAGE, isGeminiQuotaError, isGeminiTimeoutError } from "./lib/geminiErrors";
 import { takeAiCall } from "./lib/dailyLimit";
 import { wavStats } from "./lib/wavStats";
+import { TURN_SCHEMA } from "./lib/talkTurnSchema";
 import {
   buildTurnPrompt,
   checkTurnRequest,
-  FIX_KINDS,
-  FIX_PATTERNS,
   frameFor,
   parseTurnResult,
   TurnShapeError,
@@ -39,45 +37,6 @@ const GEMINI_TIMEOUT_MS = 45000;
 const MAX_RECORDING_BASE64 = 6_000_000;
 const MIN_SPEECH_SECONDS = 0.5;
 const SILENCE_DBFS = -60;
-
-const STR = { type: Type.STRING };
-const TURN_SCHEMA: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    transcript: STR,
-    review: {
-      type: Type.OBJECT,
-      properties: {
-        correct: STR,
-        natural: STR,
-        levelUp: STR,
-        structure: STR,
-        fixes: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              wrong: STR,
-              right: STR,
-              why: STR,
-              kind: { type: Type.STRING, enum: [...FIX_KINDS] },
-              pattern: { type: Type.STRING, enum: [...FIX_PATTERNS] },
-            },
-            required: ["wrong", "right", "why", "kind", "pattern"],
-          },
-        },
-      },
-      required: ["correct", "natural", "levelUp", "fixes"],
-    },
-    reply: {
-      type: Type.OBJECT,
-      properties: { text: STR, curveball: { type: Type.BOOLEAN }, ideas: { type: Type.ARRAY, items: STR } },
-      required: ["text", "curveball", "ideas"],
-    },
-    usedPhraseIds: { type: Type.ARRAY, items: STR },
-  },
-  required: ["transcript", "review", "reply", "usedPhraseIds"],
-};
 
 type TopicDoc = {
   title?: string;

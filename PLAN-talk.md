@@ -162,6 +162,13 @@ Việc cần làm:
 - Dùng `takeAiCall` (giới hạn 200 lần/ngày chung cho cả app). Talk dùng khoảng
   10 lần/buổi nên đủ.
 
+Kết quả eval (2026-11-20): `functions/scripts/talk-eval.ts` cho giọng `say` (Samantha) đọc 6
+câu (5 câu sai cố ý, 1 câu đúng) qua prompt `talkTurn` thật: 6/6 đạt. Transcript giữ
+nguyên lỗi ("I go", "She don't", "explain me", "since two years"...), fix khớp bản
+Correct, câu đúng không bị sửa. Lưu ý: giọng máy rõ hơn giọng thật; vẫn cần thử bằng
+giọng của mình. Chạy lại sau mỗi lần sửa prompt:
+`cd functions && npx tsx --env-file=.secret.local scripts/talk-eval.ts`.
+
 Rủi ro cần test trước khi làm UI:
 - Transcript có giữ lỗi không? Thử 10 câu cố ý nói sai.
 - Gemini có bịa câu không (xem memory về argon)? Kiểm tra shape giống
