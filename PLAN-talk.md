@@ -111,7 +111,23 @@ Prompt `talkTopic` (ý chính):
 
 Kiểm tra: lint, unit test, build. Thử 2 topic có sẵn + 1 custom.
 
-### Phase 2 - Talk + review mỗi lượt
+### Phase 2 - Talk + review mỗi lượt - CODE XONG (2026-11-20), CHƯA DEPLOY
+
+Đã làm: `talkTurn` (audio → transcript đúng từng chữ + câu tiếp + review + ý gợi
+ý), màn Talk, review card (Self-Repair, 3 mức, top 3 lỗi, "I said it right",
+Say it again), Flow Mode, curveball, Hint (Ideas + Phrases), màn kết thúc
+(số liệu, top 5 lỗi, xem lại từng lượt), lưu `talkSessions`, cụm dùng được lên
+`prompted`. Chirp 3 HD chưa làm (cần bật Cloud Text-to-Speech API).
+
+Thay đổi so với plan (2026-11-20):
+- **Topic mọi chủ đề**: Work (DevOps), Daily life, Friends, Family, Travel (25
+  topic có sẵn) + nút Surprise me + custom topic gì cũng được.
+- **Scenario card**: mỗi topic có 5 tình huống cụ thể, mỗi tình huống có 3-4
+  facts. Mỗi buổi chọn ngẫu nhiên 1 tình huống (khác lần trước). Không phải tự
+  bịa chuyện chưa xảy ra, chỉ tập trung vào cách nói.
+- **Ideas thay vì câu mẫu**: mỗi câu hỏi kèm 2-3 ghi chú ý (≤ 6 từ), không bao
+  giờ là câu đọc được. Câu hoàn chỉnh chỉ hiện sau khi đã nói (trong review).
+
 
 Việc cần làm:
 - Màn Talk: câu của nhân vật (TTS + nút hiện chữ), nút mic (Space),

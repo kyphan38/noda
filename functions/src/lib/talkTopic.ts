@@ -12,8 +12,11 @@ export const SET_COUNT = 4;
 export const PHRASE_COUNT = SET_SIZE * SET_COUNT;
 /** Fewer than this after clean-up means the answer is not usable. */
 export const MIN_PHRASES = SET_SIZE * 2;
-/** 2: English-only (meaning instead of a Vietnamese line). */
-export const TOPIC_VERSION = 2;
+/** 3: scenario cards (facts + opening + idea hints) instead of one opening line. */
+export const TOPIC_VERSION = 3;
+export const SCENARIO_COUNT = 5;
+/** Who the lessons are for; also used by the talkTurn prompt. Topics can be about work or any part of life. */
+export const LEARNER_ROLE = "an adult English learner who works as a DevOps engineer";
 
 const MAX_TITLE = 80;
 const MAX_DESCRIPTION = 400;
@@ -36,9 +39,19 @@ export interface TalkPhrase {
   setIndex: number;
 }
 
+/** A concrete situation inside the topic: facts to talk from, so the learner never has to invent a story. */
+export interface TalkScenario {
+  id: string;
+  title: string;
+  facts: string[];
+  opening: string;
+  /** Short notes of what the learner could say first. Ideas, never a ready answer. */
+  ideas: string[];
+}
+
 export interface TopicContent {
   persona: { name: string; role: string; style: string };
-  opening: { text: string };
+  scenarios: TalkScenario[];
   phrases: TalkPhrase[];
 }
 
@@ -69,7 +82,7 @@ const LEVEL_NOTES: Record<TalkLevel, string> = {
 
 export function buildTopicPrompt(req: TopicRequest): string {
   return [
-    "You make speaking lessons for a software engineer who learns English for work. Write everything in English only.",
+    `You make speaking lessons for ${LEARNER_ROLE}. Topics can be about work or everyday life (family, friends, shopping, travel, health). Write everything in English only.`,
     `Topic: ${req.title}`,
     req.description ? `Details: ${req.description}` : "",
     `Level: ${LEVEL_NOTES[req.level]}`,
@@ -77,7 +90,7 @@ export function buildTopicPrompt(req: TopicRequest): string {
     `Return ${PHRASE_COUNT} useful phrases for speaking about this topic, ordered from most to least useful.`,
     "Rules for phrases:",
     "- Collocations and chunks (verb + noun, set phrases, sentence starters, linking phrases), 2 to 6 words. Avoid single rare words.",
-    "- Common in real spoken English at work in tech companies. Nothing a native speaker would find odd or old-fashioned.",
+    "- Common in real spoken English in this kind of situation (at work only if the topic is about work). Nothing a native speaker would find odd or old-fashioned.",
     "- No two phrases with the same meaning.",
     "- text: the phrase in its base form, lowercase unless it starts a sentence or has a name.",
     "- ipa: American English IPA of the whole phrase, between slashes.",
@@ -85,8 +98,12 @@ export function buildTopicPrompt(req: TopicRequest): string {
     "- example: one spoken sentence about this topic, at most 15 words, that contains the phrase text EXACTLY as written (same words, same form).",
     "",
     "Also return:",
-    "- persona: the other person in the conversation. name (a first name), role (job title), style (one short line on how they talk).",
-    "- opening: the first thing the persona says to start the talk (text, one or two sentences), in English.",
+    "- persona: the other person in the conversation (a colleague, friend, family member, shop assistant... whatever fits the topic). name (a first name), role (who they are to the learner), style (one short line on how they talk).",
+    `- scenarios: ${SCENARIO_COUNT} different, concrete and realistic situations inside this topic that the learner could really meet. Each has:`,
+    "  title (at most 8 words);",
+    "  facts: 3 or 4 short facts the learner can talk about (what happened, numbers, names of systems, times), each at most 12 words, written as notes, not full sentences;",
+    "  opening: the first thing the persona says to start the talk, one or two sentences, a question the learner must answer;",
+    "  ideas: 2 or 3 notes of what the learner could mention in the first answer, each at most 6 words. Notes only, never a sentence the learner could read out.",
   ]
     .filter((l, i, all) => l !== "" || all[i - 1] !== "")
     .join("\n");
@@ -96,7 +113,6 @@ export function buildTopicPrompt(req: TopicRequest): string {
 export function parseTopicContent(raw: string | undefined): TopicContent {
   const d = JSON.parse(raw ?? "") as Record<string, unknown>;
   const persona = (d.persona ?? {}) as Record<string, unknown>;
-  const opening = (d.opening ?? {}) as Record<string, unknown>;
   const list = Array.isArray(d.phrases) ? d.phrases : [];
 
   const seen = new Set<string>();
@@ -121,11 +137,23 @@ export function parseTopicContent(raw: string | undefined): TopicContent {
   }
   if (phrases.length < MIN_PHRASES) throw new Error(`Only ${phrases.length} usable phrases.`);
 
+  const notes = (v: unknown, n: number, max: number) =>
+    (Array.isArray(v) ? v : []).map((x) => oneLine(x, max)).filter(Boolean).slice(0, n);
+  const scenarios: TalkScenario[] = [];
+  for (const item of Array.isArray(d.scenarios) ? d.scenarios : []) {
+    const s = (item ?? {}) as Record<string, unknown>;
+    const opening = oneLine(s.opening, 300);
+    const facts = notes(s.facts, 4, 100);
+    if (!opening || facts.length === 0) continue;
+    scenarios.push({ id: `s${scenarios.length}`, title: oneLine(s.title, 80) || `Situation ${scenarios.length + 1}`, facts, opening, ideas: notes(s.ideas, 3, 60) });
+    if (scenarios.length === SCENARIO_COUNT) break;
+  }
+
   const content: TopicContent = {
     persona: { name: oneLine(persona.name, 40), role: oneLine(persona.role, 60), style: oneLine(persona.style, 160) },
-    opening: { text: oneLine(opening.text, 300) },
+    scenarios,
     phrases,
   };
-  if (!content.persona.name || !content.opening.text) throw new Error("Missing persona or opening.");
+  if (!content.persona.name || scenarios.length === 0) throw new Error("Missing persona or scenarios.");
   return content;
 }

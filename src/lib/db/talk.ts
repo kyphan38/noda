@@ -1,18 +1,21 @@
-// Talk topics (users/{uid}/talkTopics) and phrase progress (users/{uid}/talkPhraseProgress).
+// Talk topics (users/{uid}/talkTopics), sessions (talkSessions) and phrase progress (talkPhraseProgress).
 // The talkTopic Cloud Function makes a topic; the app reads it, hides phrases and saves progress.
-import { collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore, getFirebaseFunctions } from '@/lib/auth/firebase-client';
-import { TALK_TOPIC_FUNCTION_NAME } from '@/constants';
+import { TALK_TOPIC_FUNCTION_NAME, TALK_TURN_FUNCTION_NAME } from '@/constants';
 import { progressId, raiseStage } from '@/lib/talk/phrase-stage';
-import type { PhraseStage, TalkLevel, TalkPhrase, TalkPhraseProgress, TalkTopic } from '@/lib/talk/types';
+import type { PhraseStage, TalkLevel, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult } from '@/lib/talk/types';
 import { getCurrentUidOrThrow } from './shared';
 
 const topicsPath = (uid: string) => `users/${uid}/talkTopics`;
 const progressPath = (uid: string) => `users/${uid}/talkPhraseProgress`;
+const sessionsPath = (uid: string) => `users/${uid}/talkSessions`;
 
 /** Making a topic takes a model call of up to about a minute and a half. */
 const TOPIC_CLIENT_TIMEOUT_MS = 150_000;
+/** Keep above `timeoutSeconds` in functions/src/talkTurn.ts. */
+const TURN_CLIENT_TIMEOUT_MS = 130_000;
 
 export type TopicRequest = {
   topicId: string;
@@ -90,4 +93,31 @@ export async function savePhraseStages(
   }
   await batch.commit();
   return next;
+}
+
+export type TurnPayload = {
+  topicId: string;
+  scenarioId: string;
+  aiLine: string;
+  history: { ai: string; you: string }[];
+  targetIds: string[];
+  curveball: boolean;
+  isLast: boolean;
+  recording: string;
+  recordingMimeType: string;
+};
+
+/** One spoken answer -> transcript, the persona's next line and a review (one model call). */
+export async function requestTalkTurn(payload: TurnPayload): Promise<TalkTurnResult> {
+  const call = httpsCallable<TurnPayload, TalkTurnResult>(getFirebaseFunctions(), TALK_TURN_FUNCTION_NAME, {
+    timeout: TURN_CLIENT_TIMEOUT_MS,
+  });
+  return (await call(payload)).data;
+}
+
+/** The whole session in one doc; written after every turn so nothing is lost. */
+export async function saveTalkSession(session: TalkSession): Promise<void> {
+  const uid = getCurrentUidOrThrow();
+  const { id, ...data } = session;
+  await setDoc(doc(getFirebaseFirestore(), sessionsPath(uid), id), JSON.parse(JSON.stringify(data)));
 }

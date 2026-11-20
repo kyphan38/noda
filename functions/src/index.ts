@@ -16,3 +16,4 @@ export { onLessonDeleted } from "./onLessonDeleted";
 export { assessSpeaking } from "./assessSpeaking";
 export { defineWord } from "./defineWord";
 export { talkTopic } from "./talkTopic";
+export { talkTurn } from "./talkTurn";

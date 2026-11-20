@@ -21,7 +21,14 @@ const TOPIC_SCHEMA: Schema = {
   type: Type.OBJECT,
   properties: {
     persona: { type: Type.OBJECT, properties: { name: STR, role: STR, style: STR }, required: ["name", "role", "style"] },
-    opening: { type: Type.OBJECT, properties: { text: STR }, required: ["text"] },
+    scenarios: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: { title: STR, facts: { type: Type.ARRAY, items: STR }, opening: STR, ideas: { type: Type.ARRAY, items: STR } },
+        required: ["title", "facts", "opening", "ideas"],
+      },
+    },
     phrases: {
       type: Type.ARRAY,
       items: {
@@ -31,7 +38,7 @@ const TOPIC_SCHEMA: Schema = {
       },
     },
   },
-  required: ["persona", "opening", "phrases"],
+  required: ["persona", "scenarios", "phrases"],
 };
 
 export const talkTopic = onCall(

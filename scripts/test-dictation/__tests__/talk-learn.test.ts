@@ -18,7 +18,7 @@ const topic: TalkTopic = {
   kind: 'preset',
   level: 'B2',
   persona: { name: 'Dana', role: 'Manager', style: '' },
-  opening: { text: 'Hi' },
+  scenarios: [{ id: 's0', title: 'A', facts: ['x'], opening: 'Hi', ideas: [] }],
   phrases: [
     { id: 'p0', text: 'wrap up', ipa: '', meaning: 'finish the last part', example: 'I need to wrap up the refactor.', setIndex: 0 },
     { id: 'p1', text: 'on track', ipa: '', meaning: 'going as planned', example: 'No blank in this one.', setIndex: 0 },

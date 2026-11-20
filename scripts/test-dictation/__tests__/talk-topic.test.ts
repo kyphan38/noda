@@ -30,6 +30,8 @@ describe('talk topic prompt', () => {
     expect(p).toContain('Topic: Daily standup');
     expect(p).toContain('B2:');
     expect(p).toContain(`Return ${PHRASE_COUNT} useful phrases`);
+    expect(p).toContain('everyday life');
+    expect(p).toContain('Notes only, never a sentence');
     expect(p).not.toMatch(/\n\n\n/);
   });
 });
@@ -39,7 +41,10 @@ describe('talk topic parsing', () => {
   const answer = (n: number, extra: Record<string, unknown> = {}) =>
     JSON.stringify({
       persona: { name: 'Dana', role: 'Engineering manager', style: 'Calm and direct.' },
-      opening: { text: 'Hi, how was your week?' },
+      scenarios: [
+        { title: 'Redis memory alert', facts: ['Redis at 95% memory', '2am page'], opening: 'What happened last night?', ideas: ['the alert', 'first check'] },
+        { title: 'No facts', facts: [], opening: 'Skipped?', ideas: [] },
+      ],
       phrases: Array.from({ length: n }, (_, i) => phrase(i)),
       ...extra,
     });
@@ -50,6 +55,9 @@ describe('talk topic parsing', () => {
     expect(c.phrases[0].id).toBe('p0');
     expect(c.phrases[SET_SIZE].setIndex).toBe(1);
     expect(c.persona.name).toBe('Dana');
+    expect(c.scenarios).toEqual([
+      { id: 's0', title: 'Redis memory alert', facts: ['Redis at 95% memory', '2am page'], opening: 'What happened last night?', ideas: ['the alert', 'first check'] },
+    ]);
   });
   it('drops duplicates and phrases with no meaning', () => {
     const list = [phrase(0), { ...phrase(0), text: 'PHRASE NUMBER 0' }, { ...phrase(1), meaning: '' }, ...Array.from({ length: 25 }, (_, i) => phrase(i + 2))];
@@ -61,6 +69,7 @@ describe('talk topic parsing', () => {
   it('throws when too few phrases or no persona', () => {
     expect(() => parseTopicContent(answer(5))).toThrow();
     expect(() => parseTopicContent(answer(30, { persona: {} }))).toThrow();
+    expect(() => parseTopicContent(answer(30, { scenarios: [] }))).toThrow();
     expect(() => parseTopicContent('not json')).toThrow();
   });
 });

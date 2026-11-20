@@ -2,7 +2,7 @@
 // (no sign-in) one sample topic in memory, so the screens can be tested.
 import * as fsdb from '@/lib/db';
 import { raiseStage } from './phrase-stage';
-import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkTopic } from './types';
+import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopic, TalkTurnResult } from './types';
 
 export type TalkStore = {
   listTopics(): Promise<TalkTopic[]>;
@@ -11,6 +11,8 @@ export type TalkStore = {
   deleteTopic(topicId: string): Promise<void>;
   listProgress(topicId: string): Promise<Map<string, TalkPhraseProgress>>;
   saveStages(topicId: string, phrases: TalkPhrase[], reached: PhraseStage, current: Map<string, TalkPhraseProgress>): Promise<Map<string, TalkPhraseProgress>>;
+  runTurn(payload: fsdb.TurnPayload): Promise<TalkTurnResult>;
+  saveSession(session: TalkSession): Promise<void>;
 };
 
 const firestoreStore: TalkStore = {
@@ -20,6 +22,8 @@ const firestoreStore: TalkStore = {
   deleteTopic: fsdb.deleteTalkTopic,
   listProgress: fsdb.listPhraseProgress,
   saveStages: fsdb.savePhraseStages,
+  runTurn: fsdb.requestTalkTurn,
+  saveSession: fsdb.saveTalkSession,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -44,7 +48,15 @@ function sampleTopic(): TalkTopic {
     presetId: 'standup',
     level: 'B2',
     persona: { name: 'Dana', role: 'Engineering manager', style: 'Calm and direct.' },
-    opening: { text: 'Morning! What did you work on yesterday?' },
+    scenarios: [
+      {
+        id: 's0',
+        title: 'Pipeline broke after a runner update',
+        facts: ['CI runners updated Monday night', 'Docker builds failed for 3 hours', 'Rolled back runner image', 'Release moved to Wednesday'],
+        opening: 'Morning! I saw some red builds yesterday. What happened?',
+        ideas: ['runner image update', 'how long builds failed', 'the rollback'],
+      },
+    ],
     phrases: SAMPLE.map(([text, meaning, example], i) => ({ id: `p${i}`, text, ipa: '', meaning, example, setIndex: 0 })),
     version: 1,
     createdAt: 0,
@@ -77,6 +89,30 @@ function memoryStore(): TalkStore {
       progress.set(topicId, next);
       return new Map(next);
     },
+    // A fixed answer with one mistake, so the review screens can be tested without the model.
+    runTurn: async (payload) => {
+      await new Promise((r) => setTimeout(r, 300));
+      return {
+        transcript: 'Yesterday I am working on the login and I wrap up it.',
+        seconds: 4,
+        reply: {
+          text: payload.isLast ? 'Great, thanks for the update.' : 'Nice. Is anything blocking you today?',
+          curveball: payload.curveball,
+          ideas: payload.isLast ? [] : ['the release date', 'who you need'],
+        },
+        review: {
+          correct: 'Yesterday I was working on the login and I wrapped it up.',
+          natural: 'Yesterday I worked on the login and wrapped it up.',
+          levelUp: 'Yesterday I focused on the login flow and wrapped it up.',
+          fixes: [
+            { kind: 'grammar', wrong: 'I am working', right: 'I was working', why: 'It happened yesterday, so use the past.', pattern: 'verb_tense' },
+            { kind: 'word', wrong: 'wrap up it', right: 'wrapped it up', why: 'Put "it" between "wrap" and "up".', pattern: 'word_order' },
+          ],
+        },
+        usedPhraseIds: payload.targetIds.slice(0, 1),
+      };
+    },
+    saveSession: async () => {},
   };
 }
 

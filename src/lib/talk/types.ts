@@ -15,6 +15,9 @@ export type TalkPhrase = {
   removed?: boolean;
 };
 
+/** A concrete situation inside a topic: facts to talk from, never a ready answer. */
+export type TalkScenario = { id: string; title: string; facts: string[]; opening: string; ideas: string[] };
+
 export type TalkTopic = {
   id: string;
   title: string;
@@ -23,7 +26,7 @@ export type TalkTopic = {
   presetId?: string;
   level: TalkLevel;
   persona: { name: string; role: string; style: string };
-  opening: { text: string };
+  scenarios: TalkScenario[];
   phrases: TalkPhrase[];
   version: number;
   createdAt: number;
@@ -38,4 +41,45 @@ export type TalkPhraseProgress = {
   stage: PhraseStage;
   usedCount: number;
   updatedAt: number;
+};
+
+// Keep in sync with functions/src/lib/talkTurn.ts.
+export type FixKind = 'grammar' | 'word' | 'natural' | 'tone' | 'vietlish';
+export type TalkFix = { kind: FixKind; wrong: string; right: string; why: string; pattern: string };
+
+export type TalkTurnResult = {
+  transcript: string;
+  seconds: number;
+  reply: { text: string; curveball: boolean; ideas: string[] };
+  review: { correct: string; natural: string; levelUp: string; fixes: TalkFix[] };
+  usedPhraseIds: string[];
+};
+
+export type TalkTurn = {
+  ai: { text: string; curveball: boolean };
+  /** Idea notes shown for this line (the reply's ideas of the turn before). */
+  ideas?: string[];
+  transcript: string;
+  seconds: number;
+  review: TalkTurnResult['review'];
+  usedPhraseIds: string[];
+  /** Fixes marked "I said it right" (speech-to-text heard it wrong). */
+  dismissedFixes?: number[];
+  /** Word match % of the last "Say it again". */
+  retryPercent?: number;
+};
+
+export type TalkMode = 'instant' | 'flow';
+
+export type TalkSession = {
+  id: string;
+  topicId: string;
+  setIndex: number;
+  scenarioId: string;
+  level: TalkLevel;
+  mode: TalkMode;
+  selfRepair: boolean;
+  turns: TalkTurn[];
+  startedAt: number;
+  endedAt?: number;
 };

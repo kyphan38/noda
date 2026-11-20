@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Volume2 } from 'lucide-react';
 
 import { TalkLearn } from '@/components/talk/TalkLearn';
+import { TalkSession } from '@/components/talk/TalkSession';
 import { stageAtLeast, summarizeSets } from '@/lib/talk/phrase-stage';
 import { speak } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
@@ -16,6 +17,7 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
   const [progress, setProgress] = useState<Map<string, TalkPhraseProgress> | null>(null);
   const [openSet, setOpenSet] = useState<number | null>(null);
   const [learning, setLearning] = useState<number | null>(null);
+  const [talking, setTalking] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -30,6 +32,9 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
 
   const sets = summarizeSets(topic.phrases, progress ?? new Map());
 
+  if (talking !== null && progress) {
+    return <TalkSession topic={topic} setIndex={talking} progress={progress} onProgress={setProgress} onExit={() => setTalking(null)} />;
+  }
   if (learning !== null && progress) {
     return (
       <TalkLearn
@@ -74,8 +79,11 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
                     {s.learned}/{s.total} learned
                   </span>
                 </button>
-                <button type="button" onClick={() => setLearning(s.setIndex)} className="rounded-lg bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500">
+                <button type="button" onClick={() => setLearning(s.setIndex)} className="rounded-lg border border-gray-700 px-3 py-1 text-sm text-gray-300 hover:text-gray-100">
                   {s.learned === s.total ? 'Review' : 'Learn'}
+                </button>
+                <button type="button" onClick={() => setTalking(s.setIndex)} className="rounded-lg bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500">
+                  Talk
                 </button>
               </div>
               {openSet === s.setIndex && (

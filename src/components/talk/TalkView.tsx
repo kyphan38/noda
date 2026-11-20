@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { TalkTopicView } from '@/components/talk/TalkTopicView';
-import { TALK_PRESETS, presetTopicId, type TalkPreset } from '@/lib/talk/presets';
+import { TALK_CATEGORIES, TALK_PRESETS, presetTopicId, randomPreset, type TalkPreset } from '@/lib/talk/presets';
 import { warmUpVoices } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
 import { TALK_LEVELS, type TalkLevel, type TalkTopic } from '@/lib/talk/types';
@@ -106,6 +106,15 @@ export function TalkView() {
         ))}
       </div>
 
+      <button
+        type="button"
+        disabled={making !== null}
+        onClick={() => void openPreset(randomPreset())}
+        className="w-full rounded-lg border border-gray-700 py-2 text-sm text-gray-200 hover:border-gray-500 disabled:cursor-wait"
+      >
+        Surprise me
+      </button>
+
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       <NewTopicForm busy={making !== null} onCreate={(title, description) => openTopic({ topicId: newCustomId(), kind: 'custom', title, description, level })} />
@@ -118,14 +127,16 @@ export function TalkView() {
         </TopicList>
       )}
 
-      <TopicList title="Topics">
-        {TALK_PRESETS.map((p) => {
-          const id = presetTopicId(p.id, level);
-          return (
-            <TopicRow key={id} title={p.title} hint={p.description} ready={savedIds.has(id)} busy={making === id} disabled={making !== null} onOpen={() => void openPreset(p)} />
-          );
-        })}
-      </TopicList>
+      {TALK_CATEGORIES.map((c) => (
+        <TopicList key={c} title={c}>
+          {TALK_PRESETS.filter((p) => p.category === c).map((p) => {
+            const id = presetTopicId(p.id, level);
+            return (
+              <TopicRow key={id} title={p.title} hint={p.description} ready={savedIds.has(id)} busy={making === id} disabled={making !== null} onOpen={() => void openPreset(p)} />
+            );
+          })}
+        </TopicList>
+      ))}
     </div>
   );
 }
@@ -183,7 +194,7 @@ function NewTopicForm({ busy, onCreate }: { busy: boolean; onCreate: (title: str
           setTitle(e.target.value);
           setError(null);
         }}
-        placeholder="Your own topic: Explain a slow API to my team"
+        placeholder="Your own topic: Ask my neighbor to turn the music down"
         className="w-full rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-blue-500 focus:outline-none"
       />
       <textarea
