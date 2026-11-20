@@ -108,7 +108,12 @@ then send the file back.
 - [ ] **Read and retell**: paste a real Slack thread or PR, **Read it**, **Hide it and tell me**. You get key points (✓/✗), what you said, a natural retell and fixes.
 - [ ] **Time Capsule**: record once. It says "This month is saved". The month shows with an audio player you can play.
 
-## 13. Theme and phone
+## 13. Voice
+
+- [ ] Before turning on the Text-to-Speech API: lines are read by the browser voice, no errors.
+- [ ] After turning it on (MANUAL-talk.md step 4): reload, the partner sounds like a real person. Starting to record stops the voice.
+
+## 14. Theme and phone
 
 - [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
 - [ ] On a phone: the page fits, the mic works, nothing is cut off.

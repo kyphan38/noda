@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Mic, Square } from 'lucide-react';
 
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { stopSpeaking } from '@/lib/talk/speak';
 
 /** Record for up to `limit` seconds: it stops by itself at the limit, or on tap. */
 export function TimedRecorder({ limit, busy, onBlob }: { limit: number; busy?: boolean; onBlob: (blob: Blob) => void }) {
@@ -22,7 +23,7 @@ export function TimedRecorder({ limit, busy, onBlob }: { limit: number; busy?: b
   };
 
   const start = async () => {
-    window.speechSynthesis?.cancel();
+    stopSpeaking();
     if (!(await rec.start())) return;
     timer.current = setTimeout(() => void stop(), limit * 1000);
   };

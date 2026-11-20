@@ -11,7 +11,7 @@ import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { blobToBase64 } from '@/lib/speakingCheck';
 import { curveballTurn, hintPhrases, pickScenario, QUICK_TURN_COUNT, STALL_PHRASES, TURN_COUNT } from '@/lib/talk/session';
-import { speak } from '@/lib/talk/speak';
+import { speak, stopSpeaking } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
 import { DEFAULT_PREFS, readLastScenario, readPrefs, writeLastScenario, writePrefs, type TalkPrefs as Prefs } from '@/lib/talk/prefs';
 import type { TalkPhraseProgress, TalkScenario, TalkSession as Session, TalkTopic, TalkTurn } from '@/lib/talk/types';
@@ -194,7 +194,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     if (phase !== 'answer') return;
     if (recorder.status === 'recording') void submit();
     else if (recorder.status === 'idle') {
-      window.speechSynthesis?.cancel();
+      stopSpeaking();
       void recorder.start();
     }
   }, [phase, recorder, submit]);

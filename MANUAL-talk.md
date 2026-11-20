@@ -24,13 +24,14 @@ Needs Anki open on your Mac, with the AnkiConnect add-on.
 
 ## 4. Natural voice (Chirp 3 HD)
 
-Right now the AI partner speaks with your browser's voice. A better Google
-voice (Chirp 3 HD) needs one API turned on in your Google Cloud project. It is
+The code is live. Until this API is on, the AI partner falls back to your
+browser's voice. The Google voice (Chirp 3 HD) needs one API turned on in your Google Cloud project. It is
 free for the first 1M characters each month; Talk uses about 200-300k.
 
 - [ ] Open https://console.cloud.google.com/apis/library/texttospeech.googleapis.com?project=kyphan38-noda-app
 - [ ] Click **Enable**.
-- [ ] Tell Claude "Chirp is on" (until the code for it ships, this step does nothing).
+- [ ] Wait a minute, then reload Talk. The partner's voice should now sound like a real person.
+      Nothing else to do: the app tries Chirp first and uses the browser voice only when Chirp is off.
 
 ---
 

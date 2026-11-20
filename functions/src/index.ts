@@ -20,3 +20,4 @@ export { talkTurn } from "./talkTurn";
 export { talkWrap } from "./talkWrap";
 export { talkHint } from "./talkHint";
 export { talkSpeech } from "./talkSpeech";
+export { talkSpeak } from "./talkSpeak";

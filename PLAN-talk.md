@@ -39,6 +39,9 @@ cuối buổi.
 - **Transcript phải đúng từng chữ, giữ nguyên lỗi.** Không được "sửa đẹp".
   Nếu không thì review vô dụng. Đây là rủi ro lớn nhất, test với giọng thật trước.
 - Không lưu file ghi âm ở V1 (giống `assessSpeaking`). Ngoại lệ ở V2: Time Capsule.
+- Chirp 3 HD - CODE XONG (2026-11-20): function `talkSpeak` (cache mp3 trong Storage
+`users/{uid}/talkTts/`), app thử Chirp trước rồi mới tới giọng trình duyệt. Chỉ còn bật API
+(xem MANUAL-talk.md).
 - Ghi chú: memory "No server transcription" là về tạo .srt cho lesson. Talk chỉ
   gửi đoạn ghi âm ngắn của mình, giống `assessSpeaking`, nên không vi phạm.
 
