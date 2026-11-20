@@ -1,0 +1,94 @@
+# Talk: manual test checklist
+
+Test on the live site (or `localhost:3000/talk`). On localhost, press Cmd+Shift+R
+once first, so an old service worker does not serve old code.
+
+Tick each box. If something is wrong, write a note under it (a screenshot helps),
+then send the file back.
+
+---
+
+## 1. Topics
+
+- [ ] Open **Talk** from the bottom of the sidebar. The page scrolls with the mouse wheel.
+- [ ] Topics are in groups: Work, Daily life, Friends, Family, Travel.
+- [ ] Pick level B1, B2 or C1. Reload: the level is remembered.
+- [ ] Open a topic you never opened ("New" on the right). It shows "Making…", then opens within about a minute.
+- [ ] Go back and open it again: it opens at once (no "Making…").
+- [ ] **Surprise me** opens a random topic.
+- [ ] Make your own topic (for example "Ask my neighbor to turn the music down"). It opens.
+- [ ] On a topic: open Set 1, check the phrases sound natural and the meanings are simple English.
+- [ ] **Hide** a phrase that sounds odd. It goes gray. **Bring back** works.
+- [ ] Delete a custom topic (button at the bottom). It is gone from the list.
+
+## 2. Learn
+
+- [ ] Tap **Learn** on a set. Cards show the phrase, IPA, meaning and example. The speaker icon reads it.
+- [ ] **Start** → Match: tap a phrase, then its meaning. A wrong pick flashes red.
+- [ ] Recall: fill the blank in the example. **Hint** shows first letters.
+- [ ] Recall: "Say the phrase that means…": the mic works, or type it.
+- [ ] Answer one wrong on purpose: it comes back a few items later.
+- [ ] The end shows "Set learned" and the hardest phrases. The set now shows "x/10 learned".
+
+## 3. Talk (one answer)
+
+- [ ] Tap **Talk** on a set. A situation card shows a few facts. The other person's line is read out loud.
+- [ ] **Ideas** shows short notes (not full sentences). **Phrases** shows phrases of the set.
+- [ ] Tap the mic (or Space), answer, tap again (or Space) to send. "Checking your answer…" takes about 5 seconds or less.
+- [ ] **Most important:** say a sentence with mistakes on purpose ("Yesterday I go to work and I meet my boss").
+      **You said** must keep "go" and "meet" (not fixed). The mistakes are marked.
+- [ ] **Show answer** shows Correct / Natural / Level up. Each fix matches the Correct version.
+- [ ] Correct English is not marked as a mistake.
+- [ ] **I said it right** removes a fix (use it when the speech-to-text heard you wrong).
+- [ ] **Say it again** gives a % and gray boxes on missed words.
+- [ ] A phrase you used gets a ✓ in the list under the talk.
+
+## 4. Talk (controls)
+
+- [ ] While recording, **Cancel (Esc)** drops the answer. Nothing is checked.
+- [ ] While "Checking…", **Cancel (Esc)** goes back to answering.
+- [ ] On a review, **Try again** asks the same line again.
+- [ ] Leave the talk halfway (go back to the topic). Open **Talk** again: "Picked up where you left off." and the same line. No waiting.
+- [ ] **New talk** starts a different situation.
+- [ ] **End talk** goes to the summary.
+- [ ] Turn on **Flow** before the first answer: no review between answers, all reviews at the end.
+- [ ] Turn off **Fix it yourself first**: the answer shows at once.
+- [ ] At B2 or C1, one line in the talk is marked **curveball** (a push back or a misunderstanding).
+
+## 5. End of a talk
+
+- [ ] The summary shows phrases used, words per answer, words per minute and top fixes.
+- [ ] "Making your notes…" turns into **Next time**, **Missed chances**, **Better words** and **Closing drill**.
+- [ ] Better words only uses words you really said.
+- [ ] Closing drill: the idea does not give the answer away. Say it, get a %.
+- [ ] Open the same talk again (or reload): the notes show at once, no "Making your notes…".
+- [ ] **Your answers**: tap one to see its full review.
+
+## 6. Mistake bank and warm-up
+
+- [ ] After one finished talk, open **Mistakes**: a **Talk** section lists mistake types (Verb tense...). Tap one to see examples.
+- [ ] Start a **new** talk: it begins with a **Warm-up** on your own old mistakes. **Skip** works.
+- [ ] Fix one right: Mistakes shows its streak "1/5 right".
+
+## 7. Stuck box
+
+- [ ] At the top of Talk: type a sentence you could not say (any language), **Save**.
+- [ ] **Saved (n)** opens the list. The X deletes one.
+
+## 8. Meeting prep and stuck lines
+
+- [ ] Make your own topic, tap **+ Add your notes**, paste real notes (an agenda or a ticket). The situations use your facts (names, numbers).
+- [ ] In a talk on that topic, **Your notes** shows above the talk.
+- [ ] Save 2-3 stuck lines, tap **Practice these (n)**. A topic "Things I got stuck on" opens; its situations make you say those things.
+- [ ] Back on Talk, those lines are gray in the list and the button is gone until you save new ones.
+
+## 9. Theme and phone
+
+- [ ] Light and dark theme: all text is easy to read, buttons are black/white like the rest of noda.
+- [ ] On a phone: the page fits, the mic works, nothing is cut off.
+
+---
+
+## Notes
+
+(write here)
