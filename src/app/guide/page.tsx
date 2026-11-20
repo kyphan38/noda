@@ -70,6 +70,8 @@ const BLOCKS: Block[] = [
       'I said it right hides a fix when the speech-to-text heard you wrong.',
       'Flow mode keeps talking and shows every review at the end. Once per talk the other person may push back or misunderstand you (marked curveball).',
       'At the end: phrases used, words per answer, words per minute, top fixes and all your answers.',
+      'Cancel (or Esc) drops the answer you are recording or that is being checked. Try again throws away the last answer and asks the same line. End talk jumps to the summary.',
+      'Leave a talk halfway and it goes on where you stopped next time, with no new AI call. New talk starts a fresh situation.',
     ],
   },
   {
@@ -109,7 +111,7 @@ const BLOCKS: Block[] = [
 
 export default function GuidePage() {
   return (
-    <main className="min-h-screen overflow-y-auto">
+    <main className="h-dvh overflow-y-auto">
       <div className="mx-auto w-full max-w-xl space-y-8 px-4 py-10 sm:py-16">
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="text-2xl font-semibold text-gray-100">Guide</h1>

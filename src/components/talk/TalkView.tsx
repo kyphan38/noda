@@ -98,7 +98,7 @@ export function TalkView() {
             aria-checked={level === l}
             onClick={() => pickLevel(l)}
             className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
-              level === l ? 'border-blue-500 bg-blue-500/15 text-blue-300' : 'border-gray-800 text-gray-400 hover:text-gray-100'
+              level === l ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'
             }`}
           >
             {l}
@@ -195,7 +195,7 @@ function NewTopicForm({ busy, onCreate }: { busy: boolean; onCreate: (title: str
           setError(null);
         }}
         placeholder="Your own topic: Ask my neighbor to turn the music down"
-        className="w-full rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-blue-500 focus:outline-none"
+        className="w-full rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
       />
       <textarea
         value={description}
@@ -203,11 +203,11 @@ function NewTopicForm({ busy, onCreate }: { busy: boolean; onCreate: (title: str
         rows={2}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Details (optional)"
-        className="w-full resize-none rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-blue-500 focus:outline-none"
+        className="w-full resize-none rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
       />
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-red-400">{error}</span>
-        <button type="submit" disabled={busy} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50">
+        <button type="submit" disabled={busy} className="rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white px-3 py-1.5 text-sm disabled:opacity-50">
           Make topic
         </button>
       </div>

@@ -46,7 +46,7 @@ export function TalkLearn({ topic, setIndex, progress, onProgress, onExit }: Pro
         </button>
         <ol className="flex gap-3 text-xs">
           {STEPS.map((s) => (
-            <li key={s.id} className={step === s.id ? 'text-blue-300' : 'text-gray-600'}>
+            <li key={s.id} className={step === s.id ? 'text-gray-100' : 'text-gray-600'}>
               {s.label}
             </li>
           ))}
@@ -105,7 +105,7 @@ function Cards({ phrases, onStart }: { phrases: TalkPhrase[]; onStart: () => voi
           </li>
         ))}
       </ul>
-      <button type="button" onClick={onStart} className="w-full rounded-lg bg-blue-600 py-2 text-sm text-white hover:bg-blue-500">
+      <button type="button" onClick={onStart} className="w-full rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white py-2 text-sm">
         Start
       </button>
     </div>
@@ -133,7 +133,7 @@ function Done({ phrases, misses, onAgain, onExit }: { phrases: TalkPhrase[]; mis
         <button type="button" onClick={onAgain} className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:text-gray-100">
           Learn again
         </button>
-        <button type="button" onClick={onExit} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500">
+        <button type="button" onClick={onExit} className="rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white px-3 py-1.5 text-sm">
           Done
         </button>
       </div>

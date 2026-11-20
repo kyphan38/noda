@@ -41,9 +41,9 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit }: Props) {
           <ul className="space-y-2 rounded-xl border border-gray-800 bg-gray-900/60 p-4">
             {top.map((f) => (
               <li key={`${f.turn}-${f.index}`} className="text-sm">
-                <span className="text-red-300 line-through decoration-red-400/60">{f.wrong}</span>
+                <span className="text-gray-500 line-through">{f.wrong}</span>
                 <span className="mx-1.5 text-gray-500">→</span>
-                <span className="text-green-300">{f.right}</span>
+                <span className="font-medium text-gray-100">{f.right}</span>
                 {f.why && <span className="block text-xs text-gray-400">{f.why}</span>}
               </li>
             ))}
@@ -78,7 +78,7 @@ export function TalkSessionEnd({ session, phrases, onChange, onExit }: Props) {
         </ul>
       </section>
 
-      <button type="button" onClick={onExit} className="w-full rounded-lg bg-blue-600 py-2 text-sm text-white hover:bg-blue-500">
+      <button type="button" onClick={onExit} className="w-full rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white py-2 text-sm">
         Done
       </button>
     </div>

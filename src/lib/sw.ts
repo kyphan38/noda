@@ -9,6 +9,13 @@
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
+  // Dev chunk names do not change with their content, so the cache-first
+  // /_next/static rule would keep serving old code. Drop any worker in dev.
+  if (process.env.NODE_ENV !== 'production') {
+    const regs = await navigator.serviceWorker.getRegistrations().catch(() => []);
+    await Promise.all(regs.map((r) => r.unregister()));
+    return null;
+  }
   try {
     return await navigator.serviceWorker.register('sw.js');
   } catch {

@@ -46,6 +46,7 @@ describe('talk turn prompt', () => {
     expect(p).not.toMatch(/Vietnamese meaning|tiếng/);
     expect(p).toContain('- Redis at 95% memory');
     expect(p).toContain('ideas: 2 or 3 notes');
+    expect(p).toContain('Every fix must agree with those versions.');
   });
   it('switches the reply rule for a curveball and for the last turn', () => {
     expect(buildTurnPrompt({ ...base, curveball: true }, ctx)).toContain('Curveball');

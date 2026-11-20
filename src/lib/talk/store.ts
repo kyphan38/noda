@@ -13,6 +13,7 @@ export type TalkStore = {
   saveStages(topicId: string, phrases: TalkPhrase[], reached: PhraseStage, current: Map<string, TalkPhraseProgress>): Promise<Map<string, TalkPhraseProgress>>;
   runTurn(payload: fsdb.TurnPayload): Promise<TalkTurnResult>;
   saveSession(session: TalkSession): Promise<void>;
+  findOpenSession(topicId: string, setIndex: number): Promise<TalkSession | null>;
 };
 
 const firestoreStore: TalkStore = {
@@ -24,6 +25,7 @@ const firestoreStore: TalkStore = {
   saveStages: fsdb.savePhraseStages,
   runTurn: fsdb.requestTalkTurn,
   saveSession: fsdb.saveTalkSession,
+  findOpenSession: fsdb.findOpenTalkSession,
 };
 
 const SAMPLE: [string, string, string][] = [
@@ -66,6 +68,7 @@ function sampleTopic(): TalkTopic {
 function memoryStore(): TalkStore {
   const topics = new Map<string, TalkTopic>();
   const progress = new Map<string, Map<string, TalkPhraseProgress>>();
+  const sessions = new Map<string, TalkSession>();
   return {
     listTopics: async () => [...topics.values()],
     ensureTopic: async (req) => {
@@ -112,7 +115,9 @@ function memoryStore(): TalkStore {
         usedPhraseIds: payload.targetIds.slice(0, 1),
       };
     },
-    saveSession: async () => {},
+    saveSession: async (s) => void sessions.set(s.id, s),
+    findOpenSession: async (topicId, setIndex) =>
+      [...sessions.values()].filter((s) => s.topicId === topicId && s.setIndex === setIndex && !s.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
   };
 }
 

@@ -10,7 +10,7 @@ import { blobToBase64 } from '@/lib/speakingCheck';
 import { curveballTurn, hintPhrases, pickScenario, TURN_COUNT } from '@/lib/talk/session';
 import { speak } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
-import type { TalkMode, TalkPhraseProgress, TalkSession as Session, TalkTopic, TalkTurn } from '@/lib/talk/types';
+import type { TalkMode, TalkPhraseProgress, TalkScenario, TalkSession as Session, TalkTopic, TalkTurn } from '@/lib/talk/types';
 
 const PREFS_KEY = 'noda.talk.prefs';
 type Prefs = { mode: TalkMode; selfRepair: boolean; showText: boolean };
@@ -46,7 +46,9 @@ type Props = {
 /** One talk of TURN_COUNT answers about one situation, with a review after each answer or at the end. */
 export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: Props) {
   const phrases = useMemo(() => topic.phrases.filter((p) => p.setIndex === setIndex && !p.removed), [topic.phrases, setIndex]);
-  const [scenario] = useState(() => pickScenario(topic.scenarios ?? [], readLastScenario(topic.id)));
+  const [scenario, setScenario] = useState<TalkScenario | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [resumed, setResumed] = useState(false);
   const [curveAt] = useState(() => curveballTurn(topic.level));
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [session, setSession] = useState<Session | null>(null);
@@ -56,34 +58,68 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
   const [showIdeas, setShowIdeas] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const recorder = useVoiceRecorder();
+  /** Bumped by Cancel, so a check that comes back late is ignored. */
+  const attemptRef = useRef(0);
   const progressRef = useRef(progress);
   useEffect(() => {
     progressRef.current = progress;
   }, [progress]);
 
-  useEffect(() => {
-    if (!scenario) return;
-    setPrefs(readPrefs());
+  /** A fresh talk on a situation not used last time. Saved at once, so leaving keeps it. */
+  const startNew = useCallback(() => {
+    const sc = pickScenario(topic.scenarios ?? [], readLastScenario(topic.id));
+    setScenario(sc);
+    setResumed(false);
+    if (!sc) return;
     try {
-      localStorage.setItem(lastScenarioKey(topic.id), scenario.id);
+      localStorage.setItem(lastScenarioKey(topic.id), sc.id);
     } catch {
       // Private mode: the next talk may repeat this situation.
     }
-    const first = { text: scenario.opening, curveball: false, ideas: scenario.ideas };
-    setLine(first);
-    setSession({
+    const first = { text: sc.opening, curveball: false, ideas: sc.ideas };
+    const s: Session = {
       id: `${topic.id}-${Date.now().toString(36)}`,
       topicId: topic.id,
       setIndex,
-      scenarioId: scenario.id,
+      scenarioId: sc.id,
       level: topic.level,
       mode: 'instant',
       selfRepair: true,
       turns: [],
+      next: first,
       startedAt: Date.now(),
-    });
+    };
+    setLine(first);
+    setSession(s);
+    setPhase('answer');
+    void getTalkStore().saveSession(s).catch(() => {});
     speak(first.text);
-  }, [scenario, topic.id, topic.level, setIndex]);
+  }, [topic.id, topic.level, topic.scenarios, setIndex]);
+
+  // Go on with a talk left halfway on this set; otherwise start one.
+  useEffect(() => {
+    let alive = true;
+    setPrefs(readPrefs());
+    getTalkStore()
+      .findOpenSession(topic.id, setIndex)
+      .catch(() => null)
+      .then((open) => {
+        if (!alive) return;
+        setLoading(false);
+        const sc = open && (topic.scenarios ?? []).find((x) => x.id === open.scenarioId);
+        if (!open || !sc) return startNew();
+        setScenario(sc);
+        setSession(open);
+        setResumed(open.turns.length > 0);
+        setLine(open.next ?? { text: sc.opening, curveball: false, ideas: sc.ideas });
+        setPhase(open.turns.length >= TURN_COUNT ? 'end' : 'answer');
+      });
+    return () => {
+      alive = false;
+    };
+    // Only once per topic and set; startNew reads the same values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic.id, setIndex]);
 
   const changePrefs = (patch: Partial<Prefs>) => {
     const next = { ...prefs, ...patch };
@@ -121,6 +157,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     setPhase('checking');
     setError(null);
     const idx = session.turns.length;
+    const attempt = ++attemptRef.current;
     try {
       const result = await getTalkStore().runTurn({
         topicId: topic.id,
@@ -133,6 +170,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         recording: await blobToBase64(blob),
         recordingMimeType: blob.type || 'audio/webm',
       });
+      if (attempt !== attemptRef.current) return;
       const turn: TalkTurn = {
         ai: { text: line.text, curveball: line.curveball },
         ideas: line.ideas,
@@ -141,7 +179,8 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         review: result.review,
         usedPhraseIds: result.usedPhraseIds,
       };
-      const s = { ...session, mode: prefs.mode, selfRepair: prefs.selfRepair, turns: [...session.turns, turn] };
+      const reply = { text: result.reply.text, curveball: result.reply.curveball, ideas: result.reply.ideas };
+      const s = { ...session, mode: prefs.mode, selfRepair: prefs.selfRepair, turns: [...session.turns, turn], next: reply };
       setSession(s);
       save(s);
       const newlyUsed = phrases.filter((p) => result.usedPhraseIds.includes(p.id));
@@ -151,11 +190,11 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
           .then(onProgress)
           .catch(() => {});
       }
-      const reply = { text: result.reply.text, curveball: result.reply.curveball, ideas: result.reply.ideas };
       setLine(reply);
       if (prefs.mode === 'instant') setPhase('review');
       else nextLine(s, reply);
     } catch (e) {
+      if (attempt !== attemptRef.current) return;
       setError(e instanceof Error ? e.message : 'Could not check this answer, try again.');
       setPhase('answer');
     }
@@ -172,8 +211,45 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     }
   }, [phase, recorder, submit]);
 
+  /** Drop the take being recorded or checked, and answer the same line again. */
+  const cancelAnswer = useCallback(() => {
+    attemptRef.current++;
+    if (recorder.status !== 'idle') recorder.cancel();
+    setError(null);
+    setPhase('answer');
+  }, [recorder]);
+
+  /** Throw away the last answer and its review, and answer that line again. */
+  const retryTurn = () => {
+    if (!session) return;
+    const last = session.turns[session.turns.length - 1];
+    if (!last) return;
+    const l = { text: last.ai.text, curveball: last.ai.curveball, ideas: last.ideas ?? [] };
+    const s = { ...session, turns: session.turns.slice(0, -1), next: l };
+    setSession(s);
+    save(s);
+    setLine(l);
+    setPhase('answer');
+    speak(l.text);
+  };
+
+  /** Stop early: the summary of what was said so far, or back to the topic when nothing was. */
+  const endTalk = () => {
+    if (!session) return;
+    cancelAnswer();
+    if (session.turns.length === 0) return onExit();
+    const done = { ...session, endedAt: Date.now() };
+    setSession(done);
+    save(done);
+    setPhase('end');
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Escape' && (recorder.status === 'recording' || phase === 'checking')) {
+        cancelAnswer();
+        return;
+      }
       if (e.code !== 'Space' || e.repeat) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'BUTTON')) return;
@@ -182,8 +258,9 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [toggleRecord]);
+  }, [toggleRecord, cancelAnswer, recorder.status, phase]);
 
+  if (loading) return <p className="breathe text-sm text-gray-500">Loading…</p>;
   if (!scenario) return <p className="text-sm text-gray-400">This topic has no situations. Make it again.</p>;
   if (!session || !line) return null;
   if (phase === 'end') return <TalkSessionEnd session={session} phrases={phrases} onChange={setSession} onExit={onExit} />;
@@ -198,10 +275,30 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         <button type="button" onClick={onExit} className="text-sm text-gray-400 hover:text-gray-100">
           ← {topic.title}
         </button>
-        <span className="text-xs text-gray-500 tabular-nums">
-          Turn {turnNo}/{TURN_COUNT}
+        <span className="flex items-center gap-3 text-xs text-gray-500">
+          <span className="tabular-nums">
+            Turn {turnNo}/{TURN_COUNT}
+          </span>
+          {session.turns.length > 0 && phase !== 'checking' && (
+            <button
+              type="button"
+              onClick={() => {
+                const done = { ...session, endedAt: Date.now() };
+                save(done);
+                startNew();
+              }}
+              className="hover:text-gray-100"
+            >
+              New talk
+            </button>
+          )}
+          <button type="button" onClick={endTalk} className="hover:text-gray-100">
+            End talk
+          </button>
         </span>
       </div>
+
+      {resumed && <p className="text-xs text-gray-500">Picked up where you left off.</p>}
 
       <details className="rounded-xl border border-gray-800 bg-gray-900/60 px-4 py-3" open={session.turns.length === 0}>
         <summary className="cursor-pointer text-sm text-gray-100">{scenario.title}</summary>
@@ -236,22 +333,27 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
               save(s);
             }}
           />
-          <button type="button" onClick={() => nextLine(session, line)} className="w-full rounded-lg bg-blue-600 py-2 text-sm text-white hover:bg-blue-500">
-            {session.turns.length >= TURN_COUNT ? 'See the summary' : 'Next turn'}
-          </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={retryTurn} className="rounded-lg border border-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-100/[0.06]">
+              Try again
+            </button>
+            <button type="button" onClick={() => nextLine(session, line)} className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white">
+              {session.turns.length >= TURN_COUNT ? 'See the summary' : 'Next turn'}
+            </button>
+          </div>
         </>
       ) : (
         <>
           <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
             <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs text-blue-300">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-xs text-gray-300">
                 {topic.persona.name.slice(0, 2)}
               </span>
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="text-xs text-gray-500">
                   {topic.persona.name}, {topic.persona.role}
                   {line.curveball && (
-                    <span className="ml-2 inline-flex items-center gap-0.5 text-yellow-400">
+                    <span className="ml-2 inline-flex items-center gap-0.5 text-gray-300">
                       <Zap className="h-3 w-3" /> curveball
                     </span>
                   )}
@@ -285,7 +387,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
                 {showHints && (
                   <div className="flex flex-wrap gap-1.5">
                     {hints.map((p) => (
-                      <span key={p.id} className="rounded-md bg-yellow-500/15 px-2 py-0.5 text-xs text-yellow-200">
+                      <span key={p.id} className="rounded-md bg-gray-800 px-2 py-0.5 text-xs text-gray-200">
                         {p.text}
                       </span>
                     ))}
@@ -301,8 +403,8 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
               aria-label={recorder.status === 'recording' ? 'Stop and send' : 'Answer'}
               disabled={phase === 'checking' || recorder.status === 'starting'}
               onClick={toggleRecord}
-              className={`flex h-16 w-16 items-center justify-center rounded-full text-white transition-colors disabled:opacity-50 ${
-                recorder.status === 'recording' ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'
+              className={`flex h-16 w-16 items-center justify-center rounded-full transition-colors disabled:opacity-50 ${
+                recorder.status === 'recording' ? 'bg-red-500 text-white hover:bg-red-400' : 'bg-gray-100 text-gray-900 hover:bg-white'
               }`}
             >
               {recorder.status === 'recording' ? <Square className="h-6 w-6" /> : <Mic className="h-7 w-7" />}
@@ -310,6 +412,11 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
             <p className="text-xs text-gray-500">
               {phase === 'checking' ? <span className="breathe">Checking your answer…</span> : recorder.status === 'recording' ? `${Math.round(recorder.elapsedMs / 1000)}s · Space to send` : 'Space to answer'}
             </p>
+            {(recorder.status === 'recording' || phase === 'checking') && (
+              <button type="button" onClick={cancelAnswer} className="text-xs text-gray-400 underline-offset-2 hover:text-gray-100 hover:underline">
+                Cancel (Esc)
+              </button>
+            )}
             {(error || recorder.error) && <p className="text-xs text-red-400">{error ?? recorder.error}</p>}
           </div>
         </>
@@ -317,7 +424,7 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
 
       <div className="flex flex-wrap gap-1.5">
         {phrases.map((p) => (
-          <span key={p.id} className={`rounded-md border px-2 py-0.5 text-xs ${used.has(p.id) ? 'border-green-700/60 text-green-300' : 'border-gray-800 text-gray-500'}`}>
+          <span key={p.id} className={`rounded-md border px-2 py-0.5 text-xs ${used.has(p.id) ? 'border-gray-500 text-gray-100' : 'border-gray-800 text-gray-500'}`}>
             {used.has(p.id) ? '✓ ' : ''}
             {p.text}
           </span>
@@ -332,7 +439,7 @@ function Toggle({ on, onClick, children }: { on: boolean; onClick: () => void; c
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg border px-2.5 py-1 ${on ? 'border-blue-500 bg-blue-500/15 text-blue-300' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`}
+      className={`rounded-lg border px-2.5 py-1 ${on ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`}
     >
       {children}
     </button>

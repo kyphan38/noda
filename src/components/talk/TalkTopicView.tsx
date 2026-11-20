@@ -82,7 +82,7 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
                 <button type="button" onClick={() => setLearning(s.setIndex)} className="rounded-lg border border-gray-700 px-3 py-1 text-sm text-gray-300 hover:text-gray-100">
                   {s.learned === s.total ? 'Review' : 'Learn'}
                 </button>
-                <button type="button" onClick={() => setTalking(s.setIndex)} className="rounded-lg bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500">
+                <button type="button" onClick={() => setTalking(s.setIndex)} className="rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white px-3 py-1 text-sm">
                   Talk
                 </button>
               </div>
@@ -97,7 +97,7 @@ export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
                         </button>
                         <span className="min-w-0 flex-1">
                           <span className="text-sm text-gray-100">{p.text}</span>
-                          {stageAtLeast(progress.get(p.id)?.stage, 'recalled') && <span className="ml-2 text-xs text-green-400">✓</span>}
+                          {stageAtLeast(progress.get(p.id)?.stage, 'recalled') && <span className="ml-2 text-xs text-gray-400">✓</span>}
                           <span className="block text-xs text-gray-500">{p.meaning}</span>
                         </span>
                         <button type="button" onClick={() => void toggleRemoved(p.id, !p.removed)} className="text-xs text-gray-500 hover:text-gray-100">

@@ -15,13 +15,6 @@ const LEVELS = [
   { key: 'levelUp', label: 'Level up', note: 'One step above' },
 ] as const;
 
-const KIND_STYLE: Record<string, string> = {
-  grammar: 'bg-red-500/15 text-red-300',
-  vietlish: 'bg-red-500/15 text-red-300',
-  word: 'bg-orange-500/15 text-orange-300',
-  tone: 'bg-yellow-500/15 text-yellow-300',
-  natural: 'bg-yellow-500/15 text-yellow-300',
-};
 
 type Props = { turn: TalkTurn; selfRepair: boolean; onChange: (patch: Partial<TalkTurn>) => void };
 
@@ -41,7 +34,7 @@ export function TalkReviewCard({ turn, selfRepair, onChange }: Props) {
             s.fix === undefined ? (
               <span key={i}>{s.text}</span>
             ) : (
-              <mark key={i} className="rounded bg-yellow-500/20 px-0.5 text-yellow-100 underline decoration-yellow-400 underline-offset-4">
+              <mark key={i} className="rounded-sm bg-gray-800 px-0.5 text-gray-100 underline decoration-gray-500 decoration-wavy underline-offset-4">
                 {s.text}
               </mark>
             ),
@@ -50,12 +43,12 @@ export function TalkReviewCard({ turn, selfRepair, onChange }: Props) {
         {!shown && (
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="text-sm text-gray-400">Fix the marked parts in your head, then check.</p>
-            <button type="button" onClick={() => setShown(true)} className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500">
+            <button type="button" onClick={() => setShown(true)} className="shrink-0 rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white px-3 py-1.5 text-sm">
               Show answer
             </button>
           </div>
         )}
-        {shown && fixes.length === 0 && <p className="mt-2 text-sm text-green-400">No mistakes found.</p>}
+        {shown && fixes.length === 0 && <p className="mt-2 text-sm text-gray-400">No mistakes found.</p>}
       </div>
 
       {shown && (
@@ -67,7 +60,7 @@ export function TalkReviewCard({ turn, selfRepair, onChange }: Props) {
                   key={l.key}
                   type="button"
                   onClick={() => setLevel(l.key)}
-                  className={`rounded-lg border px-2.5 py-1 text-xs ${level === l.key ? 'border-blue-500 bg-blue-500/15 text-blue-300' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`}
+                  className={`rounded-lg border px-2.5 py-1 text-xs ${level === l.key ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`}
                 >
                   {l.label}
                 </button>
@@ -87,10 +80,10 @@ export function TalkReviewCard({ turn, selfRepair, onChange }: Props) {
               {fixes.map((f, i) => (
                 <li key={i} className={dismissed.includes(i) ? 'opacity-40' : ''}>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className={`rounded px-1.5 py-0.5 text-[11px] ${KIND_STYLE[f.kind] ?? KIND_STYLE.natural}`}>{f.kind}</span>
-                    <span className="text-red-300 line-through decoration-red-400/60">{f.wrong}</span>
+                    <span className="rounded bg-gray-800 px-1.5 py-0.5 text-[11px] text-gray-400">{f.kind}</span>
+                    <span className="text-gray-500 line-through">{f.wrong}</span>
                     <span className="text-gray-500">→</span>
-                    <span className="text-green-300">{f.right}</span>
+                    <span className="font-medium text-gray-100">{f.right}</span>
                   </div>
                   {f.why && <p className="mt-0.5 text-xs text-gray-400">{f.why}</p>}
                   {!dismissed.includes(i) && (
@@ -138,7 +131,7 @@ function SayAgain({ target, onScore }: { target: string; onScore: (percent: numb
         <button
           type="button"
           onClick={() => (rec.status === 'listening' ? rec.stop() : void go())}
-          className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm ${rec.status === 'listening' ? 'border-red-500 text-red-400' : 'border-gray-700 text-gray-300 hover:text-gray-100'}`}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm ${rec.status === 'listening' ? 'border-red-400 text-red-400' : 'border-gray-700 text-gray-300 hover:text-gray-100'}`}
         >
           <Mic className="h-4 w-4" />
           {rec.status === 'listening' ? 'Stop' : 'Say it again'}
@@ -147,7 +140,7 @@ function SayAgain({ target, onScore }: { target: string; onScore: (percent: numb
       {marks && (
         <p className="mt-3 text-base leading-relaxed">
           {marks.map((m, i) => (
-            <span key={i} className={m.ok ? 'text-green-300' : 'text-red-400'}>
+            <span key={i} className={m.ok ? 'text-gray-100' : 'rounded-sm bg-gray-700 px-0.5 text-gray-300'}>
               {m.word}{' '}
             </span>
           ))}

@@ -32,7 +32,7 @@ export function TalkDrill({ phrases, onDone }: { phrases: TalkPhrase[]; onDone: 
   return (
     <div className="space-y-4">
       <div className="h-1 overflow-hidden rounded bg-gray-800">
-        <div className="h-full bg-blue-500 transition-all" style={{ width: `${Math.round((queue.done / queue.total) * 100)}%` }} />
+        <div className="h-full bg-gray-100 transition-all" style={{ width: `${Math.round((queue.done / queue.total) * 100)}%` }} />
       </div>
       <Item key={`${item.kind}:${item.phraseId}:${queue.done}:${queue.items.length}`} item={item} phrase={phrase} result={result} onResult={setResult} onNext={next} />
     </div>
@@ -102,14 +102,14 @@ function Item(props: { item: DrillItem; phrase: TalkPhrase; result: Result; onRe
             placeholder={item.kind === 'cloze' ? 'Fill the blank' : 'Type it, or tap the mic'}
             autoComplete="off"
             spellCheck={false}
-            className="min-w-0 flex-1 rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-blue-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-gray-800 bg-transparent px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
           />
           {item.kind === 'recall' && rec.supported && (
             <button
               type="button"
               aria-label="Say it"
               onClick={() => (rec.status === 'listening' ? rec.stop() : void say())}
-              className={`rounded-lg border px-3 ${rec.status === 'listening' ? 'border-red-500 text-red-400' : 'border-gray-700 text-gray-300 hover:text-gray-100'}`}
+              className={`rounded-lg border px-3 ${rec.status === 'listening' ? 'border-red-400 text-red-400' : 'border-gray-700 text-gray-300 hover:text-gray-100'}`}
             >
               <Mic className="h-4 w-4" />
             </button>
@@ -120,7 +120,7 @@ function Item(props: { item: DrillItem; phrase: TalkPhrase; result: Result; onRe
 
       {result && (
         <div className="space-y-1">
-          <p className={`text-sm ${result.right ? 'text-green-400' : 'text-red-400'}`}>{result.right ? 'Right' : 'Not quite'}</p>
+          <p className={`text-sm ${result.right ? 'text-gray-100' : 'text-red-400'}`}>{result.right ? 'Right' : 'Not quite'}</p>
           {result.heard && <p className="text-xs text-gray-500">Heard: “{result.heard}”</p>}
           <p className="flex items-center gap-2 text-base text-gray-100">
             <button type="button" aria-label="Play again" onClick={() => speak(phrase.text)} className="text-gray-500 hover:text-gray-100">
@@ -139,7 +139,7 @@ function Item(props: { item: DrillItem; phrase: TalkPhrase; result: Result; onRe
         ) : (
           <span />
         )}
-        <button ref={nextRef} type="submit" className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500">
+        <button ref={nextRef} type="submit" className="rounded-lg bg-gray-100 font-medium text-gray-900 hover:bg-white px-3 py-1.5 text-sm">
           {result ? 'Next' : 'Check'}
         </button>
       </div>

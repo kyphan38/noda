@@ -67,9 +67,9 @@ function Round({ items, onMiss, onDone }: { items: TalkPhrase[]; onMiss: (id: st
             }}
             className={`${cell} ${
               matched.has(p.id)
-                ? 'border-green-700/50 text-green-400/60'
+                ? 'border-gray-800 text-gray-600'
                 : picked === p.id
-                  ? 'border-blue-500 bg-blue-500/15 text-blue-200'
+                  ? 'border-gray-500 bg-gray-800 text-gray-100'
                   : 'border-gray-800 text-gray-100 hover:border-gray-600'
             }`}
           >
@@ -86,9 +86,9 @@ function Round({ items, onMiss, onDone }: { items: TalkPhrase[]; onMiss: (id: st
             onClick={() => pickMeaning(p.id)}
             className={`${cell} ${
               matched.has(p.id)
-                ? 'border-green-700/50 text-green-400/60'
+                ? 'border-gray-800 text-gray-600'
                 : wrong === p.id
-                  ? 'border-red-500 text-red-300'
+                  ? 'border-red-400 text-red-400'
                   : 'border-gray-800 text-gray-300 hover:border-gray-600'
             }`}
           >

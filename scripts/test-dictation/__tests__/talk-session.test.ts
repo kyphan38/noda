@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { TalkTopic, TalkTurnResult } from '@/lib/talk/types';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { TalkSession as Session, TalkTopic, TalkTurnResult } from '@/lib/talk/types';
 import type { TurnPayload } from '@/lib/db';
 
 /** Plays one whole talk: 8 answers, a review after each, then the summary. */
@@ -24,7 +24,7 @@ vi.mock('@/hooks/useVoiceRecorder', async () => {
           setStatus('idle');
           return new Blob(['x'], { type: 'audio/webm' });
         },
-        cancel: () => {},
+        cancel: () => setStatus('idle'),
       };
     },
   };
@@ -32,12 +32,15 @@ vi.mock('@/hooks/useVoiceRecorder', async () => {
 vi.mock('@/lib/speakingCheck', () => ({ blobToBase64: async () => 'eA==' }));
 
 const payloads: TurnPayload[] = [];
-const saveSession = vi.fn(async () => {});
+const saved = new Map<string, Session>();
+const saveSession = vi.fn(async (s: Session) => void saved.set(s.id, s));
 const saveStages = vi.fn(async (_t: string, _p: unknown, _s: string, m: Map<string, unknown>) => m);
 vi.mock('@/lib/talk/store', () => ({
   getTalkStore: () => ({
     saveSession,
     saveStages,
+    findOpenSession: async (topicId: string, setIndex: number) =>
+      [...saved.values()].filter((x) => x.topicId === topicId && x.setIndex === setIndex && !x.endedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null,
     runTurn: async (p: TurnPayload): Promise<TalkTurnResult> => {
       payloads.push(p);
       return {
@@ -83,12 +86,14 @@ async function answer() {
   await waitFor(() => screen.getByRole('button', { name: /Next turn|See the summary/ }));
 }
 
+afterEach(cleanup);
+
 describe('TalkSession', () => {
   it('runs 8 turns with reviews, one curveball, then shows the summary', async () => {
     const onExit = vi.fn();
     render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit }));
 
-    expect(screen.getByText('What happened with the builds?')).toBeTruthy();
+    await waitFor(() => screen.getByText('What happened with the builds?'));
     expect(screen.getByText('Builds failed 3 hours')).toBeTruthy();
     // Idea notes stay hidden until asked for.
     expect(screen.queryByText('the runner update')).toBeNull();
@@ -132,5 +137,51 @@ describe('TalkSession', () => {
 
     click('Done');
     expect(onExit).toHaveBeenCalled();
+  });
+
+  it('cancels a take, retries a turn and ends early', async () => {
+    payloads.length = 0;
+    render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
+
+    // Cancel while recording: nothing is sent.
+    click('Answer');
+    await waitFor(() => screen.getByRole('button', { name: 'Cancel (Esc)' }));
+    click('Cancel (Esc)');
+    await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
+    expect(payloads).toHaveLength(0);
+
+    // Try again drops the answer and asks the same line.
+    await answer();
+    click('Try again');
+    expect(screen.getByText('What happened with the builds?')).toBeTruthy();
+    expect(screen.getByText('Turn 1/8')).toBeTruthy();
+
+    await answer();
+    click('Next turn');
+    click('End talk');
+    expect(screen.getByText('Phrases used')).toBeTruthy();
+    expect(screen.getAllByText('I am working on the pipeline.')).toHaveLength(1);
+  });
+
+  it('goes on with a talk left halfway, with no new model call', async () => {
+    saved.clear();
+    payloads.length = 0;
+    const view = render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
+    await answer();
+    click('Next turn');
+    view.unmount();
+
+    render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByText('Picked up where you left off.'));
+    expect(screen.getByText('Reply 1')).toBeTruthy();
+    expect(screen.getByText('Turn 2/8')).toBeTruthy();
+    expect(payloads).toHaveLength(1);
+
+    // New talk closes the old one and starts again from the opening.
+    click('New talk');
+    await waitFor(() => screen.getByText('What happened with the builds?'));
+    expect([...saved.values()].filter((x) => !x.endedAt)).toHaveLength(1);
   });
 });

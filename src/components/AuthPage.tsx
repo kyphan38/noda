@@ -12,7 +12,7 @@ export function AuthPage({ title, children }: { title: string; children: ReactNo
   if (!isMounted || authState === 'loading') return null;
   if (authState !== 'authenticated') return <LoginView appName="noda" subtitle="Listen, write, then speak." />;
   return (
-    <main className="min-h-screen overflow-y-auto">
+    <main className="h-dvh overflow-y-auto">
       <div className="mx-auto w-full max-w-xl space-y-8 px-4 py-10 sm:py-16">
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="text-2xl font-semibold text-gray-100">{title}</h1>

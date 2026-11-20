@@ -115,6 +115,17 @@ export async function requestTalkTurn(payload: TurnPayload): Promise<TalkTurnRes
   return (await call(payload)).data;
 }
 
+/** The newest talk on this set that was left before the end, if any. */
+export async function findOpenTalkSession(topicId: string, setIndex: number): Promise<TalkSession | null> {
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDocs(query(collection(getFirebaseFirestore(), sessionsPath(uid)), where('topicId', '==', topicId)));
+  const open = snap.docs
+    .map((d) => ({ ...(d.data() as Omit<TalkSession, 'id'>), id: d.id }))
+    .filter((s) => s.setIndex === setIndex && !s.endedAt)
+    .sort((a, b) => b.startedAt - a.startedAt);
+  return open[0] ?? null;
+}
+
 /** The whole session in one doc; written after every turn so nothing is lost. */
 export async function saveTalkSession(session: TalkSession): Promise<void> {
   const uid = getCurrentUidOrThrow();

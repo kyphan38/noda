@@ -119,6 +119,11 @@ Say it again), Flow Mode, curveball, Hint (Ideas + Phrases), màn kết thúc
 (số liệu, top 5 lỗi, xem lại từng lượt), lưu `talkSessions`, cụm dùng được lên
 `prompted`. Chirp 3 HD chưa làm (cần bật Cloud Text-to-Speech API).
 
+Sau lần test đầu (2026-11-20): sửa không cuộn được (`main` tự cuộn), màu theo theme
+đen trắng của app, thêm Cancel (Esc) / Try again / End talk / New talk, **tự tiếp
+tục** buổi đang dở (lưu `next` trong session, không gọi AI lại), prompt bắt fix khớp
+với bản Correct, tắt service worker ở dev (cache code cũ).
+
 Thay đổi so với plan (2026-11-20):
 - **Topic mọi chủ đề**: Work (DevOps), Daily life, Friends, Family, Travel (25
   topic có sẵn) + nút Surprise me + custom topic gì cũng được.

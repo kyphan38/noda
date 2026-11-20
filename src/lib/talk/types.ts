@@ -80,6 +80,8 @@ export type TalkSession = {
   mode: TalkMode;
   selfRepair: boolean;
   turns: TalkTurn[];
+  /** The line waiting for an answer, so a talk left halfway goes on without a model call. */
+  next?: { text: string; curveball: boolean; ideas: string[] };
   startedAt: number;
   endedAt?: number;
 };
