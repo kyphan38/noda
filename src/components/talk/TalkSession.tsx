@@ -239,7 +239,15 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         return;
       }
       const el = e.target as HTMLElement | null;
-      if (e.repeat || (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'))) return;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
+      if (e.code === 'Space') {
+        // Space never scrolls the talk: not when held (repeats), not in review,
+        // not when a button has focus (that would also click it a second time).
+        e.preventDefault();
+        if (!e.repeat && phase !== 'review') toggleRecord();
+        return;
+      }
+      if (e.repeat) return;
       if (phase === 'review') {
         // Computer keys for the review: Enter next, R try again, 1-3 versions.
         if (e.code === 'Enter' && el?.tagName !== 'BUTTON') {
@@ -249,9 +257,6 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
         else if (['1', '2', '3'].includes(e.key)) setLevel(VERSIONS[Number(e.key) - 1].key);
         return;
       }
-      if (e.code !== 'Space' || el?.tagName === 'BUTTON') return;
-      e.preventDefault();
-      toggleRecord();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -283,4 +283,28 @@ describe('TalkSession', () => {
     expect(redo?.length).toBe(3);
     expect(redo?.scenarioId).toBe('s0');
   });
+
+  it('never lets Space scroll the page, and Space still starts the mic', async () => {
+    saved.clear();
+    mistakes.clear();
+    render(createElement(TalkSession, { topic, setIndex: 0, progress: new Map(), onProgress: () => {}, onExit: () => {} }));
+    await waitFor(() => screen.getByRole('button', { name: 'Answer' }));
+    const space = (target: EventTarget, repeat = false) => {
+      const e = new KeyboardEvent('keydown', { code: 'Space', key: ' ', repeat, bubbles: true, cancelable: true });
+      target.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
+    // A focused button: no scroll, and the mic starts once.
+    const mic = screen.getByRole('button', { name: 'Answer' });
+    mic.focus();
+    expect(space(mic)).toBe(true);
+    await waitFor(() => screen.getByRole('button', { name: 'Stop and send' }));
+    // Held down: repeats do not scroll either.
+    expect(space(document.body, true)).toBe(true);
+    expect(screen.getByRole('button', { name: 'Stop and send' })).toBeTruthy();
+    expect(space(document.body)).toBe(true);
+    await waitFor(() => screen.getByRole('button', { name: /^(Next|See the summary)/ }));
+    // In review: no scroll.
+    expect(space(document.body)).toBe(true);
+  });
 });
