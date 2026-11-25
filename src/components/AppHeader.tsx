@@ -1,8 +1,9 @@
 'use client';
 
-import React, { type RefObject } from 'react';
-import { PanelLeft, Trash2, MoreVertical, Edit2, RotateCcw } from 'lucide-react';
-import type { AppMode, LessonItem } from '@/types';
+import React, { useState, type RefObject } from 'react';
+import { PanelLeft, Trash2, MoreVertical, Edit2, RotateCcw, MessageSquareQuote } from 'lucide-react';
+import type { AppMode, LessonItem, Sentence } from '@/types';
+import { LessonTalkModal } from '@/components/LessonTalkModal';
 import { cn } from '@/lib/utils';
 import { LESSON_MODES } from '@/constants';
 import { useIndicator } from '@/hooks/useIndicator';
@@ -57,6 +58,8 @@ export interface AppHeaderProps {
   modeProgress: number | null;
   /** Clears the current tab's progress; absent in listen. */
   onResetProgress?: () => void;
+  /** The open lesson's sentences, for Retell. */
+  transcript?: Sentence[];
 }
 
 export function AppHeader({
@@ -73,7 +76,9 @@ export function AppHeader({
   onDeleteCurrent,
   modeProgress,
   onResetProgress,
+  transcript = [],
 }: AppHeaderProps) {
+  const [retellOpen, setRetellOpen] = useState(false);
   const modeLabel = LESSON_MODES.find((m) => m.mode === appMode)?.label ?? appMode;
   // On a phone the start page puts the sidebar button in its own title row.
   if (isMobile && !selectedItem) return null;
@@ -135,6 +140,18 @@ export function AppHeader({
                 >
                   <Edit2 size={14} aria-hidden /> Rename
                 </button>
+                {transcript.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeaderItemMenuOpen(false);
+                      setRetellOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-2"
+                  >
+                    <MessageSquareQuote size={14} aria-hidden /> Retell
+                  </button>
+                )}
                 {onResetProgress && (
                   <button
                     type="button"
@@ -157,6 +174,7 @@ export function AppHeader({
           </>
         ) : null}
       </div>
+      {retellOpen && selectedItem && <LessonTalkModal transcript={transcript} onClose={() => setRetellOpen(false)} />}
     </header>
   );
 }

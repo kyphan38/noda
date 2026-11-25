@@ -4,23 +4,39 @@ import React, { useEffect, useState } from 'react';
 import { PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModalShell } from '@/components/ModalShell';
+import { LessonTalkModal } from '@/components/LessonTalkModal';
+import type { Sentence } from '@/types';
 
 interface CleanupModalProps {
   isOpen: boolean;
   onKeep: () => void;
   /** Moves the lesson to the trash, where it can still be restored. */
   onMoveToTrash: () => void | Promise<void>;
+  /** The finished lesson's sentences, for Retell. */
+  transcript?: Sentence[];
 }
 
 /** Shown once a lesson is finished in both dictation and shadowing. */
-export function CleanupModal({ isOpen, onKeep, onMoveToTrash }: CleanupModalProps) {
+export function CleanupModal({ isOpen, onKeep, onMoveToTrash, transcript = [] }: CleanupModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [retell, setRetell] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!isOpen || !mounted) return null;
+  // Retelling keeps the lesson, like Keep.
+  if (retell)
+    return (
+      <LessonTalkModal
+        transcript={transcript}
+        onClose={() => {
+          setRetell(false);
+          onKeep();
+        }}
+      />
+    );
 
   const content = (
     <ModalShell
@@ -54,6 +70,16 @@ export function CleanupModal({ isOpen, onKeep, onMoveToTrash }: CleanupModalProp
         >
           Keep
         </Button>
+        {transcript.length > 0 && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-auto w-full justify-center rounded-xl py-3 text-base font-medium"
+            onClick={() => setRetell(true)}
+          >
+            Retell it
+          </Button>
+        )}
         <Button
           type="button"
           variant="secondary"

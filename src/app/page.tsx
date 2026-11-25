@@ -766,6 +766,7 @@ export default function NodaApp() {
             setHeaderItemMenuOpen={setHeaderItemMenuOpen}
             headerMenuRef={headerMenuRef}
             onRenameCurrent={handleHeaderRenameCurrent}
+            transcript={transcript}
             modeProgress={
               appMode === 'listen' || transcript.length === 0
                 ? null
@@ -933,6 +934,7 @@ export default function NodaApp() {
       <CleanupModal
         isOpen={showCleanupModal}
         onKeep={() => setShowCleanupModal(false)}
+        transcript={transcript}
         onMoveToTrash={async () => {
           const id = selectedItem?.id;
           setShowCleanupModal(false);

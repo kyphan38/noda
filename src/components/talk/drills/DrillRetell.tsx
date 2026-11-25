@@ -12,10 +12,14 @@ import { getTalkStore } from '@/lib/talk/store';
 
 type Step = 'paste' | 'read' | 'speak' | 'done';
 
-/** Paste a Slack thread, a PR or an article; read it; then tell it from memory. Key points are checked. */
-export function DrillRetell() {
-  const [text, setText] = useState('');
-  const [step, setStep] = useState<Step>('paste');
+/**
+ * Paste a Slack thread, a PR or an article; read it; then tell it from memory. Key points are checked.
+ * With `source` (a lesson part) there is no paste step and the text starts hidden: you just heard it.
+ */
+export function DrillRetell({ source }: { source?: string } = {}) {
+  const [text, setText] = useState(source ?? '');
+  const [step, setStep] = useState<Step>(source ? 'read' : 'paste');
+  const [showText, setShowText] = useState(!source);
   const [result, setResult] = useState<SpeechResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,9 +65,15 @@ export function DrillRetell() {
   if (step === 'read')
     return (
       <div className="space-y-3">
-        <p className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-gray-800 bg-gray-900/60 p-4 text-sm text-gray-200">{text}</p>
+        {showText ? (
+          <p className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-gray-800 bg-gray-900/60 p-4 text-sm text-gray-200">{text}</p>
+        ) : (
+          <button type="button" onClick={() => setShowText(true)} className="w-full rounded-lg border border-gray-800 py-2 text-sm text-gray-400 hover:bg-gray-100/[0.06]">
+            Show text
+          </button>
+        )}
         <button type="button" onClick={() => setStep('speak')} className="w-full rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white">
-          Hide it and tell me
+          {source ? 'Tell it' : 'Hide it and tell me'}
         </button>
       </div>
     );
@@ -71,7 +81,7 @@ export function DrillRetell() {
   if (step === 'speak' || !result)
     return (
       <div>
-        <p className="text-center text-sm text-gray-300">Tell a colleague what it says, in your own words.</p>
+        <p className="text-center text-sm text-gray-300">{source ? 'Tell a friend what you heard, in your own words.' : 'Tell a colleague what it says, in your own words.'}</p>
         <TimedRecorder limit={RETELL_SECONDS} busy={busy} onBlob={(b) => void send(b)} />
         {error && <p className="text-center text-xs text-red-400">{error}</p>}
       </div>
@@ -119,17 +129,19 @@ export function DrillRetell() {
         <button type="button" onClick={() => setStep('speak')} className="flex-1 rounded-lg border border-gray-800 py-2 text-sm text-gray-300 hover:bg-gray-100/[0.06]">
           Tell it again
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setText('');
-            setResult(null);
-            setStep('paste');
-          }}
-          className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white"
-        >
-          New text
-        </button>
+        {!source && (
+          <button
+            type="button"
+            onClick={() => {
+              setText('');
+              setResult(null);
+              setStep('paste');
+            }}
+            className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white"
+          >
+            New text
+          </button>
+        )}
       </div>
     </div>
   );

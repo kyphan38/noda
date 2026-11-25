@@ -107,6 +107,8 @@ then send the file back.
 
 - [ ] **60 · 45 · 30**: answer the same question 3 times. Each round stops by itself at its time. A table shows words, words per minute and uh/um.
 - [ ] **Read and retell**: paste a real Slack thread or PR, **Read it**, **Hide it and tell me**. You get key points (✓/✗), what you said, a natural retell and fixes.
+- [ ] **Retell from a lesson**: open a lesson, ⋮ menu, **Retell**. The text is hidden, **Show text** shows it. **Tell it**, record, get key points. A long lesson shows time chips (e.g. 0:00-3:10); each chip is its own part. No **New text** button.
+- [ ] **Retell from Lesson complete**: finish a lesson, the modal shows **Retell it**. It opens Retell; closing it keeps the lesson.
 - [ ] **Time Capsule**: record once. It says "This month is saved". The month shows with an audio player you can play.
 
 ## 13. Voice
