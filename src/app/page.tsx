@@ -796,6 +796,7 @@ export default function NodaApp() {
                 listenAgainLessons={listenAgainLessons}
                 onSelectLesson={handleItemSelect}
                 onNewLesson={openNewLessonModal}
+                onOpenSidebar={viewport.isMobile ? () => setIsSidebarOpen(true) : undefined}
               />
             )}
 

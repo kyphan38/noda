@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Video, Music2 } from 'lucide-react';
+import { Plus, Video, Music2, PanelLeft } from 'lucide-react';
 import type { LessonItem } from '@/types';
 import { LessonProgressBars } from './LessonProgressBars';
 
@@ -10,15 +10,30 @@ interface WelcomeScreenProps {
   listenAgainLessons: LessonItem[];
   onSelectLesson: (lesson: LessonItem) => void;
   onNewLesson: () => void;
+  /** Phone only: the sidebar button sits in the title row, on the right so the title lines up with other pages. */
+  onOpenSidebar?: () => void;
 }
 
 /** Start page: pick up a recent lesson, or create a new one. */
-export function WelcomeScreen({ recentLessons, listenAgainLessons, onSelectLesson, onNewLesson }: WelcomeScreenProps) {
+export function WelcomeScreen({ recentLessons, listenAgainLessons, onSelectLesson, onNewLesson, onOpenSidebar }: WelcomeScreenProps) {
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-[38rem] px-1 pt-4 pb-10 sm:pb-16 md:px-4 md:pt-12 space-y-8">
+      <div className="mx-auto w-full max-w-[38rem] px-1 pt-[max(1.75rem,calc(env(safe-area-inset-top)-0.75rem))] pb-10 sm:pb-16 md:px-4 md:pt-12 space-y-8">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-gray-100">noda</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold text-gray-100">noda</h1>
+            {onOpenSidebar && (
+              <button
+                type="button"
+                onClick={onOpenSidebar}
+                className="-my-2 -mr-2 rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white md:hidden"
+                title="Open Sidebar"
+                aria-label="Open sidebar"
+              >
+                <PanelLeft size={22} aria-hidden />
+              </button>
+            )}
+          </div>
           <p className="text-sm text-gray-400">Listen, write what you hear, then speak along.</p>
         </div>
 

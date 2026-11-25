@@ -62,6 +62,7 @@ export interface AppHeaderProps {
 export function AppHeader({
   isSidebarOpen,
   onOpenSidebar,
+  isMobile = false,
   selectedItem,
   appMode,
   onModeChange,
@@ -74,6 +75,8 @@ export function AppHeader({
   onResetProgress,
 }: AppHeaderProps) {
   const modeLabel = LESSON_MODES.find((m) => m.mode === appMode)?.label ?? appMode;
+  // On a phone the start page puts the sidebar button in its own title row.
+  if (isMobile && !selectedItem) return null;
   return (
     // With no lesson open, the header only holds the sidebar button; on a computer it floats
     // so the start page title lines up with the other pages.
