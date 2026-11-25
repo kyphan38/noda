@@ -75,7 +75,9 @@ export function AppHeader({
 }: AppHeaderProps) {
   const modeLabel = LESSON_MODES.find((m) => m.mode === appMode)?.label ?? appMode;
   return (
-    <header className="app-header">
+    // With no lesson open, the header only holds the sidebar button; on a computer it floats
+    // so the start page title lines up with the other pages.
+    <header className={cn('app-header', !selectedItem && 'app-header-floating')}>
       <div className="header-left">
         {!isSidebarOpen && (
           <button

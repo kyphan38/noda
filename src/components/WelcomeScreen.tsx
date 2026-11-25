@@ -16,7 +16,7 @@ interface WelcomeScreenProps {
 export function WelcomeScreen({ recentLessons, listenAgainLessons, onSelectLesson, onNewLesson }: WelcomeScreenProps) {
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-xl px-2 py-10 sm:py-16 space-y-8">
+      <div className="mx-auto w-full max-w-[38rem] px-1 pt-4 pb-10 sm:pb-16 md:px-4 md:pt-12 space-y-8">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-gray-100">noda</h1>
           <p className="text-sm text-gray-400">Listen, write what you hear, then speak along.</p>

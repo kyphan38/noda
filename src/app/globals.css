@@ -141,6 +141,16 @@ html {
   flex-shrink: 0;
 }
 
+/* No lesson open: on a computer the header (just the sidebar button) floats over the start page. */
+@media (min-width: 768px) {
+  .app-header.app-header-floating {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    margin: 0;
+  }
+}
+
 .header-left {
   flex-shrink: 0;
   display: flex;
