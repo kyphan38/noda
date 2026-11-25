@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { DailyView } from '@/components/DailyView';
 import { MistakesView } from '@/components/MistakesView';
 import { SpeakingView } from '@/components/SpeakingView';
 import { TalkMistakesList } from '@/components/talk/TalkMistakesList';
@@ -9,7 +10,6 @@ import { TalkStarredList } from '@/components/talk/TalkStarredList';
 import { REVIEW_TABS, reviewTabFromSearch, type ReviewTab } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 
-const TAB_KEY = 'noda.review.tab';
 type Source = 'all' | 'talk' | 'dictation';
 const SOURCES: { id: Source; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -23,42 +23,28 @@ export const chipClass = (on: boolean) =>
     on ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'
   );
 
-/** Everything to look back on: mistakes, speaking scores and starred phrases. */
+/** Everything to look back on: today's review, mistakes, speaking scores and starred phrases. */
 export function ReviewView() {
-  const [tab, setTab] = useState<ReviewTab>('mistakes');
+  const [tab, setTab] = useState<ReviewTab>('today');
   const [source, setSource] = useState<Source>('all');
 
   useEffect(() => {
-    // A ?tab= link (old /speaking page) wins over the last tab used.
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(TAB_KEY);
-    } catch {
-      // Private mode: start on Mistakes.
-    }
-    const next = reviewTabFromSearch(window.location.search) ?? REVIEW_TABS.find((t) => t.id === saved)?.id;
+    // Every visit starts on Today; a ?tab= link (old /speaking page) opens that tab.
+    const next = reviewTabFromSearch(window.location.search);
     if (next) setTab(next);
   }, []);
-
-  const pick = (id: ReviewTab) => {
-    setTab(id);
-    try {
-      localStorage.setItem(TAB_KEY, id);
-    } catch {
-      // Kept for this visit only.
-    }
-  };
 
   return (
     <div className="space-y-5">
       <div className="flex gap-1" role="tablist">
         {REVIEW_TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => pick(t.id)} className={chipClass(tab === t.id)}>
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={chipClass(tab === t.id)}>
             {t.label}
           </button>
         ))}
       </div>
 
+      {tab === 'today' && <DailyView />}
       {tab === 'mistakes' && (
         <div className="space-y-5">
           <div className="flex gap-1" role="radiogroup" aria-label="Source">

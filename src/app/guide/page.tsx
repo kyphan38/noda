@@ -121,7 +121,9 @@ const BLOCKS: Block[] = [
   {
     title: 'Review',
     lines: [
-      'Three tabs: Mistakes, Speaking and Starred.',
+      'Four tabs: Today, Mistakes, Speaking and Starred. Review always opens on Today.',
+      'Today: a short daily review. Hear and write up to 5 dictation lines you missed (most misses first; a line missed in the last 12 hours waits), then fix up to 4 of your Talk mistakes. Right lines leave the list. Skip moves on. When it ends it says Done for today; Again starts a fresh round.',
+      'Today uses uploaded audio only: YouTube lines stay on the Mistakes tab.',
       'Mistakes: your Talk mistakes by type, and the dictation lines you wrote wrong most often. Show All, only Talk or only Dictation.',
       'Tap a dictation line to hear it and write it again. Control plays it again. Right, and it leaves the list. YouTube lines open in their lesson.',
       'Speaking: your speaking-check score by day, the sound habits that keep going wrong (for example elision · /t/), and the words said wrong most.',

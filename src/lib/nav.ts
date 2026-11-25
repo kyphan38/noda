@@ -17,8 +17,9 @@ export function spaceForPath(pathname: string | null | undefined): NavSpace | nu
   return null;
 }
 
-export type ReviewTab = 'mistakes' | 'speaking' | 'starred';
+export type ReviewTab = 'today' | 'mistakes' | 'speaking' | 'starred';
 export const REVIEW_TABS: { id: ReviewTab; label: string }[] = [
+  { id: 'today', label: 'Today' },
   { id: 'mistakes', label: 'Mistakes' },
   { id: 'speaking', label: 'Speaking' },
   { id: 'starred', label: 'Starred' },

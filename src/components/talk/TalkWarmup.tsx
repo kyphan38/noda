@@ -7,8 +7,11 @@ import { applyWarmupAnswer, patternLabel, pickWarmup, type TalkMistake, type War
 import { isPhraseSpoken, isPhraseTyped } from '@/lib/talk/phrase-check';
 import { getTalkStore } from '@/lib/talk/store';
 
-/** Before a talk: fix a few of your own past mistakes. Calls onDone at once when the bank is empty. */
-export function TalkWarmup({ onDone }: { onDone: () => void }) {
+/**
+ * Fix a few of your own past Talk mistakes: before a talk, or in Today's review.
+ * Calls onDone at once when the bank is empty.
+ */
+export function TalkWarmup({ onDone, title = 'Warm-up', doneLabel = 'Start the talk' }: { onDone: () => void; title?: string; doneLabel?: string }) {
   const [bank, setBank] = useState<Map<string, TalkMistake> | null>(null);
   const [items, setItems] = useState<WarmupItem[]>([]);
   const [i, setI] = useState(0);
@@ -50,7 +53,7 @@ export function TalkWarmup({ onDone }: { onDone: () => void }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-gray-400">
-          Warm-up <span className="ml-1 text-xs text-gray-500 tabular-nums">{i + 1}/{items.length}</span>
+          {title} <span className="ml-1 text-xs text-gray-500 tabular-nums">{i + 1}/{items.length}</span>
         </h2>
         <button type="button" onClick={onDone} className="text-xs text-gray-500 hover:text-gray-100">
           Skip
@@ -80,7 +83,7 @@ export function TalkWarmup({ onDone }: { onDone: () => void }) {
               }}
               className="w-full rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-900 hover:bg-white"
             >
-              {i + 1 < items.length ? 'Next' : 'Start the talk'}
+              {i + 1 < items.length ? 'Next' : doneLabel}
             </button>
           </>
         )}
