@@ -1,10 +1,5 @@
-import { AuthPage } from '@/components/AuthPage';
-import { SpeakingView } from '@/components/SpeakingView';
+import { RedirectTo } from '@/components/RedirectTo';
 
 export default function SpeakingPage() {
-  return (
-    <AuthPage title="Speaking">
-      <SpeakingView />
-    </AuthPage>
-  );
+  return <RedirectTo href="/review/?tab=speaking" />;
 }

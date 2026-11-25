@@ -5,6 +5,7 @@ import { Star, Volume2 } from 'lucide-react';
 
 import { TalkLearn } from '@/components/talk/TalkLearn';
 import { TalkSession } from '@/components/talk/TalkSession';
+import { useNavFocus } from '@/hooks/useNavFocus';
 import { ankiFileName, phrasesToAnki } from '@/lib/talk/anki';
 import { stageAtLeast, summarizeSets } from '@/lib/talk/phrase-stage';
 import { speak } from '@/lib/talk/speak';
@@ -15,6 +16,7 @@ type Props = { topic: TalkTopic; onBack: () => void; onChange: (t: TalkTopic) =>
 
 /** One topic: its sets, how many phrases of each you know, and the way into Learn. */
 export function TalkTopicView({ topic, onBack, onChange, onDelete }: Props) {
+  useNavFocus();
   const [progress, setProgress] = useState<Map<string, TalkPhraseProgress> | null>(null);
   const [openSet, setOpenSet] = useState<number | null>(null);
   const [learning, setLearning] = useState<number | null>(null);

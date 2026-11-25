@@ -6,7 +6,7 @@ import { GRADUATE_STREAK, patternLabel, type TalkMistake } from '@/lib/talk/mist
 import { getTalkStore } from '@/lib/talk/store';
 
 /** Mistakes from Talk, grouped by pattern; open ones first. Shows nothing until there are some. */
-export function TalkMistakesList() {
+export function TalkMistakesList({ showEmpty = false }: { showEmpty?: boolean }) {
   const [rows, setRows] = useState<TalkMistake[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
@@ -21,7 +21,8 @@ export function TalkMistakesList() {
     };
   }, []);
 
-  if (!rows || rows.length === 0) return null;
+  if (!rows) return null;
+  if (rows.length === 0) return showEmpty ? <p className="text-sm text-gray-500">No Talk mistakes yet.</p> : null;
   return (
     <section className="space-y-2">
       <h2 className="text-sm font-medium text-gray-400">Talk</h2>

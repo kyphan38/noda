@@ -7,6 +7,15 @@ type Block = { title: string; lines: string[] };
 
 const BLOCKS: Block[] = [
   {
+    title: 'Layout',
+    lines: [
+      'noda has three parts: Listen (your lessons), Talk and Review.',
+      'On a computer they are on the rail at the left. On a phone they are in the bar at the bottom.',
+      'The bottom bar hides while a lesson or a topic is open, to give you more room. Open the sidebar to switch.',
+      'The gear opens Settings: theme, export all data (.json), this Guide, log out, and the AI cost this month.',
+    ],
+  },
+  {
     title: 'Lessons',
     lines: [
       'Tap + Audio to make a lesson. Drop an audio or video file and its .srt subtitles. Several files at once make several lessons.',
@@ -21,8 +30,6 @@ const BLOCKS: Block[] = [
       'Search finds lessons by name.',
       'Make folders and drag lessons into them.',
       'Swipe left to close it on a phone.',
-      'At the top: theme, export all data (.json) and log out.',
-      'At the bottom: Mistakes (Talk and Dictation), Speaking, Talk and this Guide.',
     ],
   },
   {
@@ -59,7 +66,7 @@ const BLOCKS: Block[] = [
     title: 'Talk',
     lines: [
       'Learn useful phrases for a topic, then speak them with an AI partner. Everything is in English.',
-      'Topics cover work, daily life, friends, family and travel. Pick your level (B1, B2, C1) and a topic, tap Surprise me, or make your own. A new topic takes up to a minute to make, then it is saved.',
+      'Topics cover work, daily life, friends, family and travel. Pick a category and your level (B1, B2, C1). The shuffle button opens a random topic. + New makes your own. A new topic takes up to a minute to make, then it is saved.',
       'Each topic has 4 sets of 10 phrases. Open a set to see its phrases. Hide one that sounds odd.',
       'Learn a set: read the cards (tap to hear), match phrases to meanings, then fill the blanks and say each phrase from its meaning. Everything is in English.',
       'A wrong answer comes back a few items later. The set is done when nothing is wrong.',
@@ -85,16 +92,16 @@ const BLOCKS: Block[] = [
       'Notes at the end (made once per talk): one thing to work on, missed chances to use a set phrase, better words, and a closing drill: say your weakest answers the natural way from a short idea.',
       'Your fixes go into a mistake bank by type (verb tense, a/an/the...). A new talk starts with a short warm-up on your top types. 5 right in a row and a type is done.',
       'A phrase you use in another talk without seeing it on the list counts as yours (Active).',
-      'Got stuck in a real talk? Type what you wanted to say in the box at the top of Talk, in any language. Practice these makes a topic where you have to say those things.',
+      'Got stuck in a real talk? Tap + New in Talk and type what you wanted to say in the box, in any language. Practice these makes a topic where you have to say those things.',
       'Voices: Google Chirp 3 HD when it is on in the project, otherwise your browser voice. Each line is made once and kept.',
-      'Drills: 60 · 45 · 30 asks one question 3 times with less time each round; compare words, speed, uh/um, and how many points of your first answer you kept.',
+      'Drills (the second tab in Talk): 60 · 45 · 30 asks one question 3 times with less time each round; compare words, speed, uh/um, and how many points of your first answer you kept.',
       'Read and retell: paste a Slack thread, a PR or an article, read it, hide it, then tell it. You see which key points you covered and a natural retell.',
       'Time Capsule: the same one-minute talk once a month, kept as audio. Play old months to hear your progress.',
       'Help: type your idea in simple words and get 2-3 word groups to build the answer with. Never a full answer.',
       'Work topics like incidents and standups expect the main point first (BLUF); the interview expects Situation, Task, Action, Result (STAR). Long answers get a short note on order.',
       'Export to Anki (in an open set) downloads the phrases you do not own yet, ready for /anki-import.',
       'Stuck for a second? Buy time shows natural ways to pause instead of uh or um. The summary counts your uh/um per answer.',
-      'Star (on a set) the phrases that fit you. Starred phrases at the top of Talk shows how far each one is: Learning, Known, Used with help, Yours.',
+      'Star (on a set) the phrases that fit you. Review > Starred shows how far each one is: Learning, Known, Used with help, Yours.',
       'Busy day? Turn on Quick before the first answer: 3 answers instead of 8.',
       'Talk this again (at the end) does the same situation again, then shows last time and now side by side.',
       'This week (top of Talk): your streak, talks, minutes and words per minute. Up to 2 missed days in 7 do not break the streak.',
@@ -110,17 +117,14 @@ const BLOCKS: Block[] = [
     ],
   },
   {
-    title: 'Mistakes',
+    title: 'Review',
     lines: [
-      'The lines you wrote wrong most often, in every lesson.',
-      'Tap one to hear it and write it again. Control plays it again. Right, and it leaves the list. YouTube lines open in their lesson.',
-    ],
-  },
-  {
-    title: 'Speaking',
-    lines: [
-      'Your speaking-check score by day, the sound habits that keep going wrong (for example elision · /t/), and the words said wrong most.',
+      'Three tabs: Mistakes, Speaking and Starred.',
+      'Mistakes: your Talk mistakes by type, and the dictation lines you wrote wrong most often. Show All, only Talk or only Dictation.',
+      'Tap a dictation line to hear it and write it again. Control plays it again. Right, and it leaves the list. YouTube lines open in their lesson.',
+      'Speaking: your speaking-check score by day, the sound habits that keep going wrong (for example elision · /t/), and the words said wrong most.',
       'Inside a speaking check, a chart shows the scores of that lesson.',
+      'Starred: the phrases you starred in Talk and how far each one is.',
     ],
   },
   {

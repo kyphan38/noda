@@ -1,30 +1,21 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
 import {
   Music2,
-  LogOut,
-  Download,
   PanelLeft,
   ChevronDown,
   ChevronRight,
   RotateCcw,
   Trash2,
   MoreVertical,
-  Monitor,
-  Sun,
-  Moon,
 } from 'lucide-react';
 import { LessonSummary, ExpandedSections, LessonItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
 import type { UseFoldersResult } from '@/hooks/useFolders';
-import AiCostRow from '@/components/AiCostRow';
+import { NavBar } from '@/components/nav/AppNav';
 import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
-import { themeStore, type Theme } from '@/lib/theme';
-import { readAllForExport } from '@/lib/db';
-import { buildExport, exportFilename } from '@/lib/exportData';
 
 function TrashedItemRow({
   item,
@@ -198,29 +189,6 @@ function SidebarImpl({
   isMobile = false,
 }: SidebarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-
-  const exportAll = async () => {
-    setExporting(true);
-    try {
-      const now = Date.now();
-      const json = buildExport(await readAllForExport(), now);
-      const url = URL.createObjectURL(new Blob([json], { type: 'application/json;charset=utf-8' }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = exportFilename(new Date(now));
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      // Safari reads the blob after click returns, so revoke later.
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (err) {
-      console.warn('[sidebar] export', err);
-    } finally {
-      setExporting(false);
-    }
-  };
   const [search, setSearch] = useState('');
 
   const searchTerm = search.trim().toLowerCase();
@@ -300,29 +268,13 @@ function SidebarImpl({
         <div
           ref={swipe.panel}
           {...swipe.panelProps}
-          className={`fixed inset-y-0 left-0 w-72 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out ${
+          className={`fixed inset-y-0 ${isMobile ? 'left-0' : 'left-14'} w-72 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           <div className="p-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-white">noda</h2>
             <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <button
-                onClick={() => void exportAll()}
-                disabled={exporting}
-                className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-40"
-                title="Export all data (.json)"
-              >
-                <Download size={18} />
-              </button>
-              <button
-                onClick={onLogout}
-                className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
-                title="Logout"
-              >
-                <LogOut size={18} />
-              </button>
               <button
                 onClick={() => onToggle(false)}
                 className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
@@ -412,47 +364,11 @@ function SidebarImpl({
             )}
           </div>
 
-          <div className="border-t border-gray-800 px-4 py-3">
-            <div className="flex gap-4">
-              <Link href="/mistakes" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Mistakes
-              </Link>
-              <Link href="/speaking" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Speaking
-              </Link>
-              <Link href="/talk" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Talk
-              </Link>
-              <Link href="/guide" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Guide
-              </Link>
-            </div>
-            <AiCostRow />
-          </div>
+          {/* On a phone the bottom bar hides while a lesson is open, so the drawer carries it. */}
+          {isMobile && <NavBar onLogout={onLogout} alwaysShow />}
         </div>
       </div>
     </>
-  );
-}
-
-const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
-const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
-
-/** Theme, per device. One icon that cycles system, light, dark. */
-function ThemeToggle() {
-  const theme = useSyncExternalStore(themeStore.subscribe, themeStore.get, themeStore.getServer);
-  const Icon = THEME_ICONS[theme];
-  const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
-  return (
-    <button
-      type="button"
-      onClick={() => themeStore.set(next)}
-      className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
-      title={`Theme: ${theme}`}
-      aria-label={`Theme: ${theme}`}
-    >
-      <Icon size={18} />
-    </button>
   );
 }
 

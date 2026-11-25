@@ -22,6 +22,7 @@ import {
 import { findActiveTranscriptIndex, scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
 import { useShadowingPatternManager } from '@/hooks/useShadowingPatternManager';
 import { useCoarsePointer } from '@/hooks/use-mobile';
+import { useNavFocus } from '@/hooks/useNavFocus';
 import { cn } from '@/lib/utils';
 
 const MemoPlayer = React.memo(Player);
@@ -115,6 +116,7 @@ export function LessonView({
   onDismissResume,
   onShadowingPanelOpenChange,
 }: LessonViewProps) {
+  useNavFocus();
   const [seekDisabled, setSeekDisabled] = useState(false);
   const [videoHidden, setVideoHidden] = useState(false);
   const [hevcWarning, setHevcWarning] = useState(false);

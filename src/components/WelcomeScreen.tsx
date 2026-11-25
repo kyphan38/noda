@@ -1,5 +1,4 @@
 import React from 'react';
-import Link from 'next/link';
 import { Plus, Video, Music2 } from 'lucide-react';
 import type { LessonItem } from '@/types';
 import { LessonProgressBars } from './LessonProgressBars';
@@ -34,12 +33,6 @@ export function WelcomeScreen({ recentLessons, listenAgainLessons, onSelectLesso
           >
             <Plus size={16} aria-hidden /> New lesson
           </button>
-          <Link href="/mistakes" className="text-sm text-gray-400 hover:text-gray-100">
-            Mistakes
-          </Link>
-          <Link href="/speaking" className="text-sm text-gray-400 hover:text-gray-100">
-            Speaking
-          </Link>
         </div>
       </div>
     </div>

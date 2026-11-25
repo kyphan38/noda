@@ -5,6 +5,7 @@ import { findActiveTranscriptIndex, scrollDictationTargetRow } from '@/lib/trans
 import { completionPercent } from '@/lib/progress';
 import { LoginView } from '@/components/auth/LoginView';
 import { Sidebar } from '@/components/Sidebar';
+import { AppShell } from '@/components/nav/AppNav';
 import { NewLessonModal } from '@/components/NewLessonModal';
 import { CleanupModal } from '@/components/CleanupModal';
 import { AppHeader } from '@/components/AppHeader';
@@ -723,7 +724,8 @@ export default function NodaApp() {
   }
 
   return (
-    <div className="flex h-dvh bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-gray-500/40">
+    <AppShell onLogout={handleLogout}>
+    <div className="flex flex-1 min-h-0 bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-gray-500/40">
       <div>
         <Sidebar
           isOpen={isSidebarOpen}
@@ -939,5 +941,6 @@ export default function NodaApp() {
 
       <ToastLayer toast={toast} onClose={dismissToast} />
     </div>
+    </AppShell>
   );
 }

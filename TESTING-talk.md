@@ -15,7 +15,7 @@ then send the file back.
 - [ ] Pick level B1, B2 or C1. Reload: the level is remembered.
 - [ ] Open a topic you never opened ("New" on the right). It shows "Making…", then opens within about a minute.
 - [ ] Go back and open it again: it opens at once (no "Making…").
-- [ ] **Surprise me** opens a random topic.
+- [ ] The **shuffle** button (next to **+ New**) opens a random topic.
 - [ ] Make your own topic (for example "Ask my neighbor to turn the music down"). It opens.
 - [ ] On a topic: open Set 1, check the phrases sound natural and the meanings are simple English.
 - [ ] **Hide** a phrase that sounds odd. It goes gray. **Bring back** works.
@@ -67,13 +67,13 @@ then send the file back.
 
 ## 6. Mistake bank and warm-up
 
-- [ ] After one finished talk, open **Mistakes**: a **Talk** section lists mistake types (Verb tense...). Tap one to see examples.
+- [ ] After one finished talk, open **Review > Mistakes**: a **Talk** section lists mistake types (Verb tense...). Tap one to see examples.
 - [ ] Start a **new** talk: it begins with a **Warm-up** on your own old mistakes. **Skip** works.
 - [ ] Fix one right: Mistakes shows its streak "1/5 right".
 
 ## 7. Stuck box
 
-- [ ] At the top of Talk ("Got stuck? Note it here"): type a sentence you could not say (any language), **Save**.
+- [ ] In Talk, tap **+ New**, then in "Got stuck? Note it here": type a sentence you could not say (any language), **Save**.
 - [ ] **Saved (n)** opens the list. The X deletes one.
 
 ## 8. Meeting prep and stuck lines
@@ -95,7 +95,7 @@ then send the file back.
 - [ ] In a talk, **Buy time** shows phrases like "Let me think for a second."
 - [ ] Say "uh" or "um" in an answer: the summary shows **uh/um per answer** above 0.
 - [ ] On a topic, open a set and tap the **star** on a phrase. It fills in.
-- [ ] Back on Talk, **Starred phrases** lists it with its level (Learning, Known, Used with help, Yours).
+- [ ] In **Review > Starred**, it is listed with its level (Learning, Known, Used with help, Yours).
 
 ## 11. Help, answer order, Anki
 
