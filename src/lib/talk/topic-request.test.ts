@@ -37,6 +37,7 @@ describe('buildTopicPrompt, lesson topics', () => {
     expect(prompt).toContain('The tunnel is 57 km long.');
     expect(prompt).toContain('- pure rock');
     expect(prompt).toContain('exactly as they appear');
+    expect(prompt).toContain('looked up that word');
   });
 
   it('takes chunks from the clip when there are no missed lines', () => {

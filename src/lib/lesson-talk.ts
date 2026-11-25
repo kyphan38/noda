@@ -60,6 +60,14 @@ export const LESSON_NOTES_MAX = 4000;
 export const LESSON_TARGETS_MAX = 12;
 
 type Miss = { sentenceId: number; n: number; text: string };
+type Word = { word: string; sentence: string };
+
+/** Slots kept for looked-up words, so many misses do not push them all out. */
+export const WORD_TARGETS_MAX = 4;
+/** Same as MAX_TARGET in functions/src/lib/talkTopic.ts. */
+const TARGET_MAX_CHARS = 200;
+
+const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 /** Talk topic id for a lesson: one topic per lesson, so opening it again is free. */
 export function lessonTopicId(lessonId: string): string {
@@ -69,20 +77,26 @@ export function lessonTopicId(lessonId: string): string {
 /**
  * What a lesson topic is built from:
  * - notes: the stretch of the transcript, at most `max` chars, with the most dictation misses
- *   (weighted by count). With no misses, the start of the lesson.
- * - targets: the missed sentences, most misses first.
+ *   (weighted by count) and looked-up words (one each). With neither, the start of the lesson.
+ * - targets: the missed sentences, most misses first, and up to WORD_TARGETS_MAX looked-up
+ *   words with their sentence. Words keep their slots; misses fill any slot left.
  */
 export function buildLessonNotes(
   sentences: readonly (Line & { id: number })[],
   misses: readonly Miss[],
+  words: readonly Word[] = [],
   max = LESSON_NOTES_MAX,
 ): { notes: string; targets: string[] } {
-  const lines = sentences
-    .map((s) => ({ id: s.id, text: s.text.replace(/\s+/g, ' ').trim().slice(0, max) }))
-    .filter((s) => s.text);
-  const weight = new Map(misses.filter((m) => m.n > 0).map((m) => [m.sentenceId, m.n]));
+  const lines = sentences.map((s) => ({ id: s.id, text: clean(s.text).slice(0, max) })).filter((s) => s.text);
+  const weight = new Map<number, number>();
+  for (const m of misses) if (m.n > 0) weight.set(m.sentenceId, (weight.get(m.sentenceId) ?? 0) + m.n);
+  const idByText = new Map(lines.map((l) => [l.text, l.id]));
+  for (const w of words) {
+    const id = idByText.get(clean(w.sentence));
+    if (id !== undefined) weight.set(id, (weight.get(id) ?? 0) + 1);
+  }
 
-  // Sliding window over whole sentences: the one with the most misses wins, the earliest on a tie.
+  // Sliding window over whole sentences: the one with the most weight wins, the earliest on a tie.
   let best = { from: 0, to: 0, score: -1 };
   let to = 0;
   let len = -1;
@@ -103,11 +117,24 @@ export function buildLessonNotes(
     .map((s) => s.text)
     .join(' ');
 
-  const targets = [...misses]
+  const missLines = [...misses]
     .filter((m) => m.n > 0 && m.text.trim())
     .sort((a, b) => b.n - a.n || a.sentenceId - b.sentenceId)
-    .map((m) => m.text.replace(/\s+/g, ' ').trim())
-    .filter((t, i, all) => all.indexOf(t) === i)
-    .slice(0, LESSON_TARGETS_MAX);
+    .map((m) => clean(m.text))
+    .filter((t, i, all) => all.indexOf(t) === i);
+  const seen = new Set<string>();
+  const wordLines: string[] = [];
+  for (const w of words) {
+    const key = clean(w.word).toLowerCase();
+    if (!key || seen.has(key) || !clean(w.sentence)) continue;
+    seen.add(key);
+    wordLines.push(`"${key}" in: ${clean(w.sentence)}`.slice(0, TARGET_MAX_CHARS));
+  }
+  const wordCount = Math.min(wordLines.length, WORD_TARGETS_MAX);
+  const missCount = Math.min(missLines.length, LESSON_TARGETS_MAX - wordCount);
+  const targets = [
+    ...missLines.slice(0, missCount),
+    ...wordLines.slice(0, LESSON_TARGETS_MAX - missCount),
+  ];
   return { notes, targets };
 }

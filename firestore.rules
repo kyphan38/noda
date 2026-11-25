@@ -20,6 +20,11 @@ service cloud.firestore {
     match /users/{userId}/misses/{lessonId} {
       allow read, write: if isOwner(userId);
     }
+    // Word cards: written by defineWord only; read to build a lesson's Talk topic.
+    match /users/{userId}/words/{wordId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
     // Heavy half of a lesson (transcript, drafts, progress), read only when it opens.
     match /users/{userId}/lessons/{lessonId}/content/{docId} {
       allow read, write: if isOwner(userId);

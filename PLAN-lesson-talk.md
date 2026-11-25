@@ -65,12 +65,21 @@ Client:
   saved section/topic state.
 - Cost: one `talkTopic` call per lesson (cached), then normal turns.
 
-## Phase 3: Looked-up words per lesson
+## Phase 3: Looked-up words per lesson - done
 
-- `defineWord` takes an optional `lessonId` and saves it on the word doc.
-- `listWordsForLesson(lessonId)` in `src/lib/db/`.
-- Feed them into `targets` (after the missed lines).
-- Old word cards have no lessonId. Skip them: not worth a migration.
+Changed from the first idea: no `lessonId` on word cards. A word card already
+keeps its sentence, so a lesson's words are the cards whose sentence is one of
+the lesson's sentences. This also finds words looked up before this change,
+and `defineWord` stays the same.
+
+- Firestore rule: the app may read `users/{uid}/words` (still written by the
+  function only).
+- `listWordsForSentences(sentences)` in `src/lib/db/words.ts`: `in` queries of
+  30 sentences each.
+- `buildLessonNotes` takes the words: each counts 1 when picking the clip
+  window, and up to 4 go into `targets` as `"word" in: sentence`. Words keep
+  their 4 slots; misses fill the rest.
+- The topic prompt says what a `"word" in:` line means.
 
 ## Out of scope
 

@@ -14,3 +14,4 @@ export * from './local';
 export * from './misses';
 export * from './talk';
 export * from './aiUsage';
+export * from './words';

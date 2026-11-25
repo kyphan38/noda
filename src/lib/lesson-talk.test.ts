@@ -48,13 +48,13 @@ describe('buildLessonNotes', () => {
   const sentences = Array.from({ length: 10 }, (_, i) => s(i, `s${i}`.padEnd(9, '.')));
 
   it('takes the stretch with the most misses, within the limit', () => {
-    const { notes } = buildLessonNotes(sentences, [{ sentenceId: 7, n: 3, text: 's7' }, { sentenceId: 1, n: 1, text: 's1' }], 30);
+    const { notes } = buildLessonNotes(sentences, [{ sentenceId: 7, n: 3, text: 's7' }, { sentenceId: 1, n: 1, text: 's1' }], [], 30);
     // Windows of 3 sentences (29 chars); the first one holding s7 is s5..s7.
     expect(notes).toBe('s5....... s6....... s7.......');
   });
 
   it('starts at the beginning with no misses', () => {
-    expect(buildLessonNotes(sentences, [], 20).notes).toBe('s0....... s1.......');
+    expect(buildLessonNotes(sentences, [], [], 20).notes).toBe('s0....... s1.......');
   });
 
   it('lists missed lines, most misses first, no repeats, no zero counts', () => {
@@ -65,5 +65,26 @@ describe('buildLessonNotes', () => {
       { sentenceId: 5, n: 1, text: 'pure rock' },
     ]);
     expect(targets).toEqual(['a mile and a half', 'pure rock']);
+  });
+
+  it('counts looked-up words when picking the stretch', () => {
+    const { notes } = buildLessonNotes(sentences, [], [{ word: 'x', sentence: ' s8.......' }], 20);
+    expect(notes).toBe('s7....... s8.......');
+  });
+
+  it('keeps slots for looked-up words, one per word, after the misses', () => {
+    const misses = Array.from({ length: 15 }, (_, i) => ({ sentenceId: i, n: 1, text: `miss ${i}` }));
+    const words = ['Pure', 'pure', 'rock', 'tunnel', 'mile', 'train', 'peak'].map((w) => ({ word: w, sentence: `the ${w}  line` }));
+    const { targets } = buildLessonNotes(sentences, misses, words);
+    expect(targets).toHaveLength(12);
+    expect(targets.slice(0, 8)).toEqual(misses.slice(0, 8).map((m) => m.text));
+    expect(targets.slice(8)).toEqual(['"pure" in: the Pure line', '"rock" in: the rock line', '"tunnel" in: the tunnel line', '"mile" in: the mile line']);
+  });
+
+  it('gives free slots to words when there are few misses', () => {
+    const words = Array.from({ length: 8 }, (_, i) => ({ word: `w${i}`, sentence: 'a line' }));
+    const { targets } = buildLessonNotes(sentences, [{ sentenceId: 1, n: 2, text: 'one miss' }], words);
+    expect(targets).toHaveLength(9);
+    expect(targets[0]).toBe('one miss');
   });
 });

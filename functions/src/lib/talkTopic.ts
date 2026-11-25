@@ -120,7 +120,7 @@ export function buildTopicPrompt(req: TopicRequest): string {
           `The learner just studied this audio clip. Part of its transcript:\n${req.notes}`,
           "Build every scenario around what the clip says: the persona asks the learner to sum up a part, asks their opinion, asks how it links to their own life or work, or questions one of the clip's claims. Take the facts from the clip, with its names and numbers.",
           req.targets?.length
-            ? `Lines the learner misheard in the clip, or words they looked up:\n${req.targets.map((t) => `- ${t}`).join("\n")}\nThe first ${SET_SIZE} phrases must be useful chunks taken from these lines, written exactly as they appear in them. If there are not enough, add chunks from the clip.`
+            ? `Lines the learner misheard in the clip, or words they looked up:\n${req.targets.map((t) => `- ${t}`).join("\n")}\nA line like "word" in: sentence means they looked up that word: use the chunk around the word in that sentence.\nThe first ${SET_SIZE} phrases must be useful chunks taken from these lines, written exactly as they appear in them. If there are not enough, add chunks from the clip.`
             : `The first ${SET_SIZE} phrases must be useful chunks taken from the clip, written exactly as they appear in it.`,
         ].join("\n")
       : req.notes && req.notesKind === "stuck"

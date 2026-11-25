@@ -109,7 +109,7 @@ then send the file back.
 - [ ] **Read and retell**: paste a real Slack thread or PR, **Read it**, **Hide it and tell me**. You get key points (✓/✗), what you said, a natural retell and fixes.
 - [ ] **Retell from a lesson**: open a lesson, ⋮ menu, **Speak about it** (Retell tab). The text is hidden, **Show text** shows it. **Tell it**, record, get key points. A long lesson shows time chips (e.g. 0:00-3:10); each chip is its own part. No **New text** button.
 - [ ] **Speak from Lesson complete**: finish a lesson, the modal shows **Speak about it**. It opens the same modal; closing it keeps the lesson.
-- [ ] **Talk from a lesson**: in a lesson with some dictation misses, ⋮ menu, **Speak about it**, **Talk** tab, **Make the talk** (up to about a minute). Talk opens on the new topic, named like the lesson, under **Yours**. Set 1 phrases come from lines you missed (same words as the clip). Scenarios ask about the clip.
+- [ ] **Talk from a lesson**: in a lesson with some dictation misses, ⋮ menu, **Speak about it**, **Talk** tab, **Make the talk** (up to about a minute). Talk opens on the new topic, named like the lesson, under **Yours**. Set 1 phrases come from lines you missed and words you tapped for a meaning (same words as the clip). Words looked up before this change count too. Scenarios ask about the clip.
 - [ ] In that talk, **The clip** fold is closed at the start and holds the transcript part with most of your misses.
 - [ ] Back in the lesson, the Talk tab now says **Open the talk** (no new model call) and **Make a new one** (asks first, then rebuilds).
 - [ ] **Time Capsule**: record once. It says "This month is saved". The month shows with an audio player you can play.

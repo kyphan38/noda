@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { getLessonMisses } from '@/lib/db';
+import { getLessonMisses, listWordsForSentences } from '@/lib/db';
 import { buildLessonNotes, lessonTopicId } from '@/lib/lesson-talk';
 import { readTalkLevel } from '@/lib/talk/prefs';
 import { getTalkStore } from '@/lib/talk/store';
@@ -42,9 +42,12 @@ export function LessonTalkStart({ lesson, transcript }: { lesson: Lesson; transc
       const store = getTalkStore();
       if (again) await store.deleteTopic(topicId);
       // No sign-in (E2E) or a failed read: build from the transcript alone.
-      const doc = await getLessonMisses(lesson.id).catch(() => null);
+      const [doc, words] = await Promise.all([
+        getLessonMisses(lesson.id).catch(() => null),
+        listWordsForSentences(transcript.map((s) => s.text)).catch(() => []),
+      ]);
       const misses = Object.entries(doc?.items ?? {}).map(([id, it]) => ({ sentenceId: Number(id), n: it?.n ?? 0, text: it?.text ?? '' }));
-      const { notes, targets } = buildLessonNotes(transcript, misses);
+      const { notes, targets } = buildLessonNotes(transcript, misses, words);
       await store.ensureTopic({
         topicId,
         kind: 'custom',
@@ -69,7 +72,7 @@ export function LessonTalkStart({ lesson, transcript }: { lesson: Lesson; transc
 
   return (
     <div className="space-y-2">
-      <p className="text-center text-sm text-gray-400">Talk about this clip, using the lines you missed.</p>
+      <p className="text-center text-sm text-gray-400">Talk about this clip, using the lines and words you missed.</p>
       {topic ? (
         <>
           <button type="button" onClick={open} disabled={busy} className={primary}>
