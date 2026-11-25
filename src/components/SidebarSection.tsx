@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, FolderPlus } from 'lucide-react';
+import React from 'react';
 import { LessonItem, SidebarFolder } from '@/types';
 import { LessonCardSkeleton } from './LoadingSkeleton';
 import { EmptyState } from './EmptyState';
@@ -8,8 +7,6 @@ import type { UseFoldersResult } from '@/hooks/useFolders';
 import { InlineCreateInput } from './InlineCreateInput';
 
 interface SidebarSectionProps {
-  type: 'lessons';
-  title: string;
   items: LessonItem[];
   folders: SidebarFolder[];
   folderActions: Pick<
@@ -34,11 +31,12 @@ interface SidebarSectionProps {
   setActiveMenu: (id: string | null) => void;
   isLoading?: boolean;
   isMobile?: boolean;
+  /** Shows a "New folder" box at the top; the parent opens it, the section closes it. */
+  creatingFolder: boolean;
+  onCreatingFolderChange: (creating: boolean) => void;
 }
 
 function SidebarSectionImpl({
-  type,
-  title,
   items,
   folders,
   folderActions,
@@ -54,91 +52,64 @@ function SidebarSectionImpl({
   setActiveMenu,
   isLoading,
   isMobile = false,
+  creatingFolder,
+  onCreatingFolderChange,
 }: SidebarSectionProps) {
-  const isExpanded = expandedSections[type] ?? true;
-  const toggleSection = () => onToggleSection(type, !isExpanded);
-
-  const [creating, setCreating] = useState(false);
-
+  // The only section, so it has no header and is always open.
   return (
     <div className="space-y-1">
-      <div className="w-full flex items-center justify-between px-3 py-2 text-sm font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors duration-200 group">
-        <button type="button" onClick={toggleSection} className="flex-1 flex items-center gap-2 text-left min-w-0">
-          {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-          <span className="truncate">{title}</span>
-        </button>
-        {isExpanded && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCreating(true);
-            }}
-            className="shrink-0 rounded p-0.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-white focus-visible:opacity-100 transition-colors"
-            aria-label="New folder"
-            title="New folder"
-          >
-            <FolderPlus size={14} />
-          </button>
-        )}
-      </div>
-
-      {isExpanded && (
-        <div className="mt-2 space-y-2">
-          {isLoading && (
-            <div className="space-y-2 px-1">
-              <LessonCardSkeleton />
-              <LessonCardSkeleton />
-              <LessonCardSkeleton />
-            </div>
-          )}
-
-          {!isLoading && items.length === 0 && (
-            <EmptyState />
-          )}
-
-          {!isLoading && items.length > 0 && (
-            <>
-              {creating && (
-                <div className="ml-2 px-2 py-1">
-                  <InlineCreateInput
-                    placeholder="New folder…"
-                    onCommit={(name) =>
-                      folderActions.createFolder({ name, kind: 'audio', language: 'en', parentId: null })
-                    }
-                    onCancel={() => setCreating(false)}
-                  />
-                </div>
-              )}
-              <SidebarFolderTree
-                items={items}
-                folders={folders}
-                selectedItemId={selectedItemId}
-                expandedSections={expandedSections}
-                forcedExpandedFolderIds={forcedExpandedFolderIds}
-                disableCaps={disableCaps}
-                onToggleSection={onToggleSection}
-                onItemSelect={onItemSelect}
-                onTrashItem={onTrashItem}
-                onRenameLesson={onRenameLesson}
-                activeMenu={activeMenu}
-                setActiveMenu={setActiveMenu}
-                enableDnd={!isMobile}
-                onCreateFolder={({ name, parentId }) =>
-                  folderActions.createFolder({ name, kind: 'audio', language: 'en', parentId })
-                }
-                onRenameFolder={(id, name) => folderActions.renameFolder(id, name)}
-                onDeleteFolder={(id) => folderActions.deleteFolder(id)}
-                onMoveItem={(itemId, folderId, sortKey) => folderActions.moveItem(itemId, folderId, sortKey)}
-                onMoveFolder={(folderId, parentId, sortKey) =>
-                  folderActions.moveFolder(folderId, parentId, sortKey)
-                }
-              />
-            </>
-          )}
-
+      {creatingFolder && (
+        <div className="ml-2 px-2 py-1">
+          <InlineCreateInput
+            placeholder="New folder…"
+            onCommit={(name) => folderActions.createFolder({ name, kind: 'audio', language: 'en', parentId: null })}
+            onCancel={() => onCreatingFolderChange(false)}
+          />
         </div>
       )}
+      <div className="space-y-2">
+      {isLoading && (
+        <div className="space-y-2 px-1">
+          <LessonCardSkeleton />
+          <LessonCardSkeleton />
+          <LessonCardSkeleton />
+        </div>
+      )}
+
+      {!isLoading && items.length === 0 && (
+        <EmptyState />
+      )}
+
+      {!isLoading && items.length > 0 && (
+        <>
+          <SidebarFolderTree
+            items={items}
+            folders={folders}
+            selectedItemId={selectedItemId}
+            expandedSections={expandedSections}
+            forcedExpandedFolderIds={forcedExpandedFolderIds}
+            disableCaps={disableCaps}
+            onToggleSection={onToggleSection}
+            onItemSelect={onItemSelect}
+            onTrashItem={onTrashItem}
+            onRenameLesson={onRenameLesson}
+            activeMenu={activeMenu}
+            setActiveMenu={setActiveMenu}
+            enableDnd={!isMobile}
+            onCreateFolder={({ name, parentId }) =>
+              folderActions.createFolder({ name, kind: 'audio', language: 'en', parentId })
+            }
+            onRenameFolder={(id, name) => folderActions.renameFolder(id, name)}
+            onDeleteFolder={(id) => folderActions.deleteFolder(id)}
+            onMoveItem={(itemId, folderId, sortKey) => folderActions.moveItem(itemId, folderId, sortKey)}
+            onMoveFolder={(folderId, parentId, sortKey) =>
+              folderActions.moveFolder(folderId, parentId, sortKey)
+            }
+          />
+        </>
+      )}
+
+      </div>
     </div>
   );
 }

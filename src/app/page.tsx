@@ -724,7 +724,7 @@ export default function NodaApp() {
   }
 
   return (
-    <AppShell onLogout={handleLogout}>
+    <AppShell onLogout={handleLogout} railJoined={isSidebarOpen && !viewport.isMobile}>
     <div className="flex flex-1 min-h-0 bg-gray-950 text-gray-100 font-sans overflow-hidden selection:bg-gray-500/40">
       <div>
         <Sidebar

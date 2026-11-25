@@ -18,7 +18,7 @@ const BLOCKS: Block[] = [
   {
     title: 'Lessons',
     lines: [
-      'Tap + Audio to make a lesson. Drop an audio or video file and its .srt subtitles. Several files at once make several lessons.',
+      'Tap + next to the search box, then New lesson. Drop an audio or video file and its .srt subtitles. Several files at once make several lessons.',
       'Or paste a YouTube link. The video needs English subtitles from the channel (auto captions do not count). Then drop the .srt for it.',
       'The start page lists recent lessons. A lesson opens where you stopped, with a Continue bar.',
       'Listen again: up to 3 lessons you did half or more of, then left for a week.',
@@ -28,7 +28,7 @@ const BLOCKS: Block[] = [
     title: 'Sidebar',
     lines: [
       'Search finds lessons by name.',
-      'Make folders and drag lessons into them.',
+      'Make folders with + (New folder) and drag lessons into them.',
       'Swipe left to close it on a phone.',
     ],
   },

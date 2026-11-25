@@ -35,10 +35,17 @@ function NavLinks({ active }: { active: NavSpace | null }) {
 }
 
 /** Desktop: a narrow rail on the left. Hidden on a phone. */
-export function NavRail({ onLogout }: { onLogout: () => void }) {
+export function NavRail({ onLogout, joined = false }: { onLogout: () => void; joined?: boolean }) {
   const active = spaceForPath(usePathname());
   return (
-    <nav aria-label="Main" className="relative z-[55] hidden w-14 shrink-0 flex-col justify-between border-r border-gray-800 bg-gray-950 px-1 py-3 md:flex">
+    // Same surface as the sidebar; with the sidebar open the line between them goes, so both read as one panel.
+    <nav
+      aria-label="Main"
+      className={cn(
+        'relative z-[55] hidden w-14 shrink-0 flex-col justify-between border-r bg-gray-900 px-1 py-3 md:flex',
+        joined ? 'border-transparent' : 'border-gray-800'
+      )}
+    >
       <div className="flex flex-col gap-1">
         <NavLinks active={active} />
       </div>
@@ -64,10 +71,10 @@ export function NavBar({ onLogout, alwaysShow = false }: { onLogout: () => void;
 }
 
 /** Rail + content + bottom bar. The content scrolls on its own. */
-export function AppShell({ onLogout, children }: { onLogout: () => void; children: ReactNode }) {
+export function AppShell({ onLogout, railJoined = false, children }: { onLogout: () => void; railJoined?: boolean; children: ReactNode }) {
   return (
     <div className="flex h-dvh flex-col bg-gray-950 text-gray-100 md:flex-row">
-      <NavRail onLogout={onLogout} />
+      <NavRail onLogout={onLogout} joined={railJoined} />
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
       <NavBar onLogout={onLogout} />
     </div>

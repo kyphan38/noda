@@ -3,7 +3,6 @@
 import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Music2,
   PanelLeft,
   ChevronDown,
   ChevronRight,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import { LessonSummary, ExpandedSections, LessonItem, SidebarFolder } from '@/types';
 import { SidebarSection } from './SidebarSection';
+import { SidebarAddMenu } from './SidebarAddMenu';
 import type { UseFoldersResult } from '@/hooks/useFolders';
 import { NavBar } from '@/components/nav/AppNav';
 import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
@@ -190,6 +190,7 @@ function SidebarImpl({
 }: SidebarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   const searchTerm = search.trim().toLowerCase();
   const searching = searchTerm.length > 0;
@@ -272,43 +273,28 @@ function SidebarImpl({
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="p-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">noda</h2>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => onToggle(false)}
-                className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
-                title="Close Sidebar"
-              >
-                <PanelLeft size={20} />
-              </button>
-            </div>
-          </div>
-
-          <div className="actions-container flex flex-row gap-2 p-4">
-            <button
-              onClick={onNewLesson}
-              className="btn-new-lesson flex-1 py-2.5 px-2 text-sm bg-gray-100 hover:bg-white text-gray-900 rounded-lg flex items-center justify-center gap-1.5 font-medium transition-colors duration-200"
-              title="New audio lesson"
-            >
-              <Music2 size={16} aria-hidden />
-              <span>+ Audio</span>
-            </button>
-          </div>
-
-          <div className="px-4 pb-2">
+          <div className="flex items-center gap-1.5 px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search…"
-              className="w-full bg-gray-950/60 border border-gray-800 focus:border-gray-500 text-gray-100 placeholder:text-gray-500 rounded-lg px-3 py-2 text-sm outline-none"
+              placeholder="Search lessons"
+              aria-label="Search lessons"
+              className="h-9 min-w-0 flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-gray-500"
             />
+            <SidebarAddMenu onNewLesson={onNewLesson} onNewFolder={() => setCreatingFolder(true)} />
+            <button
+              type="button"
+              onClick={() => onToggle(false)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white"
+              title="Close Sidebar"
+              aria-label="Close sidebar"
+            >
+              <PanelLeft size={18} aria-hidden />
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2 space-y-6">
+          <div className="flex-1 overflow-y-auto p-2 space-y-4">
             <SidebarSection
-              type="lessons"
-              title="AUDIO"
               items={filteredLessons}
               folders={folders}
               folderActions={folderActions}
@@ -324,6 +310,8 @@ function SidebarImpl({
               activeMenu={activeMenu}
               setActiveMenu={setActiveMenu}
               isMobile={isMobile}
+              creatingFolder={creatingFolder}
+              onCreatingFolderChange={setCreatingFolder}
             />
 
             {trashed.length > 0 && (
@@ -332,9 +320,9 @@ function SidebarImpl({
                   <button
                     type="button"
                     onClick={() => onToggleSection('trash', !trashExpanded)}
-                    className="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors duration-200"
+                    className="flex-1 flex items-center gap-1.5 px-3 py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors duration-200"
                   >
-                    {trashExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    {trashExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                     Trash ({trashed.length})
                   </button>
                   {trashExpanded && (
