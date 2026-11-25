@@ -396,7 +396,7 @@ export function NewLessonModal({
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-2">Name</label>
           <input
-            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-base text-white focus:outline-none focus:border-gray-500"
             placeholder=""
             value={lessonName}
             onChange={(e) => {
@@ -414,7 +414,7 @@ export function NewLessonModal({
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-2">Folder</label>
           <select
-            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-base text-white focus:outline-none focus:border-gray-500"
             value={folderId ?? ''}
             onChange={(e) => setFolderId(e.target.value ? e.target.value : null)}
             disabled={isSaving}
@@ -437,7 +437,7 @@ export function NewLessonModal({
               id="noda-youtube-link"
               type="url"
               inputMode="url"
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gray-500"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-base text-white focus:outline-none focus:border-gray-500"
               placeholder="https://youtu.be/…"
               value={youtubeInput}
               onChange={(e) => handleYoutubeInput(e.target.value)}

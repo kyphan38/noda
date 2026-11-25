@@ -129,7 +129,7 @@ export function TalkView() {
   const chip = (on: boolean) =>
     `shrink-0 rounded-lg border px-2.5 py-1 text-xs transition-colors ${on ? 'border-gray-500 bg-gray-800 text-gray-100' : 'border-gray-800 text-gray-400 hover:text-gray-100'}`;
   const select =
-    'rounded-lg border border-gray-800 bg-gray-950 px-2.5 py-1.5 text-sm text-gray-100 focus:border-gray-500 focus:outline-none';
+    'rounded-lg border border-gray-800 bg-transparent py-1 pl-2.5 pr-1 text-sm text-gray-300 hover:text-gray-100 focus:border-gray-500 focus:outline-none';
 
   return (
     <div className="mx-auto w-full max-w-xl pb-10 sm:pb-16 space-y-5">
@@ -183,7 +183,7 @@ export function TalkView() {
       {section === 'topics' && (
         <div className="space-y-2">
           <div className="flex gap-2">
-            <select aria-label="Category" value={current} onChange={(e) => pickTab(e.target.value)} className={`${select} min-w-0 flex-1`}>
+            <select aria-label="Category" value={current} onChange={(e) => pickTab(e.target.value)} className={`${select} min-w-0 max-w-[60%]`}>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}

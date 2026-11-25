@@ -423,9 +423,14 @@ button,
 
 /* Below 16px, iOS Safari zooms in when an input gets focus. */
 input,
-select,
 textarea {
   font-size: 16px;
+}
+/* A select only needs it on touch screens; on a computer it follows its own text size. */
+@media (pointer: coarse) {
+  select {
+    font-size: 16px;
+  }
 }
 
 /* ---- Motion: short, opacity/transform only (DESIGN.md "Motion") ---- */
