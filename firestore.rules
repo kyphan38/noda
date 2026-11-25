@@ -20,6 +20,10 @@ service cloud.firestore {
     match /users/{userId}/misses/{lessonId} {
       allow read, write: if isOwner(userId);
     }
+    // Misses per word, for the dictation gaps view.
+    match /users/{userId}/stats/missedWords {
+      allow read, write: if isOwner(userId);
+    }
     // Word cards: written by defineWord only; read to build a lesson's Talk topic.
     match /users/{userId}/words/{wordId} {
       allow read: if isOwner(userId);

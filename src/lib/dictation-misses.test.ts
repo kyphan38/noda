@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newWrongLetters, topMisses, type MissDoc } from './dictation-misses';
+import { newWrongLetters, topMisses, wordAtLetter, wrongWordsInChange, type MissDoc } from './dictation-misses';
 
 describe('newWrongLetters', () => {
   const target = 'hello world';
@@ -27,5 +27,20 @@ describe('topMisses', () => {
   });
   it('leaves out lessons not live and caps the list', () => {
     expect(topMisses(docs, new Set(['a']), 1).map((r) => r.sentenceId)).toEqual([2]);
+  });
+});
+
+describe('wordAtLetter and wrongWordsInChange', () => {
+  const t = 'the cat sat';
+  it('finds the word of a letter', () => {
+    expect(wordAtLetter(t, 0)).toBe('the');
+    expect(wordAtLetter(t, 3)).toBe('cat');
+    expect(wordAtLetter(t, 8)).toBe('sat');
+    expect(wordAtLetter(t, 9)).toBeNull();
+  });
+  it('lists each word with a new wrong letter once', () => {
+    expect(wrongWordsInChange('the', 'the kxt', t)).toEqual(['cat']);
+    expect(wrongWordsInChange('', 'thx kat s', t)).toEqual(['the', 'cat']);
+    expect(wrongWordsInChange('the cxt', 'the cx', t)).toEqual([]);
   });
 });

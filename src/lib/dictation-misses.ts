@@ -42,3 +42,27 @@ export function topMisses(docs: MissDoc[], live: ReadonlySet<string> | null, lim
   }
   return rows.sort((a, b) => b.n - a.n || b.at - a.at).slice(0, limit);
 }
+
+/** The target word holding letter `li` (letters only, spaces not counted), or null past the end. */
+export function wordAtLetter(targetNorm: string, li: number): string | null {
+  let start = 0;
+  for (const w of targetNorm.split(' ')) {
+    if (li < start + w.length) return li >= start ? w : null;
+    start += w.length;
+  }
+  return null;
+}
+
+/** Target words that got a wrong letter in this change, each once. Same rule as newWrongLetters. */
+export function wrongWordsInChange(prevAligned: string, nextAligned: string, targetNorm: string): string[] {
+  const prev = prevAligned.replace(/ /g, '');
+  const next = nextAligned.replace(/ /g, '');
+  const target = targetNorm.replace(/ /g, '');
+  const words = new Set<string>();
+  for (let i = prev.length; i < next.length; i++) {
+    if (next[i] === target[i]) continue;
+    const w = wordAtLetter(targetNorm, i);
+    if (w) words.add(w);
+  }
+  return [...words];
+}

@@ -21,6 +21,8 @@ interface DictationControlsProps {
   justDone?: boolean;
   /** Gaps: only the hard-to-hear words are typed; the others are filled in. */
   gaps?: boolean;
+  /** Words you often miss, hidden in gaps too. */
+  gapWords?: ReadonlySet<string>;
 }
 
 export function DictationControls({
@@ -33,10 +35,11 @@ export function DictationControls({
   isMobile = false,
   justDone = false,
   gaps = false,
+  gapWords,
 }: DictationControlsProps) {
   const slowId = useSyncExternalStore(slowSentenceStore.subscribe, slowSentenceStore.get, () => null);
   const targetNorm = useMemo(() => normalizeDictationTarget(sentence.text), [sentence.text]);
-  const mask = useMemo(() => (gaps ? clozeMask(targetNorm) : null), [gaps, targetNorm]);
+  const mask = useMemo(() => (gaps ? clozeMask(targetNorm, gapWords) : null), [gaps, targetNorm, gapWords]);
   const aligned = alignDictationInput(dictationInput, targetNorm);
   // In gaps mode the shown words are part of the input, so the field holds them too.
   const inputNorm = mask ? clozeFill(aligned, targetNorm, mask) : aligned;

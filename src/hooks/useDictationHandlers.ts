@@ -4,8 +4,9 @@
 
 import React, { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
-import { newWrongLetters, SLOW_AFTER_MISSES, SLOW_FACTOR } from '@/lib/dictation-misses';
+import { newWrongLetters, SLOW_AFTER_MISSES, SLOW_FACTOR, wordAtLetter, wrongWordsInChange } from '@/lib/dictation-misses';
 import { recordMiss } from '@/lib/db/misses';
+import { recordMissedWords } from '@/lib/db/missed-words';
 import { currentLessonStore, setSlowEnd, slowSentenceStore } from '@/lib/lesson-session';
 import { scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
 import { useMediaPlayer } from '@/hooks/useMediaPlayer';
@@ -53,6 +54,15 @@ export function useDictationHandlers({
 }) {
   // Misses this visit, per "lessonId:sentenceId" (N4 slows from SLOW_AFTER_MISSES).
   const missCountRef = useRef(new Map<string, number>());
+  // Words already counted for a line this visit ("lessonId:sentenceId:word"), so a word
+  // counts once per try, not once per wrong letter.
+  const missedWordsRef = useRef(new Set<string>());
+  const addMissedWords = useCallback((sentence: Sentence, words: string[]) => {
+    const prefix = `${currentLessonStore.get()?.id ?? ''}:${sentence.id}:`;
+    const fresh = words.filter((w) => !missedWordsRef.current.has(prefix + w));
+    fresh.forEach((w) => missedWordsRef.current.add(prefix + w));
+    recordMissedWords(fresh);
+  }, []);
   // The speed chosen before a hard sentence slowed down.
   const baseRateRef = useRef<number | null>(null);
 
@@ -132,7 +142,9 @@ export function useDictationHandlers({
   const handleDictationChange = useCallback((sentence: Sentence, val: string) => {
     const targetNorm = normalizeDictationTarget(sentence.text);
     const aligned = alignDictationInput(val, targetNorm);
-    addMiss(sentence, newWrongLetters(dictationInputsRef.current[sentence.id] || '', aligned, targetNorm));
+    const prev = dictationInputsRef.current[sentence.id] || '';
+    addMiss(sentence, newWrongLetters(prev, aligned, targetNorm));
+    addMissedWords(sentence, wrongWordsInChange(prev, aligned, targetNorm));
     setDictationInputs((prev) => ({ ...prev, [sentence.id]: aligned }));
 
     const targetLetters = targetNorm.replace(/ /g, '');
@@ -160,7 +172,7 @@ export function useDictationHandlers({
         lastScrolledIndexRef.current = idx;
       }
     }
-  }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef, transcriptRef, scrollContainerRef, lastScrolledIndexRef, addMiss, dictationInputsRef]);
+  }, [setDictationInputs, setCompletedSentences, completedSentencesRef, loopTimeoutRef, isLoopDelayingRef, transcriptRef, scrollContainerRef, lastScrolledIndexRef, addMiss, addMissedWords, dictationInputsRef]);
 
   const handleDictationKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, sentence: Sentence) => {
     if (e.key === 'Enter') {
@@ -209,8 +221,10 @@ export function useDictationHandlers({
       let li = 0;
       while (li < curLetters.length && li < tLetters.length && curLetters[li] === tLetters[li]) li++;
       if (li >= tLetters.length) return;
-      // A hint counts as a miss.
+      // A hint counts as a miss, for the line and for its word.
       addMiss(sentence, 1);
+      const hinted = wordAtLetter(t, li);
+      if (hinted) addMissedWords(sentence, [hinted]);
       handleDictationChange(sentence, tLetters.slice(0, li + 1));
     } else if (e.key === 'Control') {
       e.preventDefault();
@@ -226,7 +240,7 @@ export function useDictationHandlers({
         mediaRef.current.play().catch(() => {});
       }
     }
-  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange, sentencePlayCountRef, userSeekTargetRef, addMiss, endSlow]);
+  }, [completedSentencesRef, transcriptRef, dictationInputsRef, mediaRef, setCurrentTime, setIsPlaying, lastScrolledIndexRef, loopTimeoutRef, isLoopDelayingRef, dictationReplayOnceRef, handleDictationChange, sentencePlayCountRef, userSeekTargetRef, addMiss, addMissedWords, endSlow]);
 
   const handleDictationRetry = useCallback((sentence: Sentence) => {
     setCompletedSentences((prev) => {

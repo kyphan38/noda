@@ -28,6 +28,8 @@ interface TranscriptSentenceProps {
   touchControls?: boolean;
   /** Dictation gaps: type only the hard-to-hear words. */
   gaps?: boolean;
+  /** Words you often miss, hidden in gaps too. */
+  gapWords?: ReadonlySet<string>;
 }
 
 export function TranscriptSentence({
@@ -48,6 +50,7 @@ export function TranscriptSentence({
   isMobile = false,
   touchControls = false,
   gaps = false,
+  gapWords,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
 
@@ -120,6 +123,7 @@ export function TranscriptSentence({
             isMobile={isMobile}
             justDone={justDone}
             gaps={gaps}
+            gapWords={gapWords}
           />
         ) : (
           // Same size and weight whether active or not: the line must wrap the same way in both

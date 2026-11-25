@@ -5,6 +5,8 @@ import { ParagraphDictation } from './ParagraphDictation';
 import { currentLessonStore, endSlowNow, listenPausesStore, openWordStore, wordCardsOnStore } from '@/lib/lesson-session';
 import { Sentence, AppMode, DictationInputs, CompletedSentences } from '@/types';
 import { MemoTranscriptSentence } from './TranscriptSentence';
+import { personalWords } from '@/lib/cloze';
+import { getMissedWordCounts } from '@/lib/db/missed-words';
 
 interface TranscriptProps {
   transcript: Sentence[];
@@ -51,6 +53,20 @@ export function Transcript({
 }: TranscriptProps) {
   // Dictation one sentence at a time, only its hard words (gaps), or a whole part (N7). Per visit.
   const [dictationView, setDictationView] = useState<DictationViewId>('sentence');
+  // Words you often miss, also hidden in gaps. Read each time gaps opens, then fixed, so
+  // the gaps do not move while you type.
+  const [yourWords, setYourWords] = useState<ReadonlySet<string>>(NO_WORDS);
+  const gaps = appMode === 'dictation' && dictationView === 'gaps';
+  useEffect(() => {
+    if (!gaps) return;
+    let alive = true;
+    getMissedWordCounts()
+      .then((c) => alive && setYourWords(personalWords(c)))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [gaps]);
   // A hard sentence plays slower only in Dictation.
   useEffect(() => {
     if (appMode !== 'dictation') endSlowNow();
@@ -95,7 +111,8 @@ export function Transcript({
               isMobile={isMobile}
               touchControls={touchControls}
               isShadowingOpen={isShadowingPanelOpen && activeShadowingSentenceId === sentence.id}
-              gaps={appMode === 'dictation' && dictationView === 'gaps'}
+              gaps={gaps}
+              gapWords={yourWords}
             />
           );
         })}
@@ -137,6 +154,7 @@ function Toggle({ label, title, on, onChange }: { label: string; title: string; 
 }
 
 type DictationViewId = 'sentence' | 'gaps' | 'paragraph';
+const NO_WORDS: ReadonlySet<string> = new Set();
 
 /** Dictation one sentence at a time, only its hard words, or a part of several sentences (N7). */
 function DictationView({ value, onChange }: { value: DictationViewId; onChange: (v: DictationViewId) => void }) {

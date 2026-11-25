@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clozeChange, clozeFill, clozeMask } from './cloze';
+import { clozeChange, clozeFill, clozeMask, personalWords } from './cloze';
 import { alignDictationInput, normalizeDictationTarget } from './utils';
 
 const T = normalizeDictationTarget("I'm going to the station at 5, and it's cold.");
@@ -15,6 +15,11 @@ describe('clozeMask', () => {
   it('hides the longest word when none is weak', () => {
     const t = normalizeDictationTarget('Engineers love tunnels');
     expect(clozeMask(t)).toEqual([true, false, false]);
+  });
+
+  it('also hides your own hard words', () => {
+    const t = normalizeDictationTarget('Engineers love tunnels');
+    expect(clozeMask(t, new Set(['tunnels']))).toEqual([false, false, true]);
   });
 
   it('is empty for an empty line', () => {
@@ -66,7 +71,18 @@ describe('clozeChange', () => {
     expect(clozeChange('a big cat sat on ', 'a big cat sat on', t, m)).toBe('a big cat sat on');
   });
 
+  it('puts letters that come at once only into the gaps', () => {
+    expect(clozeChange('', 'aonthe', t, m)).toBe('a big cat sat on the mat');
+    expect(clozeChange('a big cat sat ', 'a big cat sat on', t, m)).toBe('a big cat sat on');
+  });
+
   it('keeps wrong letters, so they can be fixed', () => {
     expect(clozeChange('a big cat sat ', 'a big cat sat ix', t, m)).toBe('a big cat sat ix');
+  });
+});
+
+describe('personalWords', () => {
+  it('keeps words missed at least twice', () => {
+    expect([...personalWords({ tunnel: 2, rock: 1, mile: 5 })].sort()).toEqual(['mile', 'tunnel']);
   });
 });

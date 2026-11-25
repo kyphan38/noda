@@ -174,6 +174,9 @@ then send the file back.
 - [ ] Type a hidden word: the shown words after it come in by themselves, and the caret waits on the next gap. Finishing the last gap marks the line done.
 - [ ] A wrong letter shows as wrong and counts as a miss (2 misses: 0.8x). **Tab** fills the next hidden letter.
 - [ ] One **Backspace** right after shown words jumps back over them and takes the last letter of the gap before.
+- [ ] Your words: in **sentence** view, get one word wrong (or use Tab on it) in two different lines or visits. Switch to **gaps**: that word is now a gap too, in every lesson.
+- [ ] Two wrong letters in the same word on one line count as one try, not two.
+- [ ] Paste a few words (or let a phone keyboard put in a whole word): the letters go only into the gaps, never onto shown words.
 - [ ] On a phone: the input box works the same.
 - [ ] Back to **sentence**: lines work as before.
 
