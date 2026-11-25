@@ -4,10 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import type { MissRow } from '@/lib/dictation-misses';
+import { YoutubeClip, type ClipHandle } from '@/components/YoutubeClip';
 import { buildItemSearchString } from '@/lib/item-url';
 import { normalizeDictationTarget } from '@/lib/utils';
 
-export type LessonMedia = { name: string; url: string | null; youtube: boolean };
+export type LessonMedia = { name: string; url: string | null; youtube: boolean; videoId: string | null };
+
+/** A lesson whose lines can play here: an uploaded file, or a YouTube video. */
+export const canPlayLines = (l: LessonMedia | undefined) => !!(l && (l.youtube ? l.videoId : l.url));
 
 /** Hear one missed line from its lesson and write it again. Right once and it leaves the list. */
 export function MissPractice({
@@ -24,10 +28,14 @@ export function MissPractice({
   closeLabel?: string;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const clipRef = useRef<ClipHandle | null>(null);
+  const videoId = lesson?.youtube ? lesson.videoId : null;
+  const audioUrl = lesson && !lesson.youtube ? lesson.url : null;
   const [text, setText] = useState('');
   const [state, setState] = useState<'idle' | 'wrong' | 'shown'>('idle');
 
   const play = () => {
+    if (videoId) return clipRef.current?.play();
     const a = audioRef.current;
     if (!a) return;
     a.currentTime = row.start;
@@ -61,9 +69,13 @@ export function MissPractice({
           {closeLabel}
         </button>
       </div>
-      {lesson?.url && !lesson.youtube ? (
+      {videoId || audioUrl ? (
         <>
-          <audio ref={audioRef} src={lesson.url} preload="auto" onLoadedMetadata={play} />
+          {videoId ? (
+            <YoutubeClip ref={clipRef} videoId={videoId} start={row.start} end={row.end} />
+          ) : (
+            <audio ref={audioRef} src={audioUrl ?? undefined} preload="auto" onLoadedMetadata={play} />
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -109,7 +121,7 @@ export function MissPractice({
         </>
       ) : (
         <p className="text-sm text-gray-400">
-          YouTube lessons play in the lesson.{' '}
+          This line cannot play here.{' '}
           <Link href={lessonHref} className="text-gray-100 hover:text-white">
             Open it
           </Link>{' '}

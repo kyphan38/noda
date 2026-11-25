@@ -162,7 +162,8 @@ then send the file back.
 - [ ] Open **Review**: it starts on **Today**, even if you left it on another tab. A `?tab=mistakes` link still opens Mistakes.
 - [ ] Today lists "N lines to hear and write" and "M Talk mistakes to fix". **Start**.
 - [ ] Each line plays at once. Type it and **Check**: right moves on and the line leaves the Mistakes tab. **next** moves on without it. **Skip** jumps to the Talk part.
-- [ ] Lines from YouTube lessons and lines missed in the last 12 hours are not in Today.
+- [ ] Lines missed in the last 12 hours are not in Today. Lines from YouTube lessons are: a small video plays just that line (no captions) and stops at its end; **play again** and Control play it again.
+- [ ] Mistakes tab: a YouTube line also plays in a small video instead of "Open it".
 - [ ] Talk part: "Fix your Talk mistakes", say or type the right words, the last button says **Finish**.
 - [ ] The end says "Done for today. x/y lines right." Leave and come back: still "Done for today" with an **Again** button. Next day it is a normal **Start** again.
 - [ ] With no misses and no Talk mistakes: "Nothing to review today."

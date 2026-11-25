@@ -22,7 +22,7 @@ export function MistakesView() {
         if (!alive) return;
         const live = lessons.filter((l) => !l.isTrashed);
         setMedia(
-          new Map(live.map((l) => [l.id, { name: l.name, url: l.mediaUrl ?? null, youtube: l.source === 'youtube' }])),
+          new Map(live.map((l) => [l.id, { name: l.name, url: l.mediaUrl ?? null, youtube: l.source === 'youtube', videoId: l.youtubeVideoId ?? null }])),
         );
         setRows(topMisses(docs, new Set(live.map((l) => l.id)), LIST_SIZE));
       })

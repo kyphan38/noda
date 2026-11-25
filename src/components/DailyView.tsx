@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { MissPractice, type LessonMedia } from '@/components/MissPractice';
+import { canPlayLines, MissPractice, type LessonMedia } from '@/components/MissPractice';
 import { TalkWarmup } from '@/components/talk/TalkWarmup';
 import { pickDailyLines, dayKey } from '@/lib/daily-queue';
 import { clearMissFirestore, listLessonsFirestore, listMissesFirestore } from '@/lib/db';
@@ -36,9 +36,10 @@ async function loadPlan(): Promise<Plan> {
     Promise.all([listMissesFirestore(), listLessonsFirestore()])
       .then(([docs, lessons]) => {
         const live = lessons.filter((l) => !l.isTrashed);
-        const media = new Map(live.map((l) => [l.id, { name: l.name, url: l.mediaUrl ?? null, youtube: l.source === 'youtube' }]));
-        // YouTube lessons cannot play a single line here, so they stay on the Mistakes tab.
-        const playable = new Set(live.filter((l) => l.mediaUrl && l.source !== 'youtube').map((l) => l.id));
+        const media = new Map<string, LessonMedia>(
+          live.map((l) => [l.id, { name: l.name, url: l.mediaUrl ?? null, youtube: l.source === 'youtube', videoId: l.youtubeVideoId ?? null }]),
+        );
+        const playable = new Set(live.filter((l) => canPlayLines(media.get(l.id))).map((l) => l.id));
         const rows = topMisses(docs, new Set(live.map((l) => l.id)), Number.MAX_SAFE_INTEGER);
         return { media, picked: pickDailyLines(rows, playable, Date.now()) };
       })
