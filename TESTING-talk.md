@@ -167,6 +167,16 @@ then send the file back.
 - [ ] The end says "Done for today. x/y lines right." Leave and come back: still "Done for today" with an **Again** button. Next day it is a normal **Start** again.
 - [ ] With no misses and no Talk mistakes: "Nothing to review today."
 
+## 20. Dictation gaps
+
+- [ ] In Dictation, the view row shows **sentence · gaps · paragraph**. Pick **gaps**.
+- [ ] Every line shows its words with stars only for small words (to, the, and, it's, can't...) and numbers. A line with none of them hides its longest word.
+- [ ] Type a hidden word: the shown words after it come in by themselves, and the caret waits on the next gap. Finishing the last gap marks the line done.
+- [ ] A wrong letter shows as wrong and counts as a miss (2 misses: 0.8x). **Tab** fills the next hidden letter.
+- [ ] One **Backspace** right after shown words jumps back over them and takes the last letter of the gap before.
+- [ ] On a phone: the input box works the same.
+- [ ] Back to **sentence**: lines work as before.
+
 ---
 
 ## Notes

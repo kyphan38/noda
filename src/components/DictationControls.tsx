@@ -4,6 +4,7 @@ import { slowSentenceStore } from '@/lib/lesson-session';
 import { Lightbulb } from 'lucide-react';
 import { Sentence } from '@/types';
 import { normalizeDictationTarget, alignDictationInput } from '@/lib/utils';
+import { clozeChange, clozeFill, clozeMask } from '@/lib/cloze';
 
 type DictationKeyTarget = HTMLInputElement | HTMLTextAreaElement;
 
@@ -18,6 +19,8 @@ interface DictationControlsProps {
   isMobile?: boolean;
   /** The line was finished a moment ago by the learner: its full text fades in. */
   justDone?: boolean;
+  /** Gaps: only the hard-to-hear words are typed; the others are filled in. */
+  gaps?: boolean;
 }
 
 export function DictationControls({
@@ -29,10 +32,21 @@ export function DictationControls({
   onDictationKeyDown,
   isMobile = false,
   justDone = false,
+  gaps = false,
 }: DictationControlsProps) {
   const slowId = useSyncExternalStore(slowSentenceStore.subscribe, slowSentenceStore.get, () => null);
   const targetNorm = useMemo(() => normalizeDictationTarget(sentence.text), [sentence.text]);
-  const inputNorm = alignDictationInput(dictationInput, targetNorm);
+  const mask = useMemo(() => (gaps ? clozeMask(targetNorm) : null), [gaps, targetNorm]);
+  const aligned = alignDictationInput(dictationInput, targetNorm);
+  // In gaps mode the shown words are part of the input, so the field holds them too.
+  const inputNorm = mask ? clozeFill(aligned, targetNorm, mask) : aligned;
+  const fieldValue = mask ? inputNorm : dictationInput;
+
+  // Keep the saved input equal to what is shown: the hint (Tab) works from the saved input,
+  // and a hint that ends the last hidden word must still finish the line.
+  useEffect(() => {
+    if (mask && isActive && !isCompleted && inputNorm !== aligned) onDictationChange(sentence, inputNorm);
+  }, [mask, isActive, isCompleted, inputNorm, aligned, onDictationChange, sentence]);
 
   // Only characters added since the last render animate (typing forward, a hint, a paste).
   // Backspace and opening a half-typed line change nothing, so nothing moves. CSS does the
@@ -81,13 +95,19 @@ export function DictationControls({
     onDictationKeyDown(syntheticEvent, sentence);
   };
 
-  const syncDom = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
-    const aligned = alignDictationInput(value, targetNorm);
-    if (value !== aligned) {
-      el.value = aligned;
-      el.selectionStart = aligned.length;
-      el.selectionEnd = aligned.length;
+  const syncDom = (el: HTMLInputElement | HTMLTextAreaElement, value: string, next: string) => {
+    if (value !== next) {
+      el.value = next;
+      el.selectionStart = next.length;
+      el.selectionEnd = next.length;
     }
+  };
+
+  const change = (el: HTMLInputElement | HTMLTextAreaElement) => {
+    const value = el.value;
+    const next = mask ? clozeChange(inputNorm, alignDictationInput(value, targetNorm), targetNorm, mask) : value;
+    onDictationChange(sentence, next);
+    syncDom(el, value, mask ? next : alignDictationInput(value, targetNorm));
   };
 
   if (isCompleted) {
@@ -136,6 +156,8 @@ export function DictationControls({
           let gi = 0; // global character index
           return words.map((word, wIdx) => {
             const wordStart = gi;
+            // Filled-in words (gaps mode) are dimmer than what you typed, and do not animate.
+            const given = !!mask && !mask[wIdx];
             const wordChars = word.split('').map((ch, ci) => {
               const i = wordStart + ci;
               const typed = i < inputNorm.length ? inputNorm[i] : undefined;
@@ -151,12 +173,12 @@ export function DictationControls({
                   {/* A key per state: when a star becomes a letter React mounts a new span,
                       so its animation runs once. */}
                   {typed === undefined ? (
-                    <span key={`${i}-empty`} data-char="empty" className="text-gray-500">{'*'}</span>
+                    <span key={`${i}-empty`} data-char="empty" className={given ? 'text-gray-400' : 'text-gray-500'}>{given ? ch : '*'}</span>
                   ) : typed === ch ? (
                     <span
                       key={`${i}-ok`}
                       data-char="correct"
-                      className={`text-gray-100${isFresh(i) ? ' char-in' : ''}`}
+                      className={given ? 'text-gray-400' : `text-gray-100${isFresh(i) ? ' char-in' : ''}`}
                     >
                       {ch}
                     </span>
@@ -236,11 +258,8 @@ export function DictationControls({
             data-dictation-input
             type="text"
             inputMode="text"
-            value={dictationInput}
-            onChange={(e) => {
-              onDictationChange(sentence, e.target.value);
-              syncDom(e.target, e.target.value);
-            }}
+            value={fieldValue}
+            onChange={(e) => change(e.target)}
             onKeyDown={(e) => onDictationKeyDown(e, sentence)}
             className="flex-1 min-w-0 bg-gray-800/60 border border-gray-700 focus:border-gray-500 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono outline-none"
             placeholder="Type what you hear…"
@@ -267,11 +286,8 @@ export function DictationControls({
         <textarea
           ref={hiddenRef}
           data-dictation-input
-          value={dictationInput}
-          onChange={(e) => {
-            onDictationChange(sentence, e.target.value);
-            syncDom(e.target, e.target.value);
-          }}
+          value={fieldValue}
+          onChange={(e) => change(e.target)}
           onKeyDown={(e) => onDictationKeyDown(e, sentence)}
           onClick={(e) => e.stopPropagation()}
           className="fixed top-0 left-0 w-px h-px opacity-0 overflow-hidden pointer-events-none border-0"

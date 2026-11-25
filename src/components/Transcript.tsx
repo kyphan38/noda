@@ -49,8 +49,8 @@ export function Transcript({
   activeShadowingSentenceId,
   isShadowingPanelOpen,
 }: TranscriptProps) {
-  // Dictation one sentence at a time, or a whole part (N7). Per visit.
-  const [dictationView, setDictationView] = useState<'sentence' | 'paragraph'>('sentence');
+  // Dictation one sentence at a time, only its hard words (gaps), or a whole part (N7). Per visit.
+  const [dictationView, setDictationView] = useState<DictationViewId>('sentence');
   // A hard sentence plays slower only in Dictation.
   useEffect(() => {
     if (appMode !== 'dictation') endSlowNow();
@@ -95,6 +95,7 @@ export function Transcript({
               isMobile={isMobile}
               touchControls={touchControls}
               isShadowingOpen={isShadowingPanelOpen && activeShadowingSentenceId === sentence.id}
+              gaps={appMode === 'dictation' && dictationView === 'gaps'}
             />
           );
         })}
@@ -135,17 +136,20 @@ function Toggle({ label, title, on, onChange }: { label: string; title: string; 
   );
 }
 
-/** Dictation one sentence at a time, or a part of several sentences (N7). */
-function DictationView({ value, onChange }: { value: 'sentence' | 'paragraph'; onChange: (v: 'sentence' | 'paragraph') => void }) {
+type DictationViewId = 'sentence' | 'gaps' | 'paragraph';
+
+/** Dictation one sentence at a time, only its hard words, or a part of several sentences (N7). */
+function DictationView({ value, onChange }: { value: DictationViewId; onChange: (v: DictationViewId) => void }) {
   return (
     <div className="flex items-center gap-3 border-b border-gray-800 px-3 py-2 text-xs" role="radiogroup" aria-label="Dictation by">
-      {(['sentence', 'paragraph'] as const).map((v) => (
+      {(['sentence', 'gaps', 'paragraph'] as const).map((v) => (
         <button
           key={v}
           type="button"
           role="radio"
           aria-checked={value === v}
           onClick={() => onChange(v)}
+          title={v === 'gaps' ? 'Type only the small, fast words' : undefined}
           className={value === v ? 'text-gray-100' : 'text-gray-500 hover:text-gray-300'}
         >
           {v}

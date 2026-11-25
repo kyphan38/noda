@@ -59,6 +59,7 @@ const BLOCKS: Block[] = [
       'Tab (or the hint button) shows the next letter.',
       'Control plays the line again.',
       'After 2 misses on a line (wrong letters or hints), it plays again at 0.8x. The next line is back to your speed.',
+      'gaps: type only the small, fast words (to, the, and, it\'s, can\'t...) and numbers; the other words are already there. A line with none hides its longest word. Backspace skips over the given words. A line done in gaps counts as done.',
       'paragraph: play a part of about 5 sentences, write it all in one box, then Check to see the missed words and your %. Control plays the part again. Practice only, not saved.',
     ],
   },

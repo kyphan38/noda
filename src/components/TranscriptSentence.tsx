@@ -26,6 +26,8 @@ interface TranscriptSentenceProps {
   isMobile?: boolean;
   /** Touch-first device (phone or iPad): no Enter key outside a text field. */
   touchControls?: boolean;
+  /** Dictation gaps: type only the hard-to-hear words. */
+  gaps?: boolean;
 }
 
 export function TranscriptSentence({
@@ -45,6 +47,7 @@ export function TranscriptSentence({
   onShadowingNext,
   isMobile = false,
   touchControls = false,
+  gaps = false,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
 
@@ -116,6 +119,7 @@ export function TranscriptSentence({
             onDictationRetry={onDictationRetry}
             isMobile={isMobile}
             justDone={justDone}
+            gaps={gaps}
           />
         ) : (
           // Same size and weight whether active or not: the line must wrap the same way in both
