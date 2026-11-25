@@ -113,8 +113,9 @@ const BLOCKS: Block[] = [
     lines: [
       'The bars show how much of the lesson is done in Shadowing and in Dictation.',
       'Reset clears the progress of the current tab. Undo works for a few seconds.',
-      'When both are done, noda offers to move the lesson to Trash, or to retell it.',
-      'Retell (in the lesson menu): tell what you heard from memory, text hidden. A long lesson is cut into parts; pick one by its time.',
+      'When both are done, noda offers to move the lesson to Trash, or to speak about it.',
+      'Speak about it (in the lesson menu) has two tabs. Retell: tell what you heard from memory, text hidden. A long lesson is cut into parts; pick one by its time.',
+      'Talk: makes a Talk topic from the lesson (once; later it just opens). The talk is about the clip, and set 1 holds phrases from the lines you missed in dictation. Make a new one after more practice. The clip text is under "The clip", closed at the start.',
     ],
   },
   {

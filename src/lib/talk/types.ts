@@ -29,7 +29,9 @@ export type TalkTopic = {
   scenarios: TalkScenario[];
   /** Your own notes the topic was made from: an agenda or ticket (context), or lines you got stuck on. */
   notes?: string;
-  notesKind?: 'context' | 'stuck';
+  notesKind?: 'context' | 'stuck' | 'lesson';
+  /** The lesson a 'lesson' topic was made from. */
+  lessonId?: string;
   /** What this topic's character remembers about you, newest last (written by talkWrap). */
   memory?: { fact: string; at: number }[];
   phrases: TalkPhrase[];

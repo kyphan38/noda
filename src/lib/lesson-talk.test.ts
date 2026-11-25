@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { retellParts } from './lesson-talk';
+import { buildLessonNotes, lessonTopicId, retellParts } from './lesson-talk';
 
 const line = (text: string, i: number) => ({ text, start: i * 10, end: i * 10 + 9 });
 const sizes = (parts: { text: string }[]) => parts.map((p) => p.text.split(' ').length);
@@ -33,5 +33,37 @@ describe('retellParts', () => {
 
   it('is empty for an empty transcript', () => {
     expect(retellParts([])).toEqual([]);
+  });
+});
+
+describe('lessonTopicId', () => {
+  it('is lowercase with safe chars only', () => {
+    expect(lessonTopicId('AbC_12.x')).toBe('lesson-abc-12-x');
+    expect(lessonTopicId('a'.repeat(100))).toHaveLength(80);
+  });
+});
+
+describe('buildLessonNotes', () => {
+  const s = (id: number, text: string) => ({ id, text, start: id, end: id + 1 });
+  const sentences = Array.from({ length: 10 }, (_, i) => s(i, `s${i}`.padEnd(9, '.')));
+
+  it('takes the stretch with the most misses, within the limit', () => {
+    const { notes } = buildLessonNotes(sentences, [{ sentenceId: 7, n: 3, text: 's7' }, { sentenceId: 1, n: 1, text: 's1' }], 30);
+    // Windows of 3 sentences (29 chars); the first one holding s7 is s5..s7.
+    expect(notes).toBe('s5....... s6....... s7.......');
+  });
+
+  it('starts at the beginning with no misses', () => {
+    expect(buildLessonNotes(sentences, [], 20).notes).toBe('s0....... s1.......');
+  });
+
+  it('lists missed lines, most misses first, no repeats, no zero counts', () => {
+    const { targets } = buildLessonNotes(sentences, [
+      { sentenceId: 2, n: 1, text: 'pure  rock' },
+      { sentenceId: 3, n: 4, text: 'a mile and a half' },
+      { sentenceId: 4, n: 0, text: 'not this' },
+      { sentenceId: 5, n: 1, text: 'pure rock' },
+    ]);
+    expect(targets).toEqual(['a mile and a half', 'pure rock']);
   });
 });

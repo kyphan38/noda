@@ -354,7 +354,11 @@ export function TalkSession({ topic, setIndex, progress, onProgress, onExit }: P
           </ul>
         </Fold>
         {topic.notes && (
-          <Fold label={topic.notesKind === 'stuck' ? 'What you wanted to say' : 'Your notes'} open={session.turns.length === 0}>
+          // A lesson's text starts closed: you talk about the clip from memory.
+          <Fold
+            label={topic.notesKind === 'stuck' ? 'What you wanted to say' : topic.notesKind === 'lesson' ? 'The clip' : 'Your notes'}
+            open={session.turns.length === 0 && topic.notesKind !== 'lesson'}
+          >
             <p className="whitespace-pre-wrap">{topic.notes}</p>
           </Fold>
         )}

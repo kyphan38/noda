@@ -1,6 +1,6 @@
 // Dictation misses per lesson (users/{uid}/misses/{lessonId}), for the Mistakes page.
 // Misses are queued and written a moment later, so typing fast is not one write per key.
-import { collection, deleteField, doc, getDocs, increment, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteField, doc, getDoc, getDocs, increment, setDoc, updateDoc } from 'firebase/firestore';
 import { getFirebaseFirestore } from '@/lib/auth/firebase-client';
 import type { MissDoc } from '@/lib/dictation-misses';
 import { getCurrentUidOrThrow } from './shared';
@@ -58,6 +58,14 @@ export async function listMissesFirestore(): Promise<MissDoc[]> {
   const uid = getCurrentUidOrThrow();
   const snap = await getDocs(collection(getFirebaseFirestore(), missesPath(uid)));
   return snap.docs.map((d) => d.data() as MissDoc);
+}
+
+/** One lesson's misses, after writing the ones still queued. */
+export async function getLessonMisses(lessonId: string): Promise<MissDoc | null> {
+  await flushMisses();
+  const uid = getCurrentUidOrThrow();
+  const snap = await getDoc(doc(getFirebaseFirestore(), missesPath(uid), lessonId));
+  return snap.exists() ? (snap.data() as MissDoc) : null;
 }
 
 /** A sentence written right on the Mistakes page leaves the list. */

@@ -12,12 +12,13 @@ interface CleanupModalProps {
   onKeep: () => void;
   /** Moves the lesson to the trash, where it can still be restored. */
   onMoveToTrash: () => void | Promise<void>;
-  /** The finished lesson's sentences, for Retell. */
+  /** The finished lesson and its sentences, for Retell and Talk. */
+  lesson?: { id: string; name: string } | null;
   transcript?: Sentence[];
 }
 
 /** Shown once a lesson is finished in both dictation and shadowing. */
-export function CleanupModal({ isOpen, onKeep, onMoveToTrash, transcript = [] }: CleanupModalProps) {
+export function CleanupModal({ isOpen, onKeep, onMoveToTrash, lesson = null, transcript = [] }: CleanupModalProps) {
   const [mounted, setMounted] = useState(false);
   const [retell, setRetell] = useState(false);
 
@@ -27,9 +28,10 @@ export function CleanupModal({ isOpen, onKeep, onMoveToTrash, transcript = [] }:
 
   if (!isOpen || !mounted) return null;
   // Retelling keeps the lesson, like Keep.
-  if (retell)
+  if (retell && lesson)
     return (
       <LessonTalkModal
+        lesson={lesson}
         transcript={transcript}
         onClose={() => {
           setRetell(false);
@@ -70,14 +72,14 @@ export function CleanupModal({ isOpen, onKeep, onMoveToTrash, transcript = [] }:
         >
           Keep
         </Button>
-        {transcript.length > 0 && (
+        {lesson && transcript.length > 0 && (
           <Button
             type="button"
             variant="secondary"
             className="h-auto w-full justify-center rounded-xl py-3 text-base font-medium"
             onClick={() => setRetell(true)}
           >
-            Retell it
+            Speak about it
           </Button>
         )}
         <Button

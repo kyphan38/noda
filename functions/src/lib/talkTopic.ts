@@ -22,7 +22,12 @@ const MAX_TITLE = 80;
 const MAX_DESCRIPTION = 400;
 /** The learner's own notes: an agenda, a ticket, or lines they got stuck on. */
 export const MAX_NOTES = 2000;
-export const NOTES_KINDS = ["context", "stuck"] as const;
+/** A lesson topic's notes are a transcript excerpt, so they may be longer. */
+export const MAX_LESSON_NOTES = 4000;
+/** Lines missed in dictation and words looked up, for a lesson topic. */
+export const MAX_TARGETS = 12;
+const MAX_TARGET = 200;
+export const NOTES_KINDS = ["context", "stuck", "lesson"] as const;
 export type NotesKind = (typeof NOTES_KINDS)[number];
 
 export interface TopicRequest {
@@ -34,6 +39,9 @@ export interface TopicRequest {
   level: TalkLevel;
   notes?: string;
   notesKind?: NotesKind;
+  /** The lesson a "lesson" topic was made from. */
+  lessonId?: string;
+  targets?: string[];
 }
 
 export interface TalkPhrase {
@@ -81,9 +89,19 @@ export function checkTopicRequest(data: unknown): TopicRequest {
   if (kind === "preset" && !/^[a-z0-9-]{2,40}$/.test(presetId ?? "")) throw new Error("Bad preset id.");
   // Notes keep their line breaks: lists and tickets read better that way.
   const notes = typeof d.notes === "string" ? d.notes.replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim() : "";
-  if (notes.length > MAX_NOTES) throw new Error("Notes are too long.");
   const notesKind = NOTES_KINDS.find((k) => k === d.notesKind) ?? "context";
-  return { topicId, kind, presetId, title, description, level, ...(notes ? { notes, notesKind } : {}) };
+  if (notes.length > (notesKind === "lesson" ? MAX_LESSON_NOTES : MAX_NOTES)) throw new Error("Notes are too long.");
+  if (notesKind !== "lesson") {
+    return { topicId, kind, presetId, title, description, level, ...(notes ? { notes, notesKind } : {}) };
+  }
+  if (!notes) throw new Error("A lesson topic needs the lesson text.");
+  const lessonId = oneLine(d.lessonId, 80);
+  if (!lessonId) throw new Error("Bad lesson id.");
+  const targets = (Array.isArray(d.targets) ? d.targets : [])
+    .map((t) => oneLine(t, MAX_TARGET))
+    .filter(Boolean)
+    .slice(0, MAX_TARGETS);
+  return { topicId, kind, presetId, title, description, level, notes, notesKind, lessonId, targets };
 }
 
 const LEVEL_NOTES: Record<TalkLevel, string> = {
@@ -97,7 +115,15 @@ export function buildTopicPrompt(req: TopicRequest): string {
     `You make speaking lessons for ${LEARNER_ROLE}. Topics can be about work or everyday life (family, friends, shopping, travel, health). Write everything in English only.`,
     `Topic: ${req.title}`,
     req.description ? `Details: ${req.description}` : "",
-    req.notes && req.notesKind === "stuck"
+    req.notesKind === "lesson"
+      ? [
+          `The learner just studied this audio clip. Part of its transcript:\n${req.notes}`,
+          "Build every scenario around what the clip says: the persona asks the learner to sum up a part, asks their opinion, asks how it links to their own life or work, or questions one of the clip's claims. Take the facts from the clip, with its names and numbers.",
+          req.targets?.length
+            ? `Lines the learner misheard in the clip, or words they looked up:\n${req.targets.map((t) => `- ${t}`).join("\n")}\nThe first ${SET_SIZE} phrases must be useful chunks taken from these lines, written exactly as they appear in them. If there are not enough, add chunks from the clip.`
+            : `The first ${SET_SIZE} phrases must be useful chunks taken from the clip, written exactly as they appear in it.`,
+        ].join("\n")
+      : req.notes && req.notesKind === "stuck"
       ? `Things the learner wanted to say in real life but could not (any language):\n${req.notes}\nBuild the scenarios so the learner needs to say these things, and choose phrases that help say them.`
       : req.notes
         ? `The learner's own notes for this talk (real facts):\n${req.notes}\nBuild every scenario from these notes and keep their names, systems and numbers. Choose phrases that help talk about them.`

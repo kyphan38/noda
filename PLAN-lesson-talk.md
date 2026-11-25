@@ -24,7 +24,7 @@ Both pieces we need already exist. This plan only links them.
 3. Talk already tracks which phrases you used (`usedPhraseIds`) and moves them
    through stages. So "reuse 3-5 phrases" needs no new logic: it is set 1.
 
-## Phase 1: Retell from a lesson (no new Cloud Function)
+## Phase 1: Retell from a lesson (no new Cloud Function) - done
 
 - New pure module `src/lib/lesson-talk.ts` (+ `lesson-talk.test.ts`):
   - `retellParts(sentences, max = 4000)`: cut the transcript into parts at
@@ -37,7 +37,7 @@ Both pieces we need already exist. This plan only links them.
   mounting the button: it is over the 500-line limit.
 - Cost: one `talkSpeech` call per retell, same as today.
 
-## Phase 2: Talk topic from a lesson
+## Phase 2: Talk topic from a lesson - done
 
 Server (`functions/src/lib/talkTopic.ts`, pure, tested):
 - `NOTES_KINDS` gets `'lesson'`. For it, notes may be up to 4000 chars.

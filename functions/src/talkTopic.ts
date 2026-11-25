@@ -65,6 +65,7 @@ export const talkTopic = onCall(
       title: req.title,
       description: req.description,
       ...(req.notes ? { notes: req.notes, notesKind: req.notesKind } : {}),
+      ...(req.lessonId ? { lessonId: req.lessonId } : {}),
       kind: req.kind,
       ...(req.presetId ? { presetId: req.presetId } : {}),
       level: req.level,

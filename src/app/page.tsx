@@ -934,6 +934,7 @@ export default function NodaApp() {
       <CleanupModal
         isOpen={showCleanupModal}
         onKeep={() => setShowCleanupModal(false)}
+        lesson={selectedItem ? { id: selectedItem.id, name: selectedItem.data.name } : null}
         transcript={transcript}
         onMoveToTrash={async () => {
           const id = selectedItem?.id;

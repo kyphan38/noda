@@ -32,7 +32,10 @@ export type TopicRequest = {
   description: string;
   level: TalkLevel;
   notes?: string;
-  notesKind?: 'context' | 'stuck';
+  notesKind?: 'context' | 'stuck' | 'lesson';
+  lessonId?: string;
+  /** Lines missed in dictation, for a 'lesson' topic. */
+  targets?: string[];
 };
 
 export async function listTalkTopics(): Promise<TalkTopic[]> {

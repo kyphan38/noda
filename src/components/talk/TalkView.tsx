@@ -8,12 +8,12 @@ import { TalkTopicView } from '@/components/talk/TalkTopicView';
 import { TalkDrills } from '@/components/talk/drills/TalkDrills';
 import { TalkWeekCard } from '@/components/talk/TalkWeekCard';
 import { TALK_CATEGORIES, TALK_PRESETS, presetTopicId, randomPreset, type TalkPreset } from '@/lib/talk/presets';
+import { LEVEL_KEY, readTalkLevel } from '@/lib/talk/prefs';
 import { warmUpVoices } from '@/lib/talk/speak';
 import { getTalkStore } from '@/lib/talk/store';
 import { TALK_LEVELS, type TalkLevel, type TalkTopic } from '@/lib/talk/types';
 import type { TopicRequest } from '@/lib/db';
 
-const LEVEL_KEY = 'noda.talk.level';
 const TAB_KEY = 'noda.talk.tab';
 const SECTION_KEY = 'noda.talk.section';
 type Section = 'topics' | 'drills';
@@ -23,15 +23,6 @@ function save(key: string, value: string) {
     localStorage.setItem(key, value);
   } catch {
     // Private mode: kept for this visit only.
-  }
-}
-
-function readLevel(): TalkLevel {
-  try {
-    const v = localStorage.getItem(LEVEL_KEY);
-    return TALK_LEVELS.find((l) => l === v) ?? 'B2';
-  } catch {
-    return 'B2';
   }
 }
 
@@ -51,7 +42,7 @@ export function TalkView() {
   const [showNew, setShowNew] = useState(false);
 
   useEffect(() => {
-    setLevel(readLevel());
+    setLevel(readTalkLevel());
     try {
       const t = localStorage.getItem(TAB_KEY) ?? 'Work';
       // Drills used to be a tab next to the categories.
@@ -61,9 +52,16 @@ export function TalkView() {
       // Private mode: start on Work.
     }
     warmUpVoices();
+    // /talk/?topic=<id> opens that topic (a lesson's Talk button links here).
+    const wanted = new URLSearchParams(window.location.search).get('topic');
+    if (wanted) window.history.replaceState(null, '', window.location.pathname);
     getTalkStore()
       .listTopics()
-      .then(setSaved)
+      .then((list) => {
+        setSaved(list);
+        const t = wanted ? list.find((x) => x.id === wanted) : undefined;
+        if (t) setOpen(t);
+      })
       .catch(() => setSaved([]));
   }, []);
 

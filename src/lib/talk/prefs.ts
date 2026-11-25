@@ -1,9 +1,20 @@
 // noda - Talk: settings kept on this device (localStorage). Every read and
 // write is guarded: private mode can block storage, and Talk still works.
 
-import type { TalkMode } from './types';
+import { TALK_LEVELS, type TalkLevel, type TalkMode } from './types';
 
 const PREFS_KEY = 'noda.talk.prefs';
+export const LEVEL_KEY = 'noda.talk.level';
+
+/** The level picked on the Talk page; B2 by default. */
+export function readTalkLevel(): TalkLevel {
+  try {
+    const v = localStorage.getItem(LEVEL_KEY);
+    return TALK_LEVELS.find((l) => l === v) ?? 'B2';
+  } catch {
+    return 'B2';
+  }
+}
 
 export type TalkPrefs = { mode: TalkMode; selfRepair: boolean; showText: boolean; quick: boolean };
 export const DEFAULT_PREFS: TalkPrefs = { mode: 'instant', selfRepair: true, showText: true, quick: false };

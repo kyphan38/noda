@@ -10,6 +10,7 @@ import type { PhraseStage, TalkPhrase, TalkPhraseProgress, TalkSession, TalkTopi
 
 export type TalkStore = {
   listTopics(): Promise<TalkTopic[]>;
+  getTopic(topicId: string): Promise<TalkTopic | null>;
   ensureTopic(req: fsdb.TopicRequest): Promise<TalkTopic>;
   setPhraseRemoved(topic: TalkTopic, phraseId: string, removed: boolean): Promise<TalkPhrase[]>;
   deleteTopic(topicId: string): Promise<void>;
@@ -43,6 +44,7 @@ export type TalkStore = {
 
 const firestoreStore: TalkStore = {
   listTopics: fsdb.listTalkTopics,
+  getTopic: fsdb.getTalkTopic,
   ensureTopic: fsdb.ensureTalkTopic,
   setPhraseRemoved: fsdb.setPhraseRemoved,
   deleteTopic: fsdb.deleteTalkTopic,
@@ -121,8 +123,9 @@ function memoryStore(): TalkStore {
   const learnStates = new Map<string, LearnState>();
   return {
     listTopics: async () => [...topics.values()],
+    getTopic: async (id) => topics.get(id) ?? null,
     ensureTopic: async (req) => {
-      const t = topics.get(req.topicId) ?? { ...sampleTopic(), id: req.topicId, title: req.title, kind: req.kind, level: req.level, notes: req.notes, notesKind: req.notesKind };
+      const t = topics.get(req.topicId) ?? { ...sampleTopic(), id: req.topicId, title: req.title, kind: req.kind, level: req.level, notes: req.notes, notesKind: req.notesKind, lessonId: req.lessonId };
       topics.set(t.id, t);
       return t;
     },
