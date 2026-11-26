@@ -12,7 +12,7 @@ const BLOCKS: Block[] = [
       'noda has three parts: Listen (your lessons), Talk and Review.',
       'On a computer they are on the rail at the left. On a phone they are in the bar at the bottom.',
       'The bottom bar hides while a lesson or a topic is open, to give you more room. Open the sidebar to switch.',
-      'The gear opens Settings: theme, export all data (.json), this Guide, log out, and the AI cost this month.',
+      'The gear opens Settings: theme, export all data (.json), this Guide, and log out.',
     ],
   },
   {

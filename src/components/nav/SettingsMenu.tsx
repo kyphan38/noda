@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { BookOpen, Download, LogOut, Monitor, Moon, Settings, Sun } from 'lucide-react';
 
-import AiCostRow from '@/components/AiCostRow';
 import { useExportAll } from '@/hooks/useExportAll';
 import { themeStore, type Theme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
@@ -14,7 +13,7 @@ const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
 
 const row = 'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800 hover:text-white';
 
-/** Gear button with theme, AI cost, export, guide and log out. */
+/** Gear button with theme, export, guide and log out. */
 export function SettingsMenu({ placement, onLogout, className }: { placement: 'rail' | 'bar'; onLogout: () => void; className?: string }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -98,9 +97,6 @@ export function SettingsMenu({ placement, onLogout, className }: { placement: 'r
           >
             <LogOut size={16} aria-hidden /> Log out
           </button>
-          <div className="mt-1 border-t border-gray-800 px-3 pb-2">
-            <AiCostRow />
-          </div>
         </div>
       )}
     </div>
