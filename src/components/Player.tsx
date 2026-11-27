@@ -17,7 +17,8 @@ import {
   Mic,
   SlidersHorizontal,
 } from 'lucide-react';
-import { RepeatCount } from '@/types';
+import { RepeatCount, type AppMode } from '@/types';
+import { LessonOptionRows, useLessonOptions } from '@/components/LessonOptions';
 import {
   REPEAT_COUNT_OPTIONS,
   isRepeatCountActive,
@@ -65,6 +66,8 @@ interface PlayerProps {
   ai?: PlayerAiButton;
   /** Opens the speaking check (Shadowing mode). */
   onSpeakingCheck?: () => void;
+  /** Adds the lesson options (word meanings, pauses) for this mode to the More menu. */
+  optionsMode?: AppMode;
 }
 
 const toolBtn =
@@ -102,7 +105,7 @@ function usePopoverPosition(
 }
 
 /**
- * Settings that are set once and left alone (speed, video, captions), kept out of
+ * Settings that are set once and left alone (speed, video, captions, words, pauses), kept out of
  * the bar so the controls used every few seconds stay one tap away.
  */
 function MorePopover({
@@ -116,6 +119,7 @@ function MorePopover({
   onToggleCaptions,
   onClose,
   triggerRef,
+  optionsMode,
 }: {
   speed: number;
   onSpeedChange: (s: number) => void;
@@ -127,6 +131,7 @@ function MorePopover({
   onToggleCaptions?: () => void;
   onClose: () => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
+  optionsMode?: AppMode;
 }) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const pos = usePopoverPosition(triggerRef, true);
@@ -198,6 +203,7 @@ function MorePopover({
           )}
         </div>
       )}
+      {optionsMode && <LessonOptionRows mode={optionsMode} />}
     </div>,
     document.body
   );
@@ -291,6 +297,7 @@ export function Player({
   onToggleFocusMode,
   ai,
   onSpeakingCheck,
+  optionsMode,
 }: PlayerProps) {
   const currentTime = usePlaybackTime(clock);
 
@@ -308,8 +315,12 @@ export function Player({
   const repeatBtnRef = useRef<HTMLButtonElement>(null);
 
   const closeMore = useCallback(() => setShowMore(false), []);
+  const options = useLessonOptions(optionsMode ?? 'dictation');
   const moreChanged =
-    Math.abs(playbackRate - 1) > 0.001 || (showVideoToggle && videoHidden) || (showCaptionsToggle && captionsHidden);
+    Math.abs(playbackRate - 1) > 0.001 ||
+    (showVideoToggle && videoHidden) ||
+    (showCaptionsToggle && captionsHidden) ||
+    (!!optionsMode && options.changed);
   const closeRepeat = useCallback(() => setShowRepeatPopover(false), []);
 
   return (
@@ -446,7 +457,7 @@ export function Player({
               setShowRepeatPopover(false);
             }}
             className={`${toolBtn} relative ${showMore ? 'bg-gray-800 text-white' : ''}`}
-            aria-label="More: speed, video, captions"
+            aria-label="More: speed, video, captions, words"
             aria-expanded={showMore}
             title={`More (speed ${playbackRate.toFixed(1)}×)`}
           >
@@ -468,6 +479,7 @@ export function Player({
               onToggleCaptions={onToggleCaptions}
               onClose={closeMore}
               triggerRef={moreBtnRef}
+              optionsMode={optionsMode}
             />
           )}
         </div>

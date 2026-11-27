@@ -640,6 +640,7 @@ export function LessonView({
             onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
             ai={aiButton}
             onSpeakingCheck={speakingAvailable ? openSpeakingCheck : undefined}
+            optionsMode={mode}
           />
 
         </div>

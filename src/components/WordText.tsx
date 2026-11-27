@@ -10,7 +10,7 @@ const DOUBLE_TAP_MS = 350;
 /**
  * Sentence text whose words open a card on double click or double tap (N3): IPA,
  * part of speech and a simple meaning in this sentence. One click still goes to the
- * row, so it plays the sentence. Off by default ("Words off" above the lines).
+ * row, so it plays the sentence. Off by default (Word meanings in the player's More menu).
  */
 export function WordText({ text, sentenceId }: { text: string; sentenceId: number }) {
   const on = useSyncExternalStore(wordCardsOnStore.subscribe, wordCardsOnStore.get, () => false);

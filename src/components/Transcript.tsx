@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ParagraphDictation } from './ParagraphDictation';
-import { currentLessonStore, endSlowNow, listenPausesStore, openWordStore, wordCardsOnStore } from '@/lib/lesson-session';
+import { endSlowNow, openWordStore } from '@/lib/lesson-session';
 import { Sentence, AppMode, DictationInputs, CompletedSentences } from '@/types';
 import { MemoTranscriptSentence } from './TranscriptSentence';
 import { personalWords } from '@/lib/cloze';
@@ -76,7 +76,6 @@ export function Transcript({
 
   return (
     <div className="h-full min-h-0 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden flex flex-col">
-      {appMode !== 'dictation' && <ListenOptions showPauses={appMode === 'listen'} />}
       {appMode === 'dictation' && <DictationView value={dictationView} onChange={setDictationView} />}
       <div
         ref={scrollContainerRef}
@@ -118,38 +117,6 @@ export function Transcript({
         })}
       </div>
     </div>
-  );
-}
-
-/** Options above the lines in Listen and Shadowing: word cards (N3) and, in Listen, pauses (N10). */
-function ListenOptions({ showPauses }: { showPauses: boolean }) {
-  const lesson = useSyncExternalStore(currentLessonStore.subscribe, currentLessonStore.get, () => null);
-  const pauses = useSyncExternalStore(listenPausesStore.subscribe, listenPausesStore.get, () => false);
-  const words = useSyncExternalStore(wordCardsOnStore.subscribe, wordCardsOnStore.get, () => false);
-  return (
-    <div className="flex items-center gap-4 px-3 pt-1.5 text-xs">
-      <Toggle label="Words" title="Double click a word for its meaning" on={words} onChange={(v) => wordCardsOnStore.set(v)} />
-      {/* Uploaded files only: YouTube lessons keep playing straight through. */}
-      {showPauses && lesson && !lesson.youtube && (
-        <Toggle label="Pauses" title="Silence after each sentence, to say it" on={pauses} onChange={(v) => listenPausesStore.set(v)} />
-      )}
-    </div>
-  );
-}
-
-/** One word that says the state ("Words off") and flips it on click. */
-function Toggle({ label, title, on, onChange }: { label: string; title: string; on: boolean; onChange: (on: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      title={title}
-      onClick={() => onChange(!on)}
-      className={on ? 'text-gray-100' : 'text-gray-500 hover:text-gray-300'}
-    >
-      {label} {on ? 'on' : 'off'}
-    </button>
   );
 }
 
