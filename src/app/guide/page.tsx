@@ -12,7 +12,7 @@ const BLOCKS: Block[] = [
       'noda has three parts: Listen (your lessons), Talk and Review.',
       'On a computer they are on the rail at the left. On a phone they are in the bar at the bottom.',
       'The bottom bar hides while a lesson or a topic is open, to give you more room. Open the sidebar to switch.',
-      'The gear opens Settings: theme, export all data (.json), this Guide, and log out.',
+      'The gear opens Settings: theme, background music, export all data (.json), this Guide, and log out.',
     ],
   },
   {
@@ -39,6 +39,15 @@ const BLOCKS: Block[] = [
       'Double click a word (or tap it twice) to see its IPA and a simple meaning in that sentence. One click still plays the line.',
       'It is off at first: open More (the sliders button on the player) and turn on Word meanings.',
       'In More, turn on Pauses (uploaded files only): after each sentence, a silence as long as the sentence, so you can say it.',
+    ],
+  },
+  {
+    title: 'Background music',
+    lines: [
+      'Soft music can play behind a lesson in Listen, Shadowing and Dictation. It is off at first.',
+      'Turn it on in Settings (the gear), or with Music in More on the player. Settings also has the track and the volume.',
+      'The music gets a little quieter while the lesson plays, so the voice stays clear.',
+      'It stops while the speaking check records you, and when you leave the lesson. Talk never has music.',
     ],
   },
   {

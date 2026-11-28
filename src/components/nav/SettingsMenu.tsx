@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { BookOpen, Download, LogOut, Monitor, Moon, Settings, Sun } from 'lucide-react';
 
+import { BackgroundMusicSettings } from '@/components/nav/BackgroundMusicSettings';
 import { useExportAll } from '@/hooks/useExportAll';
 import { themeStore, type Theme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
@@ -13,7 +14,7 @@ const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
 
 const row = 'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-800 hover:text-white';
 
-/** Gear button with theme, export, guide and log out. */
+/** Gear button with theme, background music, export, guide and log out. */
 export function SettingsMenu({ placement, onLogout, className }: { placement: 'rail' | 'bar'; onLogout: () => void; className?: string }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -81,6 +82,7 @@ export function SettingsMenu({ placement, onLogout, className }: { placement: 'r
               ))}
             </span>
           </div>
+          <BackgroundMusicSettings />
           <button type="button" className={row} disabled={exporting} onClick={() => void exportAll()}>
             <Download size={16} aria-hidden /> {exporting ? 'Exporting…' : 'Export data'}
           </button>

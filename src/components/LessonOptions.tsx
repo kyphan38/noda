@@ -1,20 +1,22 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { BookA, Hourglass } from 'lucide-react';
+import { BookA, Hourglass, Music } from 'lucide-react';
 
+import { bgMusicPrefsStore } from '@/lib/bgMusic/prefs';
 import { currentLessonStore, listenPausesStore, wordCardsOnStore } from '@/lib/lesson-session';
 import type { AppMode } from '@/types';
 
-/** Word cards (N3) and, in Listen on an uploaded file, pauses (N10). Dictation has neither. */
+/** Word cards (N3), pauses (N10, Listen on an uploaded file) and background music (every lesson tab). */
 export function useLessonOptions(mode: AppMode) {
   const lesson = useSyncExternalStore(currentLessonStore.subscribe, currentLessonStore.get, () => null);
   const pauses = useSyncExternalStore(listenPausesStore.subscribe, listenPausesStore.get, () => false);
   const words = useSyncExternalStore(wordCardsOnStore.subscribe, wordCardsOnStore.get, () => false);
+  const music = useSyncExternalStore(bgMusicPrefsStore.subscribe, bgMusicPrefsStore.get, bgMusicPrefsStore.getServer).enabled;
   const showWords = mode !== 'dictation';
   // YouTube lessons keep playing straight through.
   const showPauses = mode === 'listen' && !!lesson && !lesson.youtube;
-  return { words, pauses, showWords, showPauses, changed: (showWords && words) || (showPauses && pauses) };
+  return { words, pauses, music, showWords, showPauses, changed: (showWords && words) || (showPauses && pauses) || music };
 }
 
 const row =
@@ -23,8 +25,7 @@ const icon = 'h-4 w-4 shrink-0';
 
 /** Rows for the player's More menu. */
 export function LessonOptionRows({ mode }: { mode: AppMode }) {
-  const { words, pauses, showWords, showPauses } = useLessonOptions(mode);
-  if (!showWords && !showPauses) return null;
+  const { words, pauses, music, showWords, showPauses } = useLessonOptions(mode);
   return (
     <div className="border-t border-gray-800 pt-1">
       {showWords && (
@@ -37,6 +38,9 @@ export function LessonOptionRows({ mode }: { mode: AppMode }) {
           <Hourglass className={icon} aria-hidden />
         </Switch>
       )}
+      <Switch label="Music" title="Background music behind the lesson" on={music} onChange={(v) => bgMusicPrefsStore.set({ enabled: v })}>
+        <Music className={icon} aria-hidden />
+      </Switch>
     </div>
   );
 }

@@ -457,7 +457,7 @@ export function Player({
               setShowRepeatPopover(false);
             }}
             className={`${toolBtn} relative ${showMore ? 'bg-gray-800 text-white' : ''}`}
-            aria-label="More: speed, video, captions, words"
+            aria-label="More: speed, video, captions, words, music"
             aria-expanded={showMore}
             title={`More (speed ${playbackRate.toFixed(1)}×)`}
           >

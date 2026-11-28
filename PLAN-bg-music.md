@@ -131,5 +131,13 @@ nhạc. Hỏi owner trước mỗi phase.
   đổi sang Dictation và Shadowing nhạc vẫn phát, sang Talk nhạc về 0 và
   pause, tắt option thì không tải file nhạc. Speaking check chưa thử được
   trong E2E (cần bài có media trên Storage); quy tắc mic đã có unit test.
+- **B3 xong (2026-11-28):** Settings có dòng "Background music" `off · on`
+  (`nav/BackgroundMusicSettings.tsx`); khi on hiện chọn bài (khi có từ 2
+  bài), thanh âm lượng 0-40, và "No tracks yet" khi danh sách rỗng. Menu
+  More của Player có switch "Music" (mọi tab bài học; nhãn ngắn vì menu hẹp),
+  bật thì có chấm trên nút More. Trang Guide có mục Background music. Thử
+  trong app (dev:e2e, 2 bài tạm): sáng, tối, mobile 375px; chọn Lofi thì
+  phát đúng bài; tắt trong More thì nhạc về 0, clip vẫn phát; bật lại phát
+  tiếp không cần bấm thêm.
 - Lưu ý cho B0: bucket Storage của noda cần CORS cho domain app (như mora),
   nếu không MediaElementSource phát ra im lặng.
