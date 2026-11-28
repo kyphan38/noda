@@ -1,4 +1,4 @@
-// Background music player: one looping track behind the lesson.
+// Background music player: one track at a time behind the lesson.
 //
 // Volume goes through a Web Audio GainNode: iOS Safari ignores audio.volume.
 // Every change is a short ramp, never a hard cut. Browsers block sound until a
@@ -17,6 +17,9 @@ export interface BgMusicEngine {
   setDucked(ducked: boolean): void;
   /** True when music should sound (see shouldPlay). */
   setActive(active: boolean): void;
+  /** Loop the track (true) or call onEnded when it finishes (false). */
+  setLoop(loop: boolean): void;
+  onEnded(fn: (() => void) | null): void;
   dispose(): void;
 }
 
@@ -26,6 +29,8 @@ export const noopBgMusicEngine: BgMusicEngine = {
   setVolume: () => {},
   setDucked: () => {},
   setActive: () => {},
+  setLoop: () => {},
+  onEnded: () => {},
   dispose: () => {},
 };
 
@@ -63,6 +68,17 @@ export function createBgMusicEngine(): BgMusicEngine {
   let pauseTimer: ReturnType<typeof setTimeout> | null = null;
   let swapTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
+  let endedFn: (() => void) | null = null;
+
+  el.addEventListener('ended', () => {
+    // The next track starts from silence and fades in.
+    if (ctx && gain) {
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+    }
+    aimed = 0;
+    endedFn?.();
+  });
 
   const wanted = () => active && url !== null && ctx !== null;
 
@@ -154,6 +170,12 @@ export function createBgMusicEngine(): BgMusicEngine {
     setActive(next) {
       active = next;
       apply();
+    },
+    setLoop(next) {
+      el.loop = next;
+    },
+    onEnded(fn) {
+      endedFn = fn;
     },
     dispose() {
       disposed = true;

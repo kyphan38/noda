@@ -139,5 +139,15 @@ nhạc. Hỏi owner trước mỗi phase.
   trong app (dev:e2e, 2 bài tạm): sáng, tối, mobile 375px; chọn Lofi thì
   phát đúng bài; tắt trong More thì nhạc về 0, clip vẫn phát; bật lại phát
   tiếp không cần bấm thêm.
+- **B0 xong (2026-11-28):** 17 bài của owner, đổi tên ngắn lowercase, chuẩn
+  hoá độ to về -18 LUFS (trước lệch từ -8.5 tới -23), 128k, bỏ metadata. Gốc
+  đã xử lý ở `media/bgm/` (git-ignored). 3 nhóm: piano (8), cinematic (4),
+  chill (5). Upload bằng `scripts/upload-bgm.sh` lên `defaults/bgm/` (đặt
+  CORS và thêm download token). Storage rules: `defaults/bgm` chỉ owner đọc
+  được (đã deploy), vì là nhạc có bản quyền nên không mở công khai. Hết bài
+  thì tự phát bài kế tiếp trong nhóm. Settings: chọn nhóm rồi chọn bài. Thử
+  trong app với file thật (token URL tạm, e2e): có tiếng thật qua Web Audio,
+  tự chuyển bài, đổi nhóm. Chưa có cache offline (trình duyệt vẫn cache vì
+  file có Cache-Control 1 năm).
 - Lưu ý cho B0: bucket Storage của noda cần CORS cho domain app (như mora),
   nếu không MediaElementSource phát ra im lặng.

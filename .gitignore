@@ -16,3 +16,6 @@ functions/lib/
 
 # Local Gemini key for scripts
 .gemini.key
+
+# Background music sources (uploaded to Storage defaults/bgm)
+media/

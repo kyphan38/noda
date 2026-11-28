@@ -1,0 +1,20 @@
+[
+  {
+    "origin": [
+      "https://noda.kyphan38.com",
+      "http://localhost:3000",
+      "http://localhost:3010"
+    ],
+    "method": [
+      "GET",
+      "HEAD"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Range",
+      "Accept-Ranges"
+    ],
+    "maxAgeSeconds": 86400
+  }
+]

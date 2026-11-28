@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
+import { getBgTrackUrl } from '@/lib/db';
 import { sharedBgMusicEngine, type BgMusicEngine } from '@/lib/bgMusic/engine';
 import { shouldPlay } from '@/lib/bgMusic/gain';
 import { bgMusicPrefsStore } from '@/lib/bgMusic/prefs';
-import { DEFAULT_TRACKS, pickTrackUrl } from '@/lib/bgMusic/tracks';
+import { DEFAULT_TRACKS, nextTrack, pickTrack, trackPath } from '@/lib/bgMusic/tracks';
 import type { AppMode } from '@/types';
 
 type Options = {
@@ -19,24 +20,54 @@ type Options = {
 /**
  * Background music behind a lesson (PLAN-bg-music.md). Mounted only by LessonView, so it
  * stops when the learner leaves the lesson; Talk and Speaking never mount it.
+ * Starts at the chosen track, then plays on through its category.
  */
 export function useBackgroundMusic({ mode, micOpen, clipPlaying }: Options): void {
   const prefs = useSyncExternalStore(bgMusicPrefsStore.subscribe, bgMusicPrefsStore.get, bgMusicPrefsStore.getServer);
   const engineRef = useRef<BgMusicEngine | null>(null);
 
-  const url = pickTrackUrl(prefs.trackId, DEFAULT_TRACKS);
-  const active = url !== null && shouldPlay({ enabled: prefs.enabled, mode, micOpen });
+  const chosen = pickTrack(prefs.trackId, DEFAULT_TRACKS);
+  // After a track ends the next one plays; a new choice in Settings starts over from it.
+  const [auto, setAuto] = useState<{ from: string; id: string } | null>(null);
+  const currentId = auto && auto.from === chosen?.id ? auto.id : (chosen?.id ?? null);
+  const nextId = currentId ? (nextTrack(currentId, DEFAULT_TRACKS)?.id ?? null) : null;
+
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const url = currentId ? (urls[currentId] ?? null) : null;
+  const active = currentId !== null && shouldPlay({ enabled: prefs.enabled, mode, micOpen });
+
+  // Look up the current track and the next one, so the change at the end has no wait.
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    for (const id of [currentId, nextId]) {
+      if (!id || urls[id]) continue;
+      getBgTrackUrl(trackPath(id))
+        .then((u) => !cancelled && setUrls((m) => ({ ...m, [id]: u })))
+        .catch(() => {
+          // Offline or signed out: the lesson goes on without music.
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [active, currentId, nextId, urls]);
 
   useEffect(() => {
     // The engine is made only once music is wanted, so the app is unchanged while it is off.
     if (active && !engineRef.current) engineRef.current = sharedBgMusicEngine();
     const engine = engineRef.current;
     if (!engine) return;
-    engine.setSource(url);
+    engine.setLoop(nextId === currentId);
+    engine.onEnded(() => {
+      if (chosen && nextId) setAuto({ from: chosen.id, id: nextId });
+    });
+    // While the next URL loads, keep what is playing rather than cutting to silence.
+    if (url) engine.setSource(url);
     engine.setVolume(prefs.volume);
     engine.setDucked(clipPlaying);
     engine.setActive(active);
-  }, [active, url, prefs.volume, clipPlaying]);
+  }, [active, url, prefs.volume, clipPlaying, chosen, currentId, nextId]);
 
   // Browsers allow sound only after a gesture: the next click or key press unlocks it.
   useEffect(() => {
@@ -51,5 +82,11 @@ export function useBackgroundMusic({ mode, micOpen, clipPlaying }: Options): voi
   }, [active]);
 
   // Leaving the lesson fades the music out. The engine stays for the next lesson view.
-  useEffect(() => () => engineRef.current?.setActive(false), []);
+  useEffect(
+    () => () => {
+      engineRef.current?.setActive(false);
+      engineRef.current?.onEnded(null);
+    },
+    []
+  );
 }

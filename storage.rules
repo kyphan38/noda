@@ -27,6 +27,11 @@ service firebase.storage {
         && request.resource.contentType.matches('audio/.*');
     }
 
+    // Background music tracks: uploaded by scripts/upload-bgm.sh, read-only from the app.
+    match /defaults/bgm/{file} {
+      allow read: if allowed();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
