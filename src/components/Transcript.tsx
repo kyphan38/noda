@@ -7,6 +7,7 @@ import { Sentence, AppMode, DictationInputs, CompletedSentences } from '@/types'
 import { MemoTranscriptSentence } from './TranscriptSentence';
 import { personalWords } from '@/lib/cloze';
 import { getMissedWordCounts } from '@/lib/db/missed-words';
+import type { TranslationLine } from '@/lib/translate';
 
 interface TranscriptProps {
   transcript: Sentence[];
@@ -30,6 +31,8 @@ interface TranscriptProps {
    *  opened from the player's AI button, not from the rows. */
   activeShadowingSentenceId: number | null;
   isShadowingPanelOpen: boolean;
+  /** Rows whose Vietnamese translation is shown (opened from the player's VI button). */
+  translations: ReadonlyMap<number, TranslationLine>;
 }
 
 export function Transcript({
@@ -50,6 +53,7 @@ export function Transcript({
   touchControls = false,
   activeShadowingSentenceId,
   isShadowingPanelOpen,
+  translations,
 }: TranscriptProps) {
   // Dictation one sentence at a time, only its hard words (gaps), or a whole part (N7). Per visit.
   const [dictationView, setDictationView] = useState<DictationViewId>('sentence');
@@ -112,6 +116,7 @@ export function Transcript({
               isShadowingOpen={isShadowingPanelOpen && activeShadowingSentenceId === sentence.id}
               gaps={gaps}
               gapWords={yourWords}
+              translation={translations.get(sentence.id)}
             />
           );
         })}

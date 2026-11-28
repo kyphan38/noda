@@ -42,6 +42,15 @@ const BLOCKS: Block[] = [
     ],
   },
   {
+    title: 'Vietnamese',
+    lines: [
+      'VI on the player (or T) shows the Vietnamese meaning of the line you just heard, under that line.',
+      'To translate another line, tap it first, then VI. Press VI again on that line to hide it.',
+      'Works in Listen, Shadowing and Dictation. In Dictation, only after you type the line right.',
+      'One AI call translates that line and up to 19 lines after it, but only the line you asked shows. The next VI on those lines is instant and free.',
+    ],
+  },
+  {
     title: 'Background music',
     lines: [
       'Soft music can play behind a lesson in Listen, Shadowing and Dictation. It is off at first.',

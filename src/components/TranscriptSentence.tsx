@@ -3,6 +3,7 @@ import { CheckCircle2, RotateCcw, CornerDownLeft } from 'lucide-react';
 import { Sentence, AppMode } from '@/types';
 import { WordText } from './WordText';
 import { DictationControls } from './DictationControls';
+import type { TranslationLine } from '@/lib/translate';
 
 interface TranscriptSentenceProps {
   sentence: Sentence;
@@ -30,6 +31,8 @@ interface TranscriptSentenceProps {
   gaps?: boolean;
   /** Words you often miss, hidden in gaps too. */
   gapWords?: ReadonlySet<string>;
+  /** Vietnamese translation, shown under the line when opened. */
+  translation?: TranslationLine;
 }
 
 export function TranscriptSentence({
@@ -51,6 +54,7 @@ export function TranscriptSentence({
   touchControls = false,
   gaps = false,
   gapWords,
+  translation,
 }: TranscriptSentenceProps) {
   const showDictationActions = appMode === 'dictation' && !!onDictationRetry;
 
@@ -140,6 +144,7 @@ export function TranscriptSentence({
             {hideCaptions ? sentence.text : <WordText text={sentence.text} sentenceId={sentence.id} />}
           </p>
         )}
+        {translation && <TranslationText line={translation} />}
       </div>
 
       {/* Pinned to the FIRST line of the sentence, not centred on the whole row: on a phone a
@@ -204,6 +209,17 @@ export function TranscriptSentence({
         </div>
       </div>
     </div>
+  );
+}
+
+function TranslationText({ line }: { line: TranslationLine }) {
+  if (line.status === 'loading') {
+    return <p className="breathe text-sm text-gray-500">Translating…</p>;
+  }
+  return (
+    <p data-translation lang={line.status === 'ready' ? 'vi' : undefined} className="fade-in text-sm leading-relaxed text-gray-300">
+      {line.status === 'ready' ? line.vi : line.message}
+    </p>
   );
 }
 

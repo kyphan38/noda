@@ -6,7 +6,7 @@ import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
 import type { ShadowingMediaSource } from '@/lib/shadowingAnalysis';
 import { YouTubeStage } from './YouTubeStage';
-import { ShadowingPatternDock } from './ShadowingPatternDock';
+import { ShadowingDockArea } from './ShadowingDockArea';
 import { SpeakingCheckModal } from './SpeakingCheckModal';
 import { ResumePrompt } from './ResumePrompt';
 import type { ResumeTarget } from '@/lib/progress';
@@ -21,6 +21,7 @@ import {
 } from '@/types';
 import { findActiveTranscriptIndex } from '@/lib/transcript-scroll';
 import { useShadowingAiPanel } from '@/hooks/useShadowingAiPanel';
+import { useSentenceTranslations } from '@/hooks/useSentenceTranslations';
 import { useLessonMediaStatus } from '@/hooks/useLessonMediaStatus';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 import { useCoarsePointer } from '@/hooks/use-mobile';
@@ -214,6 +215,24 @@ export function LessonView({
     onShadowingPanelOpenChange,
   });
 
+  const { translationLines, viButton, followSentence } = useSentenceTranslations({
+    lessonId,
+    title: lesson.name,
+    transcript,
+    mode,
+    focusActive,
+    currentTime,
+    completedSentences,
+  });
+
+  const handleSentenceClick = useCallback(
+    (sentence: Sentence) => {
+      followSentence(sentence.id);
+      onSentenceClick(sentence);
+    },
+    [followSentence, onSentenceClick]
+  );
+
   // Speaking check: Shadowing only, where reading the text aloud is the exercise.
   const [speakingOpen, setSpeakingOpen] = useState(false);
   const speakingAvailable = mode === 'shadowing' && !!lessonId && !!aiMediaSource && !focusActive;
@@ -403,7 +422,7 @@ export function LessonView({
               completedSentences={completedSentences}
               shadowingCompleted={shadowingCompleted}
               scrollContainerRef={scrollContainerRef}
-              onSentenceClick={onSentenceClick}
+              onSentenceClick={handleSentenceClick}
               onDictationChange={onDictationChange}
               onDictationKeyDown={onDictationKeyDown}
               onDictationRetry={onDictationRetry}
@@ -412,55 +431,21 @@ export function LessonView({
               touchControls={touchControls}
               activeShadowingSentenceId={activeShadowingSentenceId}
               isShadowingPanelOpen={isShadowingPanelOpen}
+              translations={translationLines}
             />
           </div>
-          {isMobile && (
-            // Mobile: an in-flow dock between the transcript and the player, not a modal sheet.
-            // The transcript above stays visible and scrollable and the player below stays usable,
-            // so the learner can loop the line and read the analysis at the same time.
-            <div
-              className={cn(
-                'shrink-0 flex flex-col overflow-hidden rounded-xl bg-gray-900 transition-[max-height] duration-300 ease-in-out',
-                isShadowingPanelOpen ? 'max-h-[45dvh] border border-gray-800' : 'max-h-0'
-              )}
-            >
-              {isShadowingPanelOpen && activeShadowingSentenceId != null && (
-                <ShadowingPatternDock
-                  key={activeShadowingSentenceId}
-                  isMobile
-                  entry={getShadowingEntry(activeShadowingSentenceId)}
-                  sentenceText={activeShadowingSentence?.text ?? ''}
-                  onClose={closeShadowingPanel}
-                  onAnalyze={onAnalyzeShadowingSentence}
-                  autoAnalyze={shadowingAutoAnalyze}
-                  autoStopped={shadowingAutoStopped}
-                  onAutoAnalyzeChange={setShadowingAutoAnalyze}
-                />
-              )}
-            </div>
-          )}
-          {!isMobile && (
-            <div
-              className={cn(
-                'h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out',
-                isShadowingPanelOpen ? 'w-[30%] max-w-[320px] min-w-[240px]' : 'w-0'
-              )}
-            >
-              {isShadowingPanelOpen && activeShadowingSentenceId != null && (
-                <ShadowingPatternDock
-                  key={activeShadowingSentenceId}
-                  isMobile={false}
-                  entry={getShadowingEntry(activeShadowingSentenceId)}
-                  sentenceText={activeShadowingSentence?.text ?? ''}
-                  onClose={closeShadowingPanel}
-                  onAnalyze={onAnalyzeShadowingSentence}
-                  autoAnalyze={shadowingAutoAnalyze}
-                  autoStopped={shadowingAutoStopped}
-                  onAutoAnalyzeChange={setShadowingAutoAnalyze}
-                />
-              )}
-            </div>
-          )}
+          <ShadowingDockArea
+            isMobile={isMobile}
+            isOpen={isShadowingPanelOpen}
+            sentenceId={activeShadowingSentenceId}
+            entry={activeShadowingSentenceId != null ? getShadowingEntry(activeShadowingSentenceId) : undefined}
+            sentenceText={activeShadowingSentence?.text ?? ''}
+            onClose={closeShadowingPanel}
+            onAnalyze={onAnalyzeShadowingSentence}
+            autoAnalyze={shadowingAutoAnalyze}
+            autoStopped={shadowingAutoStopped}
+            onAutoAnalyzeChange={setShadowingAutoAnalyze}
+          />
         </div>
       )}
 
@@ -497,6 +482,7 @@ export function LessonView({
             focusMode={focusActive}
             onToggleFocusMode={showFocusToggle ? toggleFocusMode : undefined}
             ai={aiButton}
+            vi={viButton}
             onSpeakingCheck={speakingAvailable ? openSpeakingCheck : undefined}
             optionsMode={mode}
           />

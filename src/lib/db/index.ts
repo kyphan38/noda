@@ -16,3 +16,4 @@ export * from './talk';
 export * from './words';
 export * from './missed-words';
 export * from './bgm';
+export * from './translations';

@@ -24,15 +24,15 @@ cần dịch khoảng 100 câu.
 ### Giao diện
 
 - Nút **VI** nhỏ, màu xám, trên thanh player, cạnh nút AI. Phím tắt **T**.
-- Bấm VI: dịch câu đang phát (active sentence). Muốn dịch câu khác thì bấm vào
-  dòng đó trước.
+- Bấm VI: dịch câu đang phát, hoặc câu vừa nghe/vừa bấm. Muốn dịch câu khác thì
+  bấm vào dòng đó trước.
 - Bản dịch hiện thành một dòng nhỏ màu xám dưới câu đó, ở yên đó (không chạy
   theo câu đang phát). Bấm VI lại trên câu đó thì ẩn.
 - Có thể mở bản dịch ở nhiều câu cùng lúc. Rời bài thì tất cả đóng lại.
 - Dictation: câu chưa gõ đúng thì nút VI mờ (disabled).
-- Đang tải: nút VI có trạng thái loading, giống nút AI.
-- Lỗi (hết giới hạn ngày, timeout): toast ngắn, như word card.
-- Paragraph dictation: không có nút VI trong bản này.
+- Đang tải: dòng "Translating…" dưới câu, chữ VI nhấp nháy.
+- Lỗi (hết giới hạn ngày, timeout): một dòng ngắn dưới câu, như word card.
+- Focus mode: không có nút VI. Paragraph dictation: bản dịch không hiện (chưa làm).
 
 ### Dữ liệu
 
@@ -52,7 +52,7 @@ cần dịch khoảng 100 câu.
 - Đọc cache, chỉ gọi Gemini cho câu còn thiếu, ghi cache, trả về tất cả.
 - Đếm 1 lần vào giới hạn ngày (`takeAiCall`) cho mỗi lần gọi Gemini thật.
 - Model: `getShadowingModelId()` (flash), giống `defineWord`. Temperature 0.2,
-  timeout 30s. Kết quả qua `noLongDash` (không có em dash).
+  timeout 45s, thinking low (thử 20 câu: khoảng 9 giây, khoảng $0.004 mỗi lần gọi). Kết quả qua `noLongDash` (không có em dash).
 - Phần thuần (không firebase) ở `functions/src/lib/translate.ts`: kiểm tra
   request, prompt, đọc kết quả, có test.
 - ai-evals: thêm task `translate` vào `upkeep/ai-evals/tasks/noda.ts`.
@@ -78,13 +78,13 @@ cần dịch khoảng 100 câu.
 
 ### T2 - Client
 
-- [ ] Tách `LessonView.tsx` và `Player.tsx` cho gọn.
-- [ ] `src/lib/translate.ts` + test, `src/lib/db/translations.ts`.
-- [ ] Hook `useSentenceTranslations`, nút VI, phím T, dòng dịch dưới câu.
-- [ ] Quy tắc Dictation.
+- [x] Tách `LessonView.tsx` và `Player.tsx` cho gọn.
+- [x] `src/lib/translate.ts` + test, `src/lib/db/translations.ts`.
+- [x] Hook `useSentenceTranslations`, nút VI, phím T, dòng dịch dưới câu.
+- [x] Quy tắc Dictation.
 
 ### T3 - Hoàn thiện
 
-- [ ] Trang Guide (`src/app/guide/page.tsx`).
-- [ ] Test (vitest, lint, build).
+- [x] Trang Guide (`src/app/guide/page.tsx`).
+- [x] Test (vitest, lint, build).
 - [ ] Deploy function + rules, push (chờ owner đồng ý).
