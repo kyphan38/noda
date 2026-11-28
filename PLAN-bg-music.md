@@ -112,4 +112,13 @@ nhạc. Hỏi owner trước mỗi phase.
 
 ## Tiến độ
 
-- 2026-11-28: viết plan. Chưa bắt đầu phase nào.
+- 2026-11-28: viết plan.
+- **B1 xong (2026-11-28):** `src/lib/bgMusic/` có `gain.ts` (hàm thuần),
+  `prefs.ts` (localStorage, store cho useSyncExternalStore), `engine.ts`
+  (AudioContext + GainNode, fade, duck, đổi bài có fade, tự pause sau khi
+  fade out). 21 unit test mới, cả bộ 481/481 xanh. Thử thật trên trình
+  duyệt với file mp3 tạm: fade in 0 → 0.2 trong 800ms, duck còn 0.12, tắt về
+  0 rồi element pause, đổi bài fade out rồi fade in, bật lại phát tiếp.
+  Chưa thử trên iPhone/iPad (làm ở B2-B3 khi có giao diện).
+- Lưu ý cho B0: bucket Storage của noda cần CORS cho domain app (như mora),
+  nếu không MediaElementSource phát ra im lặng.
