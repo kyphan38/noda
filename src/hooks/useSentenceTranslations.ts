@@ -11,6 +11,7 @@ import {
   usableTranslations,
   type TranslationLine,
 } from '@/lib/translate';
+import { takesTyping } from '@/lib/shortcut-target';
 import type { AppMode, CompletedSentences, Sentence } from '@/types';
 
 /** The player's VI button: translates the sentence just heard into Vietnamese. */
@@ -136,8 +137,15 @@ export function useSentenceTranslations({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'KeyT' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.repeat) return;
       const el = document.activeElement;
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
-      if (el instanceof HTMLElement && el.isContentEditable) return;
+      const field =
+        el instanceof HTMLElement
+          ? {
+              tag: el.tagName,
+              readOnly: el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.readOnly : false,
+              editable: el.isContentEditable,
+            }
+          : null;
+      if (takesTyping(field)) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       e.preventDefault();
       onViClick();

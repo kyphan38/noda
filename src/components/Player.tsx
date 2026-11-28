@@ -187,6 +187,8 @@ export function Player({
             <button
               type="button"
               data-translate
+              // Keep focus where it was (the Dictation line), so Enter still goes to the next line.
+              onMouseDown={(e) => e.preventDefault()}
               onClick={vi.onClick}
               disabled={vi.disabled}
               className={`${toolBtn} text-xs font-semibold disabled:pointer-events-none disabled:opacity-40 ${
