@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Player, type PlayerAiButton } from './Player';
+import { Player } from './Player';
 import { Transcript } from './Transcript';
 import { VideoPane } from './VideoPane';
 import type { ShadowingMediaSource } from '@/lib/shadowingAnalysis';
@@ -19,8 +19,10 @@ import {
   DictationInputs,
   CompletedSentences,
 } from '@/types';
-import { findActiveTranscriptIndex, scrollTranscriptRowIntoView } from '@/lib/transcript-scroll';
-import { useShadowingPatternManager } from '@/hooks/useShadowingPatternManager';
+import { findActiveTranscriptIndex } from '@/lib/transcript-scroll';
+import { useShadowingAiPanel } from '@/hooks/useShadowingAiPanel';
+import { useLessonMediaStatus } from '@/hooks/useLessonMediaStatus';
+import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 import { useCoarsePointer } from '@/hooks/use-mobile';
 import { useNavFocus } from '@/hooks/useNavFocus';
 import { cn } from '@/lib/utils';
@@ -117,9 +119,7 @@ export function LessonView({
   onShadowingPanelOpenChange,
 }: LessonViewProps) {
   useNavFocus();
-  const [seekDisabled, setSeekDisabled] = useState(false);
   const [videoHidden, setVideoHidden] = useState(false);
-  const [hevcWarning, setHevcWarning] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   /** True once the YouTube player holds mediaRef; effects that read the ref rerun then. */
   const [youtubeReady, setYoutubeReady] = useState(false);
@@ -151,6 +151,14 @@ export function LessonView({
   const focusActive = focusMode && showFocusToggle;
 
   const toggleFocusMode = useCallback(() => setFocusMode((v) => !v), []);
+  const { seekDisabled, hevcWarning } = useLessonMediaStatus({
+    mediaRef,
+    mediaURL,
+    lessonKey: lesson.id,
+    youtubeReady,
+    isVideoLesson,
+    isMobile,
+  });
 
   useEffect(() => {
     onFocusModeChangeRef.current = onFocusModeChange;
@@ -172,112 +180,39 @@ export function LessonView({
   const activeSentence =
     activeTranscriptIndex >= 0 ? transcript[activeTranscriptIndex] : undefined;
 
-  // Shadowing-pattern explanation feature (Stage 7: centralized manager, side panel / bottom
-  // sheet). Separate from the Shadowing tab's playback loop (auto-pause per line).
   /** Where AI analysis reads the sentence audio: YouTube lessons have no upload. */
   const aiMediaSource = useMemo<ShadowingMediaSource | null>(
     () =>
       youtubeVideoId ? { youtubeVideoId } : mediaStoragePath ? { mediaStoragePath } : null,
     [youtubeVideoId, mediaStoragePath]
   );
+  const touchControls = useCoarsePointer() || isMobile;
 
   const {
-    activeSentenceId: activeShadowingSentenceId,
-    isPanelOpen: isShadowingPanelOpen,
-    getEntry: getShadowingEntry,
-    open: openShadowingPanel,
-    close: closeShadowingPanel,
-    show: showShadowingSentence,
-    analyze: analyzeShadowingSentence,
-    autoAnalyze: shadowingAutoAnalyze,
-    autoStopped: shadowingAutoStopped,
-    setAutoAnalyze: setShadowingAutoAnalyze,
-  } = useShadowingPatternManager(lessonId, aiMediaSource, transcript);
-  const activeShadowingSentence =
-    activeShadowingSentenceId != null
-      ? transcript.find((s) => s.id === activeShadowingSentenceId)
-      : undefined;
-  const onAnalyzeShadowingSentence = useCallback(() => {
-    if (activeShadowingSentence) analyzeShadowingSentence(activeShadowingSentence);
-  }, [activeShadowingSentence, analyzeShadowingSentence]);
-
-  // The player's AI button opens and closes the panel; while open, the panel follows the
-  // sentence being played. Hidden where the analysis would give away text the mode keeps
-  // hidden (Dictation, captions off) and in focus mode, which has no room for the panel.
-  const touchControls = useCoarsePointer() || isMobile;
-  const shadowingAvailable =
-    mode !== 'dictation' && !hideCaptions && !!lessonId && !!aiMediaSource && !focusActive;
-
-  // The sentence the panel follows. Only a sentence that is really playing replaces it: at a
-  // sentence's end (the loop's pause) and during Ctrl's 0.1s pre-roll the time sits in a gap,
-  // where `activeSentence` already points at the NEXT sentence - following that would flick
-  // the panel to the next line and back on every loop.
-  const playingSentenceId =
-    activeSentence && currentTime >= activeSentence.start && currentTime < activeSentence.end
-      ? activeSentence.id
-      : null;
-  const [followedSentenceId, setFollowedSentenceId] = useState<number | null>(null);
-  useEffect(() => {
-    if (playingSentenceId != null) setFollowedSentenceId(playingSentenceId);
-  }, [playingSentenceId]);
-  useEffect(() => {
-    setFollowedSentenceId(null);
-  }, [lesson.id]);
-  const followedSentence = useMemo(
-    () =>
-      (followedSentenceId != null ? transcript.find((s) => s.id === followedSentenceId) : undefined) ??
-      activeSentence,
-    [followedSentenceId, transcript, activeSentence]
-  );
-  const currentAiSentence = shadowingAvailable ? followedSentence : undefined;
-
-  // Free cache lookup for the current sentence (open or not, so the button can show
-  // "already analyzed"); with the panel open, also move the panel to it.
-  useEffect(() => {
-    if (currentAiSentence) showShadowingSentence(currentAiSentence, { follow: isShadowingPanelOpen });
-  }, [currentAiSentence, isShadowingPanelOpen, showShadowingSentence]);
-
-  // Leaving Shadowing/Listen (or hiding captions) closes the panel rather than leaving it on
-  // a sentence the mode is meant to hide.
-  useEffect(() => {
-    if (!shadowingAvailable && isShadowingPanelOpen) closeShadowingPanel();
-  }, [shadowingAvailable, isShadowingPanelOpen, closeShadowingPanel]);
-
-  const onAiClick = useCallback(() => {
-    if (isShadowingPanelOpen) closeShadowingPanel();
-    else if (currentAiSentence) openShadowingPanel(currentAiSentence);
-  }, [isShadowingPanelOpen, currentAiSentence, closeShadowingPanel, openShadowingPanel]);
-
-  // "A" toggles the panel, like the player button.
-  useEffect(() => {
-    if (!shadowingAvailable) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'KeyA' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.repeat) return;
-      const el = document.activeElement;
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
-      if (el instanceof HTMLElement && el.isContentEditable) return;
-      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
-      e.preventDefault();
-      onAiClick();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [shadowingAvailable, onAiClick]);
-
-  const currentAiEntry = currentAiSentence ? getShadowingEntry(currentAiSentence.id) : null;
-  const aiButton = useMemo<PlayerAiButton | undefined>(
-    () =>
-      shadowingAvailable
-        ? {
-            onClick: onAiClick,
-            active: isShadowingPanelOpen,
-            loading: currentAiEntry?.status === 'loading',
-            cached: currentAiEntry?.status === 'ready',
-            disabled: !currentAiSentence,
-          }
-        : undefined,
-    [shadowingAvailable, onAiClick, isShadowingPanelOpen, currentAiSentence, currentAiEntry]
-  );
+    activeShadowingSentenceId,
+    activeShadowingSentence,
+    isShadowingPanelOpen,
+    getShadowingEntry,
+    closeShadowingPanel,
+    onAnalyzeShadowingSentence,
+    shadowingAutoAnalyze,
+    shadowingAutoStopped,
+    setShadowingAutoAnalyze,
+    aiButton,
+  } = useShadowingAiPanel({
+    lessonId,
+    lessonKey: lesson.id,
+    aiMediaSource,
+    transcript,
+    mode,
+    hideCaptions,
+    focusActive,
+    isMobile,
+    currentTime,
+    activeSentence,
+    scrollContainerRef,
+    onShadowingPanelOpenChange,
+  });
 
   // Speaking check: Shadowing only, where reading the text aloud is the exercise.
   const [speakingOpen, setSpeakingOpen] = useState(false);
@@ -290,93 +225,16 @@ export function LessonView({
     if (!speakingAvailable) setSpeakingOpen(false);
   }, [speakingAvailable]);
 
-  // Tell the page shell to widen a bit while the panel is open, so the 60/40 split isn't
-  // cramped. Mirrors the `onFocusModeChange` ref pattern above.
-  const onShadowingPanelOpenChangeRef = React.useRef(onShadowingPanelOpenChange);
-  useEffect(() => {
-    onShadowingPanelOpenChangeRef.current = onShadowingPanelOpenChange;
-  }, [onShadowingPanelOpenChange]);
-  useEffect(() => {
-    onShadowingPanelOpenChangeRef.current?.(isShadowingPanelOpen);
-  }, [isShadowingPanelOpen]);
-  // Make sure the page shell is told to shrink back down if this view unmounts while still open.
-  useEffect(() => {
-    return () => onShadowingPanelOpenChangeRef.current?.(false);
-  }, []);
-
-  // Mobile: the dock takes the bottom of the transcript area, which can hide the sentence it
-  // is about. Re-centre that row once the dock has finished growing (300ms transition). Only
-  // on opening: after that the panel follows playback and the normal auto-scroll keeps the
-  // playing row in view.
-  const activeShadowingSentenceIdRef = React.useRef(activeShadowingSentenceId);
-  activeShadowingSentenceIdRef.current = activeShadowingSentenceId;
-  useEffect(() => {
-    if (!isMobile || !isShadowingPanelOpen) return;
-    const timer = window.setTimeout(() => {
-      const index = transcript.findIndex((s) => s.id === activeShadowingSentenceIdRef.current);
-      if (index !== -1 && scrollContainerRef.current) {
-        scrollTranscriptRowIntoView(scrollContainerRef.current, index, 'smooth');
-      }
-    }, 320);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run on open only, not on every followed sentence
-  }, [isMobile, isShadowingPanelOpen]);
+  useBackgroundMusic({ mode, micOpen: speakingOpen, clipPlaying: isPlaying });
 
   useEffect(() => {
     setVideoHidden(false);
-    setHevcWarning(false);
     setFocusMode(false);
   }, [lesson.id]);
 
   useEffect(() => {
     if (!showFocusToggle) setFocusMode(false);
   }, [showFocusToggle]);
-
-  useEffect(() => {
-    setSeekDisabled(false);
-  }, [mediaURL, lesson.id]);
-
-  useEffect(() => {
-    const el = mediaRef.current;
-    if (!el) return;
-    const onWaiting = () => setSeekDisabled(true);
-    const onReady = () => setSeekDisabled(false);
-    el.addEventListener('waiting', onWaiting);
-    el.addEventListener('playing', onReady);
-    el.addEventListener('canplay', onReady);
-    el.addEventListener('canplaythrough', onReady);
-    return () => {
-      el.removeEventListener('waiting', onWaiting);
-      el.removeEventListener('playing', onReady);
-      el.removeEventListener('canplay', onReady);
-      el.removeEventListener('canplaythrough', onReady);
-    };
-  }, [mediaURL, lesson.id, mediaRef, youtubeReady]);
-
-  useEffect(() => {
-    if (!isVideoLesson || isMobile || !mediaURL) {
-      setHevcWarning(false);
-      return;
-    }
-    const el = mediaRef.current;
-    if (!el || !(el instanceof HTMLVideoElement)) return;
-
-    const check = () => {
-      if (el.videoWidth > 0) setHevcWarning(false);
-    };
-    el.addEventListener('loadeddata', check);
-
-    const timer = window.setTimeout(() => {
-      if (mediaRef.current instanceof HTMLVideoElement && mediaRef.current.videoWidth === 0) {
-        setHevcWarning(true);
-      }
-    }, 3000);
-
-    return () => {
-      clearTimeout(timer);
-      el.removeEventListener('loadeddata', check);
-    };
-  }, [isVideoLesson, isMobile, mediaURL, lesson.id, mediaRef]);
 
   useEffect(() => {
     const media = mediaRef.current;

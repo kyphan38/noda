@@ -120,5 +120,16 @@ nhạc. Hỏi owner trước mỗi phase.
   duyệt với file mp3 tạm: fade in 0 → 0.2 trong 800ms, duck còn 0.12, tắt về
   0 rồi element pause, đổi bài fade out rồi fade in, bật lại phát tiếp.
   Chưa thử trên iPhone/iPad (làm ở B2-B3 khi có giao diện).
+- **B2 xong (2026-11-28):** LessonView tách còn 508 dòng (AI panel →
+  `useShadowingAiPanel`, trạng thái media → `useLessonMediaStatus`).
+  `useBackgroundMusic` gắn vào LessonView: duck theo `isPlaying`, dừng khi
+  Speaking check mở, fade out khi rời bài. Engine dùng chung cả lượt
+  (`sharedBgMusicEngine`): đổi tab Listen/Dictation/Shadowing làm LessonView
+  mount lại, engine chung giữ AudioContext nên nhạc không bị dừng.
+  `tracks.ts` (`DEFAULT_TRACKS` còn rỗng tới B0, `pickTrackUrl` có test).
+  Thử trong app (dev:e2e, file tạm): Play → nhạc 0.12 (duck), Pause → 0.2,
+  đổi sang Dictation và Shadowing nhạc vẫn phát, sang Talk nhạc về 0 và
+  pause, tắt option thì không tải file nhạc. Speaking check chưa thử được
+  trong E2E (cần bài có media trên Storage); quy tắc mic đã có unit test.
 - Lưu ý cho B0: bucket Storage của noda cần CORS cho domain app (như mora),
   nếu không MediaElementSource phát ra im lặng.

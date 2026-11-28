@@ -31,6 +31,17 @@ export const noopBgMusicEngine: BgMusicEngine = {
 
 type AudioSessionNavigator = Navigator & { audioSession?: { type: string } };
 
+let shared: BgMusicEngine | null = null;
+
+/**
+ * One engine for the whole visit. Switching lesson tabs remounts the lesson view; a shared
+ * engine keeps its unlocked AudioContext, so music goes on without another click.
+ */
+export function sharedBgMusicEngine(): BgMusicEngine {
+  shared ??= createBgMusicEngine();
+  return shared;
+}
+
 export function createBgMusicEngine(): BgMusicEngine {
   if (typeof window === 'undefined' || typeof Audio === 'undefined' || typeof AudioContext === 'undefined') {
     return noopBgMusicEngine;
