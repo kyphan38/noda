@@ -15,6 +15,7 @@ export { analyzeShadowingPattern } from "./analyzeShadowingPattern";
 export { onLessonDeleted } from "./onLessonDeleted";
 export { assessSpeaking } from "./assessSpeaking";
 export { defineWord } from "./defineWord";
+export { translateSentences } from "./translateSentences";
 export { talkTopic } from "./talkTopic";
 export { talkTurn } from "./talkTurn";
 export { talkWrap } from "./talkWrap";

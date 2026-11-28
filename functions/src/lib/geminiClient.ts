@@ -9,7 +9,7 @@
  * extra transport retries would blow the function's time budget.
  */
 
-import { GoogleGenAI, MediaResolution, type Content, type Schema } from "@google/genai";
+import { GoogleGenAI, MediaResolution, ThinkingLevel, type Content, type Schema } from "@google/genai";
 import { SHADOWING_ANALYSIS_RESPONSE_SCHEMA } from "../prompts/shadowingAnalysisPrompt";
 import { summarizeUsage } from "./geminiUsage";
 import { noLongDash } from "./text";
@@ -61,7 +61,7 @@ export function generateShadowingJson(
 export async function generateStructuredJson(
   contents: Content[],
   responseSchema: Schema,
-  opts: { timeoutMs: number; lowMediaResolution?: boolean; temperature: number; label?: string }
+  opts: { timeoutMs: number; lowMediaResolution?: boolean; temperature: number; label?: string; thinkingLow?: boolean }
 ): Promise<string | undefined> {
   const response = await getGenAI().models.generateContent({
     model: getShadowingModelId(),
@@ -71,6 +71,7 @@ export async function generateStructuredJson(
       responseSchema,
       temperature: opts.temperature,
       ...(opts.lowMediaResolution ? { mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW } : {}),
+      ...(opts.thinkingLow ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
       httpOptions: { timeout: opts.timeoutMs },
     },
   });

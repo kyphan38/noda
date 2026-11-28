@@ -65,6 +65,10 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow write: if false; // only Cloud Function (Admin SDK) writes here
     }
+    match /users/{userId}/lessons/{lessonId}/translations/{sentenceId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // only Cloud Function (Admin SDK) writes here
+    }
     match /users/{userId}/lessons/{lessonId}/speakingAttempts/{attemptId} {
       allow read: if isOwner(userId);
       allow write: if false; // only Cloud Function (Admin SDK) writes here
