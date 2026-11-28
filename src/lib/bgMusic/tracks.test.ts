@@ -2,11 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { BG_CATEGORIES, DEFAULT_TRACKS, nextTrack, pickTrack, trackPath, tracksIn, type BgTrack } from './tracks';
 
-const tracks: BgTrack[] = [
-  { id: 'a', name: 'a', category: 'piano' },
-  { id: 'b', name: 'b', category: 'piano' },
-  { id: 'c', name: 'c', category: 'chill' },
-];
+const t = (id: string, category: BgTrack['category']): BgTrack => ({ id, name: id, category, path: `p/${id}`, gain: 1 });
+const tracks: BgTrack[] = [t('a', 'piano'), t('b', 'piano'), t('c', 'chill')];
 
 describe('pickTrack', () => {
   it('returns the chosen track', () => {
@@ -42,10 +39,14 @@ describe('DEFAULT_TRACKS', () => {
       expect(t.id).toMatch(/^[a-z0-9-]+$/);
       expect(t.name).toBe(t.name.toLowerCase());
     }
-    for (const c of BG_CATEGORIES) expect(tracksIn(c, DEFAULT_TRACKS).length).toBeGreaterThan(1);
+    for (const c of BG_CATEGORIES) {
+      if (c !== 'mine') expect(tracksIn(c, DEFAULT_TRACKS).length).toBeGreaterThan(1);
+    }
+    expect(tracksIn('mine', DEFAULT_TRACKS)).toEqual([]);
   });
 
   it('maps an id to its Storage path', () => {
     expect(trackPath('solas')).toBe('defaults/bgm/solas.mp3');
+    expect(DEFAULT_TRACKS[0].path).toBe(trackPath(DEFAULT_TRACKS[0].id));
   });
 });

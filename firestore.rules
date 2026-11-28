@@ -16,6 +16,10 @@ service cloud.firestore {
     match /users/{userId}/sidebarFolders/{folderId} {
       allow read, write: if isOwner(userId);
     }
+    // Own background music tracks (files in Storage users/{uid}/bgm/).
+    match /users/{userId}/bgmTracks/{trackId} {
+      allow read, write: if isOwner(userId);
+    }
     // Dictation misses per lesson, for the Mistakes page.
     match /users/{userId}/misses/{lessonId} {
       allow read, write: if isOwner(userId);

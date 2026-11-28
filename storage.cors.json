@@ -3,7 +3,8 @@
     "origin": [
       "https://noda.kyphan38.com",
       "http://localhost:3000",
-      "http://localhost:3010"
+      "http://localhost:3010",
+      "http://localhost:3011"
     ],
     "method": [
       "GET",

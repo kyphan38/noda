@@ -6,7 +6,8 @@ import { getBgTrackUrl } from '@/lib/db';
 import { sharedBgMusicEngine, type BgMusicEngine } from '@/lib/bgMusic/engine';
 import { shouldPlay } from '@/lib/bgMusic/gain';
 import { bgMusicPrefsStore } from '@/lib/bgMusic/prefs';
-import { DEFAULT_TRACKS, nextTrack, pickTrack, trackPath } from '@/lib/bgMusic/tracks';
+import { nextTrack, pickTrack } from '@/lib/bgMusic/tracks';
+import { useBgTracks } from '@/hooks/useBgTracks';
 import type { AppMode } from '@/types';
 
 type Options = {
@@ -26,11 +27,13 @@ export function useBackgroundMusic({ mode, micOpen, clipPlaying }: Options): voi
   const prefs = useSyncExternalStore(bgMusicPrefsStore.subscribe, bgMusicPrefsStore.get, bgMusicPrefsStore.getServer);
   const engineRef = useRef<BgMusicEngine | null>(null);
 
-  const chosen = pickTrack(prefs.trackId, DEFAULT_TRACKS);
+  const tracks = useBgTracks();
+  const chosen = pickTrack(prefs.trackId, tracks);
   // After a track ends the next one plays; a new choice in Settings starts over from it.
   const [auto, setAuto] = useState<{ from: string; id: string } | null>(null);
   const currentId = auto && auto.from === chosen?.id ? auto.id : (chosen?.id ?? null);
-  const nextId = currentId ? (nextTrack(currentId, DEFAULT_TRACKS)?.id ?? null) : null;
+  const current = currentId ? (tracks.find((t) => t.id === currentId) ?? null) : null;
+  const nextId = currentId ? (nextTrack(currentId, tracks)?.id ?? null) : null;
 
   const [urls, setUrls] = useState<Record<string, string>>({});
   const url = currentId ? (urls[currentId] ?? null) : null;
@@ -41,8 +44,9 @@ export function useBackgroundMusic({ mode, micOpen, clipPlaying }: Options): voi
     if (!active) return;
     let cancelled = false;
     for (const id of [currentId, nextId]) {
-      if (!id || urls[id]) continue;
-      getBgTrackUrl(trackPath(id))
+      const track = id ? tracks.find((t) => t.id === id) : undefined;
+      if (!id || !track || urls[id]) continue;
+      getBgTrackUrl(track.path)
         .then((u) => !cancelled && setUrls((m) => ({ ...m, [id]: u })))
         .catch(() => {
           // Offline or signed out: the lesson goes on without music.
@@ -51,7 +55,7 @@ export function useBackgroundMusic({ mode, micOpen, clipPlaying }: Options): voi
     return () => {
       cancelled = true;
     };
-  }, [active, currentId, nextId, urls]);
+  }, [active, currentId, nextId, urls, tracks]);
 
   useEffect(() => {
     // The engine is made only once music is wanted, so the app is unchanged while it is off.
@@ -63,11 +67,11 @@ export function useBackgroundMusic({ mode, micOpen, clipPlaying }: Options): voi
       if (chosen && nextId) setAuto({ from: chosen.id, id: nextId });
     });
     // While the next URL loads, keep what is playing rather than cutting to silence.
-    if (url) engine.setSource(url);
+    if (url) engine.setSource(url, current?.gain ?? 1);
     engine.setVolume(prefs.volume);
     engine.setDucked(clipPlaying);
     engine.setActive(active);
-  }, [active, url, prefs.volume, clipPlaying, chosen, currentId, nextId]);
+  }, [active, url, prefs.volume, clipPlaying, chosen, current, currentId, nextId]);
 
   // Browsers allow sound only after a gesture: the next click or key press unlocks it.
   useEffect(() => {

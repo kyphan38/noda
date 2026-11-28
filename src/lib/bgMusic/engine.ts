@@ -10,7 +10,8 @@ import { rampMs, targetGain } from './gain';
 export interface BgMusicEngine {
   /** Call from a click or key press: creates the AudioContext the browser allows. */
   unlock(): void;
-  setSource(url: string | null): void;
+  /** `trackGain` evens out loudness between tracks (1 for the defaults). */
+  setSource(url: string | null, trackGain?: number): void;
   /** Percent, 0..MAX_VOLUME. */
   setVolume(volume: number): void;
   /** True while the lesson clip plays: music dips lightly. */
@@ -60,6 +61,7 @@ export function createBgMusicEngine(): BgMusicEngine {
   let ctx: AudioContext | null = null;
   let gain: GainNode | null = null;
   let url: string | null = null;
+  let trackGain = 1;
   let volume = 0;
   let ducked = false;
   let active = false;
@@ -100,7 +102,7 @@ export function createBgMusicEngine(): BgMusicEngine {
   function apply() {
     if (disposed || swapTimer) return;
     const play = wanted();
-    const to = targetGain(volume, ducked, play);
+    const to = targetGain(volume, ducked, play) * trackGain;
     if (play) {
       clearPause();
       if (ctx?.state === 'suspended') void ctx.resume().catch(() => {});
@@ -118,8 +120,9 @@ export function createBgMusicEngine(): BgMusicEngine {
     }
   }
 
-  function loadSource(next: string | null) {
+  function loadSource(next: string | null, nextGain: number) {
     url = next;
+    trackGain = nextGain;
     if (next) el.src = next;
     else {
       el.pause();
@@ -145,10 +148,17 @@ export function createBgMusicEngine(): BgMusicEngine {
       }
       apply();
     },
-    setSource(next) {
-      if (disposed || next === url) return;
+    setSource(next, nextGain = 1) {
+      if (disposed) return;
+      if (next === url) {
+        if (nextGain !== trackGain) {
+          trackGain = nextGain;
+          apply();
+        }
+        return;
+      }
       if (aimed === 0 || el.paused) {
-        loadSource(next);
+        loadSource(next, nextGain);
         return;
       }
       // Fade the old track out before the new one fades in.
@@ -156,7 +166,7 @@ export function createBgMusicEngine(): BgMusicEngine {
       if (swapTimer) clearTimeout(swapTimer);
       swapTimer = setTimeout(() => {
         swapTimer = null;
-        loadSource(next);
+        loadSource(next, nextGain);
       }, rampMs(1, 0));
     },
     setVolume(next) {

@@ -149,5 +149,14 @@ nhạc. Hỏi owner trước mỗi phase.
   trong app với file thật (token URL tạm, e2e): có tiếng thật qua Web Audio,
   tự chuyển bài, đổi nhóm. Chưa có cache offline (trình duyệt vẫn cache vì
   file có Cache-Control 1 năm).
+- **B4 xong (2026-11-28):** nhóm "mine" trong Settings: "add a track"
+  (audio tối đa 30MB, hiện reading / uploading %, cancel), bài mới được chọn
+  luôn; "delete" bấm 2 lần (trong 3 giây). Lúc upload app giải mã file một lần
+  để đo độ to và lưu gain (mục tiêu -21 dB RMS như bài mặc định, không vượt
+  peak 0.95, trong 0.25..4). Tên lấy từ tên file, lowercase. File ở
+  `users/{uid}/bgm/`, danh sách ở Firestore `users/{uid}/bgmTracks` (rules đã
+  deploy). CORS thêm `localhost:3011` (cổng noda-dev). Thử thật với tài khoản
+  owner: upload 1MB, bản ghi gain 1.028, phát trong bài với gain 0.123, xoá
+  thì Firestore và Storage đều sạch.
 - Lưu ý cho B0: bucket Storage của noda cần CORS cho domain app (như mora),
   nếu không MediaElementSource phát ra im lặng.

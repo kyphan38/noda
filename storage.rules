@@ -27,6 +27,14 @@ service firebase.storage {
         && request.resource.contentType.matches('audio/.*');
     }
 
+    // Own background music tracks. Same limits as lib/db/bgm.ts (MAX_BG_TRACK_BYTES).
+    match /users/{userId}/bgm/{file} {
+      allow read, delete: if allowed() && request.auth.uid == userId;
+      allow create: if allowed() && request.auth.uid == userId
+        && request.resource.size < 30 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+    }
+
     // Background music tracks: uploaded by scripts/upload-bgm.sh, read-only from the app.
     match /defaults/bgm/{file} {
       allow read: if allowed();

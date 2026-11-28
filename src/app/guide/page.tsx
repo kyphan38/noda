@@ -46,7 +46,8 @@ const BLOCKS: Block[] = [
     lines: [
       'Soft music can play behind a lesson in Listen, Shadowing and Dictation. It is off at first.',
       'Turn it on in Settings (the gear), or with Music in More on the player. Settings also has the track and the volume.',
-      'Pick a group (piano, cinematic, chill) and a track to start from. When a track ends, the next one in the group plays.',
+      'Pick a group (piano, cinematic, chill, mine) and a track to start from. When a track ends, the next one in the group plays.',
+      'In mine, add a track adds your own audio file (up to 30MB). It plays as loud as the others and is on all your devices. Tap delete twice to remove it.',
       'The music gets a little quieter while the lesson plays, so the voice stays clear.',
       'It stops while the speaking check records you, and when you leave the lesson. Talk never has music.',
     ],

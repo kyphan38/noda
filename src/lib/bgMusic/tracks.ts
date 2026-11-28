@@ -1,35 +1,46 @@
-// Background music tracks. Files are in Storage defaults/bgm/<id>.mp3
-// (scripts/upload-bgm.sh), all at the same loudness.
+// Background music tracks. Default files are in Storage defaults/bgm/<id>.mp3
+// (scripts/upload-bgm.sh), all at the same loudness. Own tracks ("mine") live in
+// users/{uid}/bgm/ and carry a gain measured at upload.
 
-export type BgCategory = 'piano' | 'cinematic' | 'chill';
+export type BgCategory = 'piano' | 'cinematic' | 'chill' | 'mine';
 
-export const BG_CATEGORIES: readonly BgCategory[] = ['piano', 'cinematic', 'chill'];
+export const BG_CATEGORIES: readonly BgCategory[] = ['piano', 'cinematic', 'chill', 'mine'];
 
-export type BgTrack = { id: string; name: string; category: BgCategory };
-
-export const DEFAULT_TRACKS: readonly BgTrack[] = [
-  { id: 'solas', name: 'solas', category: 'piano' },
-  { id: 'track-in-time', name: 'track in time', category: 'piano' },
-  { id: 'gifts', name: 'gifts', category: 'piano' },
-  { id: 'library-poets', name: 'library poets', category: 'piano' },
-  { id: 'interstellar', name: 'interstellar', category: 'piano' },
-  { id: 'scent', name: 'scent', category: 'piano' },
-  { id: 'waterfall', name: 'waterfall', category: 'piano' },
-  { id: 'pluto', name: 'pluto', category: 'piano' },
-  { id: 'stay', name: 'stay', category: 'cinematic' },
-  { id: 'daylight', name: 'daylight', category: 'cinematic' },
-  { id: 'minari', name: 'minari', category: 'cinematic' },
-  { id: 'sojourn', name: 'sojourn', category: 'cinematic' },
-  { id: 'bipolar', name: 'bipolar', category: 'chill' },
-  { id: 'green-to-blue', name: 'green to blue', category: 'chill' },
-  { id: 'lights-are-on', name: 'lights are on', category: 'chill' },
-  { id: 'champs', name: 'champs', category: 'chill' },
-  { id: 'ceo-mindset', name: 'ceo mindset', category: 'chill' },
-];
+export type BgTrack = {
+  id: string;
+  name: string;
+  category: BgCategory;
+  /** Storage path of the file. */
+  path: string;
+  /** Playback gain so the track is as loud as the others. 1 for defaults. */
+  gain: number;
+};
 
 export function trackPath(id: string): string {
   return `defaults/bgm/${id}.mp3`;
 }
+
+const def = (id: string, name: string, category: BgCategory): BgTrack => ({ id, name, category, path: trackPath(id), gain: 1 });
+
+export const DEFAULT_TRACKS: readonly BgTrack[] = [
+  def('solas', 'solas', 'piano'),
+  def('track-in-time', 'track in time', 'piano'),
+  def('gifts', 'gifts', 'piano'),
+  def('library-poets', 'library poets', 'piano'),
+  def('interstellar', 'interstellar', 'piano'),
+  def('scent', 'scent', 'piano'),
+  def('waterfall', 'waterfall', 'piano'),
+  def('pluto', 'pluto', 'piano'),
+  def('stay', 'stay', 'cinematic'),
+  def('daylight', 'daylight', 'cinematic'),
+  def('minari', 'minari', 'cinematic'),
+  def('sojourn', 'sojourn', 'cinematic'),
+  def('bipolar', 'bipolar', 'chill'),
+  def('green-to-blue', 'green to blue', 'chill'),
+  def('lights-are-on', 'lights are on', 'chill'),
+  def('champs', 'champs', 'chill'),
+  def('ceo-mindset', 'ceo mindset', 'chill'),
+];
 
 /** The chosen track, or the first track when the choice is gone. Null with no tracks. */
 export function pickTrack(trackId: string | null, tracks: readonly BgTrack[]): BgTrack | null {
